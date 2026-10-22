@@ -44,6 +44,8 @@ typedef struct {
     uint32_t              fs_len[4];
     uint8_t               rx_buf[64];
     uint8_t               tx_buf[64];
+    int                   in_pending;   /* an IN transfer is queued in the kernel */
+    int                   in_done;      /* it completed while send_packet was polling */
 #else
     int                   ep_fd[6];
 #endif
@@ -220,23 +222,40 @@ static int usb_fs_recv_packet(usb_slot_device_t *dev, uint8_t *buffer, uint32_t 
 {
     if (!dev->use_fs) return -1;
     struct usb_fs_endpoint *ep = &dev->endpoints[dev->in_index];
-    uint32_t ask_len = length > 64 ? 64 : length;
-    dev->fs_len[dev->in_index] = ask_len;
-    ep->timeout = (uint16_t)timeout_ms;
 
-    struct usb_fs_start start;
-    memset(&start, 0, sizeof(start));
-    start.ep_index = dev->in_index;
-    if (ioctl(dev->fd, USB_FS_START, &start) != 0) {
-        if (errno != EBUSY) return -1;
+    /* Keep one IN transfer queued with no kernel timeout and re-arm it only after it
+     * completes. Letting it time out every 15ms and restarting it drops reports from
+     * pads that only send on change (e.g. the 8BitDo 2.4G dongle): a press or release
+     * landing in the stop/restart window is lost. */
+    if (!dev->in_pending) {
+        uint32_t ask_len = length > 64 ? 64 : length;
+        dev->fs_len[dev->in_index] = ask_len;
+        ep->timeout = 0;
+
+        struct usb_fs_start start;
+        memset(&start, 0, sizeof(start));
+        start.ep_index = dev->in_index;
+        if (ioctl(dev->fd, USB_FS_START, &start) != 0 && errno != EBUSY) return -1;
+        dev->in_pending = 1;
     }
 
     int spins = timeout_ms / 4 + 1;
     while (spins-- > 0) {
-        struct usb_fs_complete complete;
-        memset(&complete, 0, sizeof(complete));
-        complete.ep_index = dev->in_index;
-        if (ioctl(dev->fd, USB_FS_COMPLETE, &complete) == 0) {
+        int done = dev->in_done;
+        if (!done) {
+            struct usb_fs_complete complete;
+            memset(&complete, 0, sizeof(complete));
+            if (ioctl(dev->fd, USB_FS_COMPLETE, &complete) == 0) {
+                /* USB_FS_COMPLETE reports whichever endpoint finished, not the one asked for */
+                if (complete.ep_index != dev->in_index) continue;
+                done = 1;
+            } else if (errno != EBUSY && errno != ETIMEDOUT && errno != EAGAIN && errno != EWOULDBLOCK) {
+                return -1;
+            }
+        }
+        if (done) {
+            dev->in_done = 0;
+            dev->in_pending = 0;
             if (ep->status == USB_ERR_NORMAL_COMPLETION || ep->status == USB_ERR_SHORT_XFER) {
                 uint32_t n = dev->fs_len[dev->in_index];
                 if (n > length) n = length;
@@ -244,11 +263,6 @@ static int usb_fs_recv_packet(usb_slot_device_t *dev, uint8_t *buffer, uint32_t 
                 return (int)n;
             }
             return 0;
-        }
-        if (errno == EBUSY || errno == ETIMEDOUT || errno == EAGAIN || errno == EWOULDBLOCK) {
-            /* Transfer still in progress or waiting for packet — continue select loop */
-        } else {
-            return -1;
         }
 
         struct timeval wait;
@@ -284,8 +298,12 @@ static int usb_fs_send_packet(usb_slot_device_t *dev, const uint8_t *buffer, uin
     while (spins-- > 0) {
         struct usb_fs_complete complete;
         memset(&complete, 0, sizeof(complete));
-        complete.ep_index = dev->out_index;
         if (ioctl(dev->fd, USB_FS_COMPLETE, &complete) == 0) {
+            if (complete.ep_index == dev->in_index) {
+                /* The queued IN transfer finished first; hand it to the next recv */
+                dev->in_done = 1;
+                continue;
+            }
             return (ep->status == USB_ERR_NORMAL_COMPLETION || ep->status == USB_ERR_SHORT_XFER) ? (int)send_len : -1;
         }
         if (errno != EBUSY) return -1;
