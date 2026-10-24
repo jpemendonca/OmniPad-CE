@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>OmniPad PS5 Universal</title>
+  <style>
+    :root {
+      --bg: #070a12;
+      --card: rgba(18, 25, 41, 0.75);
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.35);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: rgba(255, 255, 255, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { background: radial-gradient(circle at 50% 0%, #152238 0%, var(--bg) 100%); color: var(--text); min-height: 100vh; padding: clamp(14px, 3.5vw, 28px); }
+    .container { max-width: 1050px; margin: 0 auto; }
+    header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    .logo-group h1 { font-size: clamp(22px, 5vw, 28px); font-weight: 800; background: linear-gradient(135deg, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; }
+    .logo-group p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+    .badge-fw { background: rgba(59, 130, 246, 0.12); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.25); padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .actions-bar { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+    button { background: var(--card); color: var(--text); border: 1px solid var(--border); padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; backdrop-filter: blur(12px); min-height: 42px; }
+    button:active { transform: scale(0.97); }
+    button:hover { border-color: rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.06); }
+    button.btn-danger { color: #f87171; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); }
+    button.btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
+    .slots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; backdrop-filter: blur(16px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); display: flex; flex-direction: column; transition: border-color 0.2s, transform 0.2s; }
+    .card:hover { transform: translateY(-2px); }
+    .card.connected { border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 26, 46, 0.85); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .slot-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #334155; display: inline-block; }
+    .dot.active { background: var(--success); box-shadow: 0 0 12px var(--success); }
+    .dot.pending { background: var(--warning); box-shadow: 0 0 12px var(--warning); }
+    .pad-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 10px; min-height: 22px; word-break: break-word; }
+    .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .pill { display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 600; color: #cbd5e1; }
+    .pill.green { background: rgba(16, 185, 129, 0.12); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3); }
+    .pill.blue { background: rgba(59, 130, 246, 0.12); color: #93c5fd; border-color: rgba(59, 130, 246, 0.3); }
+    .meta-list { font-size: 13px; color: var(--text-muted); line-height: 1.8; margin-top: auto; }
+    .meta-list span { color: var(--text); font-weight: 600; }
+    .empty-state { text-align: center; color: #64748b; font-size: 13px; font-weight: 500; padding: 24px 0; }
+    footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 36px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo-group">
+        <h1>OmniPad PS5 Universal</h1>
+        <p>Universal Controller Hub &bull; DualSense Emulation &bull; Zero Lag 250Hz</p>
+      </div>
+      <div class="badge-fw">v<span class="js-version"></span> &bull; FW 7.00 - 13.60</div>
+    </header>
+
+    <div class="actions-bar">
+      <button onclick="window.open('/api/log', '_blank')">
+        <span>&#128220;</span> View Logs
+      </button>
+      <button onclick="refreshData()">
+        <span>&#8635;</span> Refresh
+      </button>
+      <button class="btn-danger" onclick="disconnectAll()">
+        <span>&#128268;</span> Disconnect Controllers
+      </button>
+    </div>
+
+    <div class="slots-grid" id="slotsContainer">
+      <!-- Filled dynamically -->
+    </div>
+
+    <footer>
+      OmniPad PS5 Universal <span class="js-version-long"></span> &bull; Zero Lag 250Hz &bull; Universal Gamepad Engine
+    </footer>
+  </div>
+
+  <script>
+    async function refreshData() {
+      try {
+        const res = await fetch('/api/status');
+        if (!res.ok) return;
+        const data = await res.json();
+        render(data);
+      } catch (e) {}
+    }
+
+    function render(data) {
+      document.querySelectorAll('.js-version').forEach(e => e.textContent = `${data.version}-b${data.build}`);
+      document.querySelectorAll('.js-version-long').forEach(e => e.textContent = `v${data.version} (Build ${data.build})`);
+      const container = document.getElementById('slotsContainer');
+      container.innerHTML = '';
+
+      data.slots.forEach((s, idx) => {
+        const card = document.createElement('div');
+        const isLive = s.status === 3;
+        const isPending = s.status === 1 || s.status === 2;
+        card.className = 'card' + (isLive ? ' connected' : '');
+        const dotClass = isLive ? 'active' : (isPending ? 'pending' : '');
+        const vdaHandle = s.handle >= 0 ? s.handle : (s.alt_handle > 0 ? s.alt_handle : '--');
+        
+        let connBadge = '';
+        if (s.conn === 4) {
+          connBadge = '<span class="pill blue">&#128225; 2.4G Wireless Dongle</span>';
+        } else if (s.conn === 3) {
+          connBadge = '<span class="pill green">&#128268; USB-C Wired</span>';
+        } else if (s.conn === 1 || s.conn === 2) {
+          connBadge = '<span class="pill blue">&#128246; Bluetooth Direct</span>';
+        } else if (isLive) {
+          connBadge = '<span class="pill blue">&#127918; Connected</span>';
+        }
+
+        if (isLive) {
+          card.innerHTML = `
+            <div class="card-header">
+              <span class="slot-label">Player ${idx + 1}</span>
+              <span class="dot ${dotClass}"></span>
+            </div>
+            <div class="pad-title">${s.name || 'Virtual DualSense'}</div>
+            <div class="pills">
+              ${connBadge}
+              <span class="pill blue">&#9889; 250Hz Zero-Lag</span>
+            </div>
+            <div class="meta-list">
+              Status: <span>Connected & Ready</span><br>
+              Handle VDA: <span>${vdaHandle}</span><br>
+              User: <span>${s.user_id ? '0x' + s.user_id.toString(16) : 'Primary'}</span><br>
+              Injected: <span>${s.injected || 0} frames</span>
+            </div>
+          `;
+        } else {
+          card.innerHTML = `
+            <div class="card-header">
+              <span class="slot-label">Player ${idx + 1}</span>
+              <span class="dot ${dotClass}"></span>
+            </div>
+            <div class="pad-title" style="color:#64748b;">${isPending ? 'Identifying...' : 'Slot Available'}</div>
+            <div class="empty-state">${isPending ? 'Syncing with console...' : 'Waiting for Controller or 2.4G Dongle'}</div>
+          `;
+        }
+        container.appendChild(card);
+      });
+    }
+
+    async function disconnectAll() {
+      await fetch('/api/disconnect?slot=-1', { method: 'POST' });
+      refreshData();
+    }
+
+    setInterval(refreshData, 1000);
+    refreshData();
+  </script>
+</body>
+</html>

@@ -4,6 +4,7 @@
 #include "version.h"
 #include "log.h"
 #include "util.h"
+#include "web_index.h"  /* generated from web/index.html by tools/embed_web.py */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,170 +25,17 @@ static volatile int g_server_running = 0;
 
 static void *web_server_worker(void *arg);
 
-static const char HTML_INDEX[] =
-"<!DOCTYPE html>\n"
-"<html lang=\"en\">\n"
-"<head>\n"
-"  <meta charset=\"UTF-8\">\n"
-"  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover\">\n"
-"  <meta http-equiv=\"Cache-Control\" content=\"no-cache, no-store, must-revalidate\">\n"
-"  <meta http-equiv=\"Pragma\" content=\"no-cache\">\n"
-"  <meta http-equiv=\"Expires\" content=\"0\">\n"
-"  <title>OmniPad PS5 Universal</title>\n"
-"  <style>\n"
-"    :root {\n"
-"      --bg: #070a12;\n"
-"      --card: rgba(18, 25, 41, 0.75);\n"
-"      --accent: #3b82f6;\n"
-"      --accent-glow: rgba(59, 130, 246, 0.35);\n"
-"      --success: #10b981;\n"
-"      --warning: #f59e0b;\n"
-"      --danger: #ef4444;\n"
-"      --text: #f8fafc;\n"
-"      --text-muted: #94a3b8;\n"
-"      --border: rgba(255, 255, 255, 0.08);\n"
-"    }\n"
-"    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }\n"
-"    body { background: radial-gradient(circle at 50% 0%, #152238 0%, var(--bg) 100%); color: var(--text); min-height: 100vh; padding: clamp(14px, 3.5vw, 28px); }\n"
-"    .container { max-width: 1050px; margin: 0 auto; }\n"
-"    header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }\n"
-"    .logo-group h1 { font-size: clamp(22px, 5vw, 28px); font-weight: 800; background: linear-gradient(135deg, #60a5fa, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; }\n"
-"    .logo-group p { font-size: 13px; color: var(--text-muted); margin-top: 3px; }\n"
-"    .badge-fw { background: rgba(59, 130, 246, 0.12); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.25); padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }\n"
-"    .actions-bar { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }\n"
-"    button { background: var(--card); color: var(--text); border: 1px solid var(--border); padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; backdrop-filter: blur(12px); min-height: 42px; }\n"
-"    button:active { transform: scale(0.97); }\n"
-"    button:hover { border-color: rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.06); }\n"
-"    button.btn-danger { color: #f87171; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); }\n"
-"    button.btn-danger:hover { background: rgba(239, 68, 68, 0.2); }\n"
-"    .slots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 28px; }\n"
-"    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; backdrop-filter: blur(16px); box-shadow: 0 8px 24px rgba(0,0,0,0.25); display: flex; flex-direction: column; transition: border-color 0.2s, transform 0.2s; }\n"
-"    .card:hover { transform: translateY(-2px); }\n"
-"    .card.connected { border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 26, 46, 0.85); }\n"
-"    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }\n"
-"    .slot-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); }\n"
-"    .dot { width: 10px; height: 10px; border-radius: 50%; background: #334155; display: inline-block; }\n"
-"    .dot.active { background: var(--success); box-shadow: 0 0 12px var(--success); }\n"
-"    .dot.pending { background: var(--warning); box-shadow: 0 0 12px var(--warning); }\n"
-"    .pad-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 10px; min-height: 22px; word-break: break-word; }\n"
-"    .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }\n"
-"    .pill { display: inline-flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 600; color: #cbd5e1; }\n"
-"    .pill.green { background: rgba(16, 185, 129, 0.12); color: #6ee7b7; border-color: rgba(16, 185, 129, 0.3); }\n"
-"    .pill.blue { background: rgba(59, 130, 246, 0.12); color: #93c5fd; border-color: rgba(59, 130, 246, 0.3); }\n"
-"    .meta-list { font-size: 13px; color: var(--text-muted); line-height: 1.8; margin-top: auto; }\n"
-"    .meta-list span { color: var(--text); font-weight: 600; }\n"
-"    .empty-state { text-align: center; color: #64748b; font-size: 13px; font-weight: 500; padding: 24px 0; }\n"
-"    footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 36px; line-height: 1.6; }\n"
-"  </style>\n"
-"</head>\n"
-"<body>\n"
-"  <div class=\"container\">\n"
-"    <header>\n"
-"      <div class=\"logo-group\">\n"
-"        <h1>OmniPad PS5 Universal</h1>\n"
-"        <p>Universal Controller Hub &bull; DualSense Emulation &bull; Zero Lag 250Hz</p>\n"
-"      </div>\n"
-#define STR_HELPER(x) #x
-#define STR(x) STR_HELPER(x)
-"      <div class=\"badge-fw\">v" ANYPAD_VERSION "-b" STR(ANYPAD_BUILD) " &bull; FW 7.00 - 13.60</div>\n"
-"    </header>\n"
-"\n"
-"    <div class=\"actions-bar\">\n"
-"      <button onclick=\"window.open('/api/log', '_blank')\">\n"
-"        <span>&#128220;</span> View Logs\n"
-"      </button>\n"
-"      <button onclick=\"refreshData()\">\n"
-"        <span>&#8635;</span> Refresh\n"
-"      </button>\n"
-"      <button class=\"btn-danger\" onclick=\"disconnectAll()\">\n"
-"        <span>&#128268;</span> Disconnect Controllers\n"
-"      </button>\n"
-"    </div>\n"
-"\n"
-"    <div class=\"slots-grid\" id=\"slotsContainer\">\n"
-"      <!-- Filled dynamically -->\n"
-"    </div>\n"
-"\n"
-"    <footer>\n"
-"      OmniPad PS5 Universal v" ANYPAD_VERSION " (Build " STR(ANYPAD_BUILD) ") &bull; Zero Lag 250Hz &bull; Universal Gamepad Engine\n"
-"    </footer>\n"
-"  </div>\n"
-"\n"
-"  <script>\n"
-"    async function refreshData() {\n"
-"      try {\n"
-"        const res = await fetch('/api/status');\n"
-"        if (!res.ok) return;\n"
-"        const data = await res.json();\n"
-"        render(data);\n"
-"      } catch (e) {}\n"
-"    }\n"
-"\n"
-"    function render(data) {\n"
-"      const container = document.getElementById('slotsContainer');\n"
-"      container.innerHTML = '';\n"
-"\n"
-"      data.slots.forEach((s, idx) => {\n"
-"        const card = document.createElement('div');\n"
-"        const isLive = s.status === 3;\n"
-"        const isPending = s.status === 1 || s.status === 2;\n"
-"        card.className = 'card' + (isLive ? ' connected' : '');\n"
-"        const dotClass = isLive ? 'active' : (isPending ? 'pending' : '');\n"
-"        const vdaHandle = s.handle >= 0 ? s.handle : (s.alt_handle > 0 ? s.alt_handle : '--');\n"
-"        \n"
-"        let connBadge = '';\n"
-"        if (s.conn === 4) {\n"
-"          connBadge = '<span class=\"pill blue\">&#128225; 2.4G Wireless Dongle</span>';\n"
-"        } else if (s.conn === 3) {\n"
-"          connBadge = '<span class=\"pill green\">&#128268; USB-C Wired</span>';\n"
-"        } else if (s.conn === 1 || s.conn === 2) {\n"
-"          connBadge = '<span class=\"pill blue\">&#128246; Bluetooth Direct</span>';\n"
-"        } else if (isLive) {\n"
-"          connBadge = '<span class=\"pill blue\">&#127918; Connected</span>';\n"
-"        }\n"
-"\n"
-"        if (isLive) {\n"
-"          card.innerHTML = `\n"
-"            <div class=\"card-header\">\n"
-"              <span class=\"slot-label\">Player ${idx + 1}</span>\n"
-"              <span class=\"dot ${dotClass}\"></span>\n"
-"            </div>\n"
-"            <div class=\"pad-title\">${s.name || 'Virtual DualSense'}</div>\n"
-"            <div class=\"pills\">\n"
-"              ${connBadge}\n"
-"              <span class=\"pill blue\">&#9889; 250Hz Zero-Lag</span>\n"
-"            </div>\n"
-"            <div class=\"meta-list\">\n"
-"              Status: <span>Connected & Ready</span><br>\n"
-"              Handle VDA: <span>${vdaHandle}</span><br>\n"
-"              User: <span>${s.user_id ? '0x' + s.user_id.toString(16) : 'Primary'}</span><br>\n"
-"              Injected: <span>${s.injected || 0} frames</span>\n"
-"            </div>\n"
-"          `;\n"
-"        } else {\n"
-"          card.innerHTML = `\n"
-"            <div class=\"card-header\">\n"
-"              <span class=\"slot-label\">Player ${idx + 1}</span>\n"
-"              <span class=\"dot ${dotClass}\"></span>\n"
-"            </div>\n"
-"            <div class=\"pad-title\" style=\"color:#64748b;\">${isPending ? 'Identifying...' : 'Slot Available'}</div>\n"
-"            <div class=\"empty-state\">${isPending ? 'Syncing with console...' : 'Waiting for Controller or 2.4G Dongle'}</div>\n"
-"          `;\n"
-"        }\n"
-"        container.appendChild(card);\n"
-"      });\n"
-"    }\n"
-"\n"
-"    async function disconnectAll() {\n"
-"      await fetch('/api/disconnect?slot=-1', { method: 'POST' });\n"
-"      refreshData();\n"
-"    }\n"
-"\n"
-"    setInterval(refreshData, 1000);\n"
-"    refreshData();\n"
-"  </script>\n"
-"</body>\n"
-"</html>\n";
+/* write() may send only part of a large body (the page is tens of KB) */
+static void write_all(int fd, const void *buf, size_t len)
+{
+    const char *p = (const char *)buf;
+    while (len > 0) {
+        ssize_t w = write(fd, p, len);
+        if (w <= 0) return;
+        p += w;
+        len -= (size_t)w;
+    }
+}
 
 #ifndef SO_REUSEPORT
 #define SO_REUSEPORT 0x0200
@@ -496,7 +344,7 @@ static void handle_client(int cfd)
     }
     else {
         /* Serve Web Dashboard HTML */
-        size_t hlen = sizeof(HTML_INDEX) - 1;
+        size_t hlen = HTML_INDEX_LEN;
         res_len = snprintf(res, sizeof(res),
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: text/html; charset=UTF-8\r\n"
@@ -506,7 +354,7 @@ static void handle_client(int cfd)
             "Content-Length: %zu\r\n"
             "Connection: close\r\n\r\n", hlen);
         write(cfd, res, (size_t)res_len);
-        write(cfd, HTML_INDEX, hlen);
+        write_all(cfd, HTML_INDEX, hlen);
     }
     close(cfd);
 }

@@ -7,8 +7,9 @@ VERSION   := $(shell sed -E -n 's/.*ANYPAD_VERSION[[:space:]]+"([^"]+)".*/\1/p' 
 BUILD_NUM := $(shell sed -E -n 's/.*ANYPAD_BUILD[[:space:]]+([0-9]+).*/\1/p' src/version.h | tr -d '\r')
 ELF       := dist/OmniPad-PS5-$(VERSION)-b$(BUILD_NUM).elf
 BUILD     := build/ps5
+GEN       := $(BUILD)/gen
 
-CFLAGS    := -std=c11 -Wall -Wextra -O2 -Isrc
+CFLAGS    := -std=c11 -Wall -Wextra -O2 -Isrc -I$(GEN)
 LDLIBS    += -lScePad -lSceUserService -lSceSystemService -lSceAppInstUtil -ldl
 
 SRCS := src/util.c src/log.c src/profiles.c \
@@ -31,6 +32,13 @@ HEADERS := $(wildcard src/*.h)
 $(BUILD)/%.o: src/%.c $(HEADERS)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c -o $@ $<
+
+# Dashboard page, embedded into the payload as a C array
+$(GEN)/web_index.h: web/index.html tools/embed_web.py
+	@mkdir -p $(GEN)
+	python3 tools/embed_web.py $< $@ HTML_INDEX
+
+$(BUILD)/web.o: $(GEN)/web_index.h
 
 clean:
 	rm -rf $(BUILD)
