@@ -5,16 +5,24 @@ Slot 1 is a DualShock 4 on a cable that never stops reporting, cycling through e
 Slot 2 is an 8BitDo dongle that only reports on change: it moves for a few seconds, then goes
 quiet long enough to show the 60s idle countdown. Slot 3 is free.
 
-Usage: python tools/mock_dashboard.py [port]   (default 8095, then open http://localhost:8095/)
+With --proxy, /api/* goes to a real OmniPad instead (the page is still served from disk), so the
+dashboard can be worked on against live controllers without rebuilding the payload.
+
+Usage: python tools/mock_dashboard.py [port] [--proxy http://<PS5_IP>:8095]
+       (default port 8095, then open http://localhost:<port>/)
 """
 import json
 import math
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+
+PROXY = None
 
 ROOT = Path(__file__).resolve().parent.parent
 PAGE = ROOT / "web" / "index.html"
@@ -94,10 +102,21 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+    def _proxy(self, method):
+        req = urllib.request.Request(PROXY + self.path, method=method, data=b"" if method == "POST" else None)
+        try:
+            with urllib.request.urlopen(req, timeout=3) as res:
+                extra = {k: v for k, v in res.headers.items() if k in ("X-Log-Offset",)}
+                self._send(res.status, res.read(), res.headers.get("Content-Type", "text/plain"), extra)
+        except (urllib.error.URLError, TimeoutError) as e:
+            self._send(502, f"proxy error: {e}", "text/plain")
+
     def do_GET(self):
         url = urlparse(self.path)
         t = time.time() - START
-        if url.path == "/api/state":
+        if PROXY and url.path.startswith("/api/"):
+            self._proxy("GET")
+        elif url.path == "/api/state":
             state = {"version": "1.0.4-mock", "build": 0, "uptime_ms": now_ms(), "now_ms": now_ms(),
                      "slots": [ds4_slot(t), dongle.slot(t), FREE]}
             self._send(200, json.dumps(state), "application/json")
@@ -114,6 +133,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, PAGE.read_bytes(), "text/html; charset=UTF-8")
 
     def do_POST(self):
+        if PROXY:
+            self._proxy("POST")
+            return
         log(f"web: mock received POST {self.path}")
         self._send(200, '{"status":"ok"}', "application/json")
 
@@ -137,7 +159,13 @@ def background_log():
 
 
 if __name__ == "__main__":
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8095
-    threading.Thread(target=background_log, daemon=True).start()
-    print(f"mock dashboard on http://localhost:{port}/")
+    args = sys.argv[1:]
+    if "--proxy" in args:
+        i = args.index("--proxy")
+        PROXY = args[i + 1].rstrip("/")
+        del args[i:i + 2]
+    port = int(args[0]) if args else 8095
+    if not PROXY:
+        threading.Thread(target=background_log, daemon=True).start()
+    print(f"dashboard on http://localhost:{port}/" + (f" (API proxied to {PROXY})" if PROXY else " (simulated API)"))
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()

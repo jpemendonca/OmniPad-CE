@@ -70,6 +70,7 @@
     .slot .nm { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .slot .sub { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .slot.free .nm { color: var(--faint); font-weight: 600; }
+    .slot .pl .short { display: none; }
 
     /* Main tester */
     .main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
@@ -144,9 +145,14 @@
     }
     @media (max-width: 560px) {
       .wrap { padding: 12px; }
-      .slots { grid-template-columns: 1fr; }
-      .slot { min-height: 0; }
-      .readouts { grid-template-columns: 1fr; }
+      .slots { gap: 6px; }
+      .slot { min-height: 0; padding: 9px 10px; gap: 3px; }
+      .slot .sub, .slot .pl .long { display: none; }
+      .slot .pl .short { display: inline; }
+      .slot .nm { font-size: 13px; }
+      .stickbox { flex-direction: column; align-items: flex-start; gap: 6px; }
+      .stickbox svg { width: 72px; height: 72px; }
+      .trig { grid-template-columns: 22px 1fr 30px; gap: 6px; }
       pre.log { height: 260px; }
     }
   </style>
@@ -420,7 +426,8 @@
         const free = s.status === ST_FREE;
         b.classList.toggle('free', free);
         b.setAttribute('aria-selected', String(i === selected));
-        b.querySelector('.pl').textContent = `${T.player} ${i + 2} · slot ${i}`; // the log numbers slots from 0
+        // the log numbers slots from 0; phones only show the short form
+        b.querySelector('.pl').innerHTML = `<span class="long">${T.player} ${i + 2} · slot ${i}</span><span class="short">P${i + 2}</span>`;
         b.querySelector('.led').className = 'led ' + slotLed(s);
         b.querySelector('.nm').textContent = free ? T.free : (s.name || 'Controller');
         b.querySelector('.sub').textContent = free ? T.waiting : `${connPill(s.conn)} · ${T.st[s.status] || ''}`;
