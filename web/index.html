@@ -1,46 +1,108 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>OmniPad PS5</title>
+  <script>
+    /* Apply the saved theme before first paint; light is the default */
+    try { document.documentElement.dataset.theme = localStorage.getItem('omnipad.theme') === 'dark' ? 'dark' : 'light'; } catch (e) { /* private mode */ }
+  </script>
   <style>
     :root {
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --tri: #1fb57a;
+      --cir: #e5484d;
+      --crs: #3b82f6;
+      --sqr: #d6409f;
+    }
+    :root, [data-theme="light"] {
+      --bg: #eef1f6;
+      --panel: #ffffff;
+      --panel-2: #f5f7fb;
+      --line: rgba(15, 23, 42, 0.08);
+      --line-strong: rgba(15, 23, 42, 0.16);
+      --hover: rgba(15, 23, 42, 0.32);
+      --text: #0f172a;
+      --muted: #5b6678;
+      --faint: #94a0b2;
+      --accent: #2563eb;
+      --accent-soft: rgba(37, 99, 235, 0.10);
+      --accent-text: #1d4ed8;
+      --ok: #059669;
+      --ok-soft: rgba(5, 150, 105, 0.10);
+      --warn: #b45309;
+      --warn-soft: rgba(217, 119, 6, 0.10);
+      --bad: #dc2626;
+      --bad-soft: rgba(220, 38, 38, 0.08);
+      --shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.05);
+      /* controller */
+      --pad-shell: #ffffff;
+      --pad-shell-edge: #c3ccd9;
+      --pad-core-edge: #c3ccd9;
+      --pad-touch: #f3f5f9;
+      --pad-key: #eef1f6;
+      --pad-key-edge: #c3ccd9;
+      --pad-glyph: #8a94a6;
+      --pad-well: #e9edf3;
+      --pad-cap: #f7f9fc;
+      --pad-cap-ring: #b9c2d0;
+      --pad-core-key: #eef1f6;
+      --pad-trig: #e4e8ef;
+      --pad-label: #7a8496;
+      --log-bg: #f8fafc;
+      --log-text: #1e293b;
+    }
+    [data-theme="dark"] {
       --bg: #080b12;
       --panel: #111827;
       --panel-2: #0d1320;
       --line: rgba(255, 255, 255, 0.08);
       --line-strong: rgba(255, 255, 255, 0.16);
+      --hover: rgba(255, 255, 255, 0.32);
       --text: #e8edf5;
       --muted: #8a96a8;
       --faint: #5b6678;
       --accent: #4f8cff;
       --accent-soft: rgba(79, 140, 255, 0.16);
+      --accent-text: #b9d1ff;
       --ok: #2dd4a0;
       --ok-soft: rgba(45, 212, 160, 0.14);
       --warn: #f5b443;
       --warn-soft: rgba(245, 180, 67, 0.14);
       --bad: #f26d6d;
       --bad-soft: rgba(242, 109, 109, 0.14);
-      --pad-body: #1a2233;
-      --pad-edge: #2b3650;
-      --pad-key: #253048;
+      --shadow: none;
+      --pad-shell: #1c2433;
+      --pad-shell-edge: #34405a;
+      --pad-core-edge: #34405a;
+      --pad-touch: #222c3e;
+      --pad-key: #273246;
+      --pad-key-edge: #3a4762;
+      --pad-glyph: #7d8aa3;
+      --pad-well: #141b28;
+      --pad-cap: #2b3448;
+      --pad-cap-ring: #3c4762;
+      --pad-core-key: #273246;
+      --pad-trig: #1a2130;
+      --pad-label: #6b7790;
+      --log-bg: #0d1320;
+      --log-text: #c3ccda;
       --tri: #3ddc97;
       --cir: #ff6b6b;
       --crs: #5aa9ff;
       --sqr: #f78fd0;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
     body { background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.45; }
     .wrap { max-width: 1120px; margin: 0 auto; padding: 16px; }
     button { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line-strong); border-radius: 10px; padding: 9px 14px; min-height: 40px; cursor: pointer; font-weight: 600; font-size: 13px; }
-    button:hover { border-color: rgba(255, 255, 255, 0.3); }
+    button:hover { border-color: var(--hover); }
     button:active { transform: scale(0.98); }
     button:disabled { opacity: 0.4; cursor: default; transform: none; }
-    button.danger { color: var(--bad); border-color: rgba(242, 109, 109, 0.35); background: var(--bad-soft); }
+    button.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); background: var(--bad-soft); }
     button.ghost { background: transparent; }
     input[type=search] { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 12px; min-height: 38px; width: 100%; }
 
@@ -55,16 +117,18 @@
     .led.ok { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
     .led.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
     .led.bad { background: var(--bad); box-shadow: 0 0 8px var(--bad); }
-    .lang button { min-height: 30px; padding: 4px 10px; font-size: 12px; border-radius: 8px; }
-    .lang button[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); }
+    .seg { display: inline-flex; gap: 4px; }
+    .seg button { min-height: 30px; padding: 4px 10px; font-size: 12px; border-radius: 8px; }
+    .seg button[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
+    .seg svg { width: 14px; height: 14px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-    .banner { display: none; margin-bottom: 14px; padding: 10px 14px; border-radius: 10px; background: var(--bad-soft); color: #ffc1c1; border: 1px solid rgba(242, 109, 109, 0.3); font-size: 13px; }
+    .banner { display: none; margin-bottom: 14px; padding: 10px 14px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); border: 1px solid color-mix(in srgb, var(--bad) 30%, transparent); font-size: 13px; }
     .banner.show { display: block; }
 
     /* Slot cards */
     .slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
-    .slot { text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); min-height: 92px; font-weight: 400; }
-    .slot[aria-selected=true] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+    .slot { text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); min-height: 92px; font-weight: 400; }
+    .slot[aria-selected=true] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, var(--shadow); }
     .slot .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .slot .pl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
     .slot .nm { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -74,34 +138,43 @@
 
     /* Main tester */
     .main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
-    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
     .panel h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .pad-wrap { position: relative; }
-    .pad-wrap.idle svg { opacity: 0.35; }
-    .pad-hint { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; color: var(--muted); font-size: 13px; padding: 24px; }
+    .pad-wrap.idle svg.pad { opacity: 0.45; }
+    .pad-hint { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; color: var(--muted); font-size: 13px; font-weight: 600; padding: 24px; }
     .pad-wrap.idle .pad-hint { display: flex; }
     svg.pad { width: 100%; height: auto; display: block; }
-    .pad .body { fill: var(--pad-body); stroke: var(--pad-edge); stroke-width: 2; }
-    .pad .key { fill: var(--pad-key); stroke: var(--pad-edge); stroke-width: 1.5; transition: fill 60ms; }
-    .pad .key.on { fill: var(--accent); stroke: #9cc0ff; filter: drop-shadow(0 0 6px rgba(79, 140, 255, 0.9)); }
-    .pad .glyph { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
-    .pad .g-tri { stroke: var(--tri); } .pad .g-cir { stroke: var(--cir); } .pad .g-crs { stroke: var(--crs); } .pad .g-sqr { stroke: var(--sqr); }
-    .pad .face.on .glyph { stroke: #fff; }
-    .pad #k-tri.on { fill: var(--tri); } .pad #k-cir.on { fill: var(--cir); } .pad #k-crs.on { fill: var(--crs); } .pad #k-sqr.on { fill: var(--sqr); }
-    .pad .well { fill: #121a29; stroke: var(--pad-edge); stroke-width: 1.5; }
-    .pad .stick { fill: #2f3b57; stroke: #46557a; stroke-width: 2; }
-    .pad .stick.on { fill: var(--accent); stroke: #9cc0ff; }
-    .pad .trig-bg { fill: #121a29; stroke: var(--pad-edge); stroke-width: 1.5; }
-    .pad .trig-fill { fill: var(--accent); }
-    .pad .lbl { fill: var(--faint); font-size: 10px; font-weight: 700; font-family: inherit; text-anchor: middle; pointer-events: none; }
-    .pad .touch { fill: #1f2940; stroke: var(--pad-edge); stroke-width: 1.5; }
+
+    /* DualSense drawing */
+    .pad .shell { fill: var(--pad-shell); stroke: var(--pad-shell-edge); stroke-width: 2; }
+    .pad .touch { fill: var(--pad-touch); stroke: var(--pad-shell-edge); stroke-width: 1.5; transition: fill 60ms; }
     .pad .touch.on { fill: var(--accent-soft); stroke: var(--accent); }
+    .pad .lightbar { fill: none; stroke: var(--pad-shell-edge); stroke-width: 3; stroke-linecap: round; transition: stroke 200ms; }
+    .pad .lightbar.lit { stroke: var(--accent); filter: drop-shadow(0 0 3px var(--accent)); }
+    .pad .key { fill: var(--pad-key); stroke: var(--pad-key-edge); stroke-width: 1.5; stroke-linejoin: round; transition: fill 60ms; }
+    .pad .key.on { fill: var(--accent); stroke: var(--accent); filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 70%, transparent)); }
+    .pad .ckey { fill: var(--pad-core-key); stroke: var(--pad-core-edge); stroke-width: 1.5; transition: fill 60ms; }
+    .pad .ckey.on { fill: var(--accent); stroke: var(--accent); filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 70%, transparent)); }
+    .pad .glyph { fill: none; stroke: var(--pad-glyph); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; transition: stroke 60ms; }
+    .pad .face.on .glyph { stroke: #fff; }
+    .pad #k-tri.on { fill: var(--tri); stroke: var(--tri); } .pad #k-cir.on { fill: var(--cir); stroke: var(--cir); }
+    .pad #k-crs.on { fill: var(--crs); stroke: var(--crs); } .pad #k-sqr.on { fill: var(--sqr); stroke: var(--sqr); }
+    .pad .well { fill: var(--pad-well); stroke: var(--pad-core-edge); stroke-width: 1.5; }
+    .pad .cap { fill: var(--pad-cap); stroke: var(--pad-cap-ring); stroke-width: 2; transition: fill 60ms; }
+    .pad .cap-ring { fill: none; stroke: var(--pad-cap-ring); stroke-width: 1.5; }
+    .pad .stick.on .cap { fill: var(--accent); stroke: var(--accent); }
+    .pad .trig-bg { fill: var(--pad-trig); stroke: var(--pad-shell-edge); stroke-width: 1.5; }
+    .pad .trig-fill { fill: var(--accent); }
+    .pad .lbl { fill: var(--pad-label); font-size: 10px; font-weight: 700; font-family: inherit; text-anchor: middle; pointer-events: none; }
+    .pad .ps-glyph { fill: none; stroke: var(--pad-glyph); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+    .pad .ckey.on + .ps-glyph { stroke: #fff; }
 
     .readouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
     .stickbox { display: flex; gap: 12px; align-items: center; }
     .stickbox svg { width: 84px; height: 84px; flex: none; }
     .stickbox .ring { fill: var(--panel-2); stroke: var(--line-strong); stroke-width: 1.5; }
-    .stickbox .cross { stroke: var(--line); stroke-width: 1; }
+    .stickbox .cross { stroke: var(--line-strong); stroke-width: 1; }
     .stickbox .dot { fill: var(--accent); }
     .kv { font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.7; }
     .kv b { color: var(--text); font-weight: 600; }
@@ -109,7 +182,7 @@
     .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 40ms linear; }
     .trig { display: grid; grid-template-columns: 28px 1fr 34px; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
     .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; margin-top: 12px; }
-    .chip { font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 7px; background: var(--accent-soft); color: #b9d1ff; border: 1px solid rgba(79, 140, 255, 0.35); }
+    .chip { font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 7px; background: var(--accent-soft); color: var(--accent-text); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
     .chips .none { font-size: 12px; color: var(--faint); align-self: center; }
 
     /* Health */
@@ -124,17 +197,14 @@
     .note.warn { color: var(--warn); }
     .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 
-    .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
-    .pill.ok { color: var(--ok); background: var(--ok-soft); border-color: rgba(45, 212, 160, 0.3); }
-    .pill.warn { color: var(--warn); background: var(--warn-soft); border-color: rgba(245, 180, 67, 0.3); }
-    .pill.bad { color: var(--bad); background: var(--bad-soft); border-color: rgba(242, 109, 109, 0.3); }
+    .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
 
     /* Log */
     .log-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
     .log-tools .grow { flex: 1 1 200px; }
     .quick button { min-height: 32px; padding: 4px 10px; font-size: 12px; }
-    .quick button[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); }
-    pre.log { font-family: var(--mono); font-size: 12px; line-height: 1.55; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-word; color: #c3ccda; }
+    .quick button[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
+    pre.log { font-family: var(--mono); font-size: 12px; line-height: 1.55; background: var(--log-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-word; color: var(--log-text); }
     pre.log .w { color: var(--warn); } pre.log .e { color: var(--bad); } pre.log .g { color: var(--ok); } pre.log .t { color: var(--faint); }
 
     footer { margin-top: 20px; color: var(--faint); font-size: 12px; text-align: center; }
@@ -166,7 +236,11 @@
       </div>
       <div class="hdr-right">
         <span class="link"><span class="led" id="linkLed"></span><span id="linkText"></span></span>
-        <div class="lang" role="group" aria-label="Idioma / Language">
+        <div class="seg" role="group" id="themeSeg">
+          <button type="button" data-set-theme="light" id="btnLight"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
+          <button type="button" data-set-theme="dark" id="btnDark"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>
+        </div>
+        <div class="seg" role="group" aria-label="Idioma / Language">
           <button type="button" data-lang="pt">PT</button>
           <button type="button" data-lang="en">EN</button>
         </div>
@@ -181,41 +255,50 @@
       <section class="panel" aria-labelledby="hTest">
         <h2><span id="hTest"></span><span class="pill" id="slotPill"></span></h2>
         <div class="pad-wrap idle" id="padWrap">
-          <svg class="pad" viewBox="0 0 480 300" aria-hidden="true">
-            <!-- triggers -->
-            <rect class="trig-bg" x="102" y="14" width="74" height="22" rx="8"/>
-            <rect class="trig-fill" id="t-l2" x="102" y="14" width="0" height="22" rx="8"/>
-            <text class="lbl" x="139" y="29">L2</text>
-            <rect class="trig-bg" x="304" y="14" width="74" height="22" rx="8"/>
-            <rect class="trig-fill" id="t-r2" x="304" y="14" width="0" height="22" rx="8"/>
-            <text class="lbl" x="341" y="29">R2</text>
-            <!-- shoulders -->
-            <rect class="key" id="k-l1" x="98" y="42" width="82" height="14" rx="7"/>
-            <rect class="key" id="k-r1" x="300" y="42" width="82" height="14" rx="7"/>
-            <!-- body -->
-            <path class="body" d="M150,62 C176,52 304,52 330,62 L352,70 C392,80 418,112 436,170 C452,222 450,268 418,278 C392,286 372,262 352,232 C340,214 326,206 310,206 L170,206 C154,206 140,214 128,232 C108,262 88,286 62,278 C30,268 28,222 44,170 C62,112 88,80 128,70 Z"/>
-            <!-- touchpad, create, options -->
-            <rect class="touch" id="k-touch" x="178" y="66" width="124" height="68" rx="12"/>
-            <rect class="key" id="k-create" x="150" y="74" width="10" height="22" rx="5"/>
-            <rect class="key" id="k-options" x="320" y="74" width="10" height="22" rx="5"/>
-            <!-- d-pad -->
-            <rect class="key" id="k-up" x="108" y="108" width="20" height="25" rx="4"/>
-            <rect class="key" id="k-down" x="108" y="147" width="20" height="25" rx="4"/>
-            <rect class="key" id="k-left" x="83" y="130" width="25" height="20" rx="4"/>
-            <rect class="key" id="k-right" x="128" y="130" width="25" height="20" rx="4"/>
-            <!-- face buttons -->
-            <g class="face" id="f-tri"><circle class="key" id="k-tri" cx="362" cy="113" r="14"/><path class="glyph g-tri" d="M362,106 L369,118 L355,118 Z"/></g>
-            <g class="face" id="f-cir"><circle class="key" id="k-cir" cx="389" cy="140" r="14"/><circle class="glyph g-cir" cx="389" cy="140" r="6.5"/></g>
-            <g class="face" id="f-crs"><circle class="key" id="k-crs" cx="362" cy="167" r="14"/><path class="glyph g-crs" d="M356,161 L368,173 M368,161 L356,173"/></g>
-            <g class="face" id="f-sqr"><circle class="key" id="k-sqr" cx="335" cy="140" r="14"/><rect class="glyph g-sqr" x="329" y="134" width="12" height="12" rx="1"/></g>
+          <!-- DualSense-style controller in one colour per theme, wide touchpad with light bar -->
+          <svg class="pad" viewBox="0 0 520 340" aria-hidden="true">
+            <!-- L2 / R2 -->
+            <g transform="rotate(-7 152 34)">
+              <rect class="trig-bg" x="116" y="20" width="72" height="24" rx="10"/>
+              <rect class="trig-fill" id="t-l2" x="116" y="20" width="0" height="24" rx="10"/>
+              <text class="lbl" x="152" y="36">L2</text>
+            </g>
+            <g transform="rotate(7 368 34)">
+              <rect class="trig-bg" x="332" y="20" width="72" height="24" rx="10"/>
+              <rect class="trig-fill" id="t-r2" x="332" y="20" width="0" height="24" rx="10"/>
+              <text class="lbl" x="368" y="36">R2</text>
+            </g>
+            <!-- L1 / R1 -->
+            <rect class="key" id="k-l1" x="108" y="48" width="86" height="13" rx="6.5" transform="rotate(-7 151 54)"/>
+            <rect class="key" id="k-r1" x="326" y="48" width="86" height="13" rx="6.5" transform="rotate(7 369 54)"/>
+            <!-- shell -->
+            <path class="shell" d="M260,58 C210,58 168,58 140,62 C112,66 92,76 78,94 C58,120 46,162 38,208 C30,258 30,300 54,318 C76,334 104,324 118,304 C134,280 150,254 176,244 C200,236 230,234 260,234 C290,234 320,236 344,244 C370,254 386,280 402,304 C416,324 444,334 466,318 C490,300 490,258 482,208 C474,162 462,120 442,94 C428,76 408,66 380,62 C352,58 310,58 260,58 Z"/>
+            <!-- touchpad and light bar -->
+            <rect class="touch" id="k-touch" x="184" y="62" width="152" height="82" rx="14"/>
+            <path class="lightbar" id="lb-l" d="M182,96 Q180,146 214,148"/>
+            <path class="lightbar" id="lb-r" d="M338,96 Q340,146 306,148"/>
+            <!-- create / options -->
+            <rect class="key" id="k-create" x="161" y="74" width="9" height="22" rx="4.5"/>
+            <rect class="key" id="k-options" x="350" y="74" width="9" height="22" rx="4.5"/>
+            <!-- d-pad: four separate arrows pointing at the centre (118,140) -->
+            <path class="key" id="k-up" d="M110,110 h16 v15 l-8,9 l-8,-9 Z"/>
+            <path class="key" id="k-down" d="M110,170 h16 v-15 l-8,-9 l-8,9 Z"/>
+            <path class="key" id="k-left" d="M88,132 v16 h15 l9,-8 l-9,-8 Z"/>
+            <path class="key" id="k-right" d="M148,132 v16 h-15 l-9,-8 l9,-8 Z"/>
+            <!-- face buttons around (402,140) -->
+            <g class="face" id="f-tri"><circle class="key" id="k-tri" cx="402" cy="113" r="13"/><path class="glyph" d="M402,106.5 L408.5,117.5 L395.5,117.5 Z"/></g>
+            <g class="face" id="f-cir"><circle class="key" id="k-cir" cx="429" cy="140" r="13"/><circle class="glyph" cx="429" cy="140" r="6"/></g>
+            <g class="face" id="f-crs"><circle class="key" id="k-crs" cx="402" cy="167" r="13"/><path class="glyph" d="M396.5,161.5 L407.5,172.5 M407.5,161.5 L396.5,172.5"/></g>
+            <g class="face" id="f-sqr"><circle class="key" id="k-sqr" cx="375" cy="140" r="13"/><rect class="glyph" x="369.5" y="134.5" width="11" height="11" rx="1"/></g>
             <!-- sticks -->
-            <circle class="well" cx="182" cy="178" r="25"/>
-            <circle class="stick" id="s-l" cx="182" cy="178" r="15"/>
-            <circle class="well" cx="298" cy="178" r="25"/>
-            <circle class="stick" id="s-r" cx="298" cy="178" r="15"/>
-            <!-- PS, mute -->
-            <circle class="key" id="k-ps" cx="240" cy="170" r="10"/>
-            <rect class="key" id="k-mute" x="231" y="190" width="18" height="7" rx="3.5"/>
+            <circle class="well" cx="200" cy="192" r="27"/>
+            <g class="stick" id="s-l" transform="translate(200 192)"><circle class="cap" r="18"/><circle class="cap-ring" r="11"/></g>
+            <circle class="well" cx="320" cy="192" r="27"/>
+            <g class="stick" id="s-r" transform="translate(320 192)"><circle class="cap" r="18"/><circle class="cap-ring" r="11"/></g>
+            <!-- PS and mute -->
+            <circle class="ckey" id="k-ps" cx="260" cy="186" r="9"/>
+            <path class="ps-glyph" d="M257.5,191 V181 h3.5 a2.5,2.5 0 0 1 0,5 h-3.5"/>
+            <rect class="ckey" id="k-mute" x="251" y="206" width="18" height="7" rx="3.5"/>
           </svg>
           <div class="pad-hint" id="padHint"></div>
         </div>
@@ -300,7 +383,7 @@
         confirmDropAll: 'Desconectar todos os controles virtuais?',
         log: 'Log ao vivo', filter: 'Filtrar o log…', pause: 'Pausar', resume: 'Continuar', clear: 'Limpar',
         qAll: 'Tudo', qUsb: 'USB', qSlot: 'Slots', qErr: 'Erros',
-        raw: 'log bruto', up: 'ligado há'
+        raw: 'log bruto', up: 'ligado há', light: 'Tema claro', dark: 'Tema escuro'
       },
       en: {
         linkOk: 'Connected to PS5', linkWait: 'Connecting…', linkBad: 'No response',
@@ -324,7 +407,7 @@
         confirmDropAll: 'Disconnect all virtual controllers?',
         log: 'Live log', filter: 'Filter the log…', pause: 'Pause', resume: 'Resume', clear: 'Clear',
         qAll: 'All', qUsb: 'USB', qSlot: 'Slots', qErr: 'Errors',
-        raw: 'raw log', up: 'up for'
+        raw: 'raw log', up: 'up for', light: 'Light theme', dark: 'Dark theme'
       }
     };
 
@@ -337,17 +420,20 @@
       ['ps', 1 << 16, 'PS'], ['mute', 1 << 18, 'Mute'], ['touch', 1 << 20, 'Touchpad']
     ];
     const ST_FREE = 0, ST_READY = 3;
+    const STICK_L = [200, 192], STICK_R = [320, 192], STICK_TRAVEL = 10, TRIG_W = 72;
     const STATE_EVERY_MS = 33, LOG_EVERY_MS = 1000, MAX_LOG_LINES = 1500;
 
     const $ = (id) => document.getElementById(id);
-    let lang = (localStorage.getItem('omnipad.lang') || (navigator.language || 'pt').slice(0, 2)) === 'en' ? 'en' : 'pt';
+    function load(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
+    function save(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
+
+    let lang = load('omnipad.lang', (navigator.language || 'pt').slice(0, 2)) === 'en' ? 'en' : 'pt';
     let T = I18N[lang];
-    let selected = Number(localStorage.getItem('omnipad.slot') || 0) || 0;
+    let theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    let selected = Number(load('omnipad.slot', '0')) || 0;
     let last = null;          // last /api/state
     let failures = 0;
     const hist = [[], [], []]; // per slot: [{t, inputs, injected}]
-
-    function safeStore(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
 
     /* ---------- formatting ---------- */
     function fmtDur(ms) {
@@ -359,13 +445,21 @@
       return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
     }
     function hex4(n) { return Number(n || 0).toString(16).padStart(4, '0'); }
-    function connPill(c) { return T.conn[c] || T.conn[0]; }
+    function connName(c) { return T.conn[c] || T.conn[0]; }
 
     /* ---------- static text ---------- */
+    function applyTheme() {
+      document.documentElement.dataset.theme = theme;
+      $('btnLight').setAttribute('aria-pressed', String(theme === 'light'));
+      $('btnDark').setAttribute('aria-pressed', String(theme === 'dark'));
+    }
+
     function applyLang() {
       T = I18N[lang];
       document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
-      document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+      document.querySelectorAll('[data-lang]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+      $('btnLight').setAttribute('aria-label', T.light); $('btnLight').title = T.light;
+      $('btnDark').setAttribute('aria-label', T.dark); $('btnDark').title = T.dark;
       $('hTest').textContent = T.test; $('hHealth').textContent = T.health; $('hLog').textContent = T.log;
       $('lblLS').textContent = T.ls; $('lblRS').textContent = T.rs;
       $('kRate').textContent = T.kRate; $('kAge').textContent = T.kAge; $('kInj').textContent = T.kInj;
@@ -387,7 +481,7 @@
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'slot'; b.setAttribute('role', 'tab'); b.id = `slot${i}`;
         b.innerHTML = '<div class="top"><span class="pl"></span><span class="led"></span></div><div class="nm"></div><div class="sub"></div>';
-        b.addEventListener('click', () => { selected = i; safeStore('omnipad.slot', String(i)); if (last) render(last); });
+        b.addEventListener('click', () => { selected = i; save('omnipad.slot', String(i)); if (last) render(last); });
         box.appendChild(b);
       }
     }
@@ -416,6 +510,10 @@
 
     /* ---------- render ---------- */
     function setKey(id, on) { const el = $(id); if (el) el.classList.toggle('on', on); }
+    function moveStick(id, [cx, cy], x, y) {
+      const off = (v) => ((v - 128) / 128) * STICK_TRAVEL;
+      $(id).setAttribute('transform', `translate(${cx + off(x)} ${cy + off(y)})`);
+    }
 
     function render(d) {
       $('ver').textContent = `v${d.version} · build ${d.build} · ${T.up} ${fmtDur(d.uptime_ms)}`;
@@ -430,38 +528,38 @@
         b.querySelector('.pl').innerHTML = `<span class="long">${T.player} ${i + 2} · slot ${i}</span><span class="short">P${i + 2}</span>`;
         b.querySelector('.led').className = 'led ' + slotLed(s);
         b.querySelector('.nm').textContent = free ? T.free : (s.name || 'Controller');
-        b.querySelector('.sub').textContent = free ? T.waiting : `${connPill(s.conn)} · ${T.st[s.status] || ''}`;
+        b.querySelector('.sub').textContent = free ? T.waiting : `${connName(s.conn)} · ${T.st[s.status] || ''}`;
       });
 
       const s = d.slots[selected] || d.slots[0];
       const free = s.status === ST_FREE;
       const gotInput = s.input_age_ms >= 0;
+      const live = !free && gotInput;  // until the first report the pad is drawn at rest
 
       $('slotPill').textContent = `${T.player} ${selected + 2}`;
-      const wrap = $('padWrap');
-      wrap.classList.toggle('idle', free || !gotInput);
+      $('padWrap').classList.toggle('idle', !live);
       $('padHint').textContent = free ? T.hintFree : T.hintWait;
+      ['lb-l', 'lb-r'].forEach(id => $(id).classList.toggle('lit', s.status === ST_READY));
 
-      const btn = free ? 0 : s.buttons >>> 0;
+      const btn = live ? s.buttons >>> 0 : 0;
       BTN.forEach(([k, bit]) => setKey(`k-${k}`, (btn & bit) !== 0));
       ['tri', 'cir', 'crs', 'sqr'].forEach(k => $(`f-${k}`).classList.toggle('on', $(`k-${k}`).classList.contains('on')));
       setKey('s-l', (btn & (1 << 1)) !== 0); setKey('s-r', (btn & (1 << 2)) !== 0);
 
-      const lx = free ? 128 : s.lx, ly = free ? 128 : s.ly, rx = free ? 128 : s.rx, ry = free ? 128 : s.ry;
-      const l2 = free ? 0 : s.l2, r2 = free ? 0 : s.r2;
+      const lx = live ? s.lx : 128, ly = live ? s.ly : 128, rx = live ? s.rx : 128, ry = live ? s.ry : 128;
+      const l2 = live ? s.l2 : 0, r2 = live ? s.r2 : 0;
+      moveStick('s-l', STICK_L, lx, ly); moveStick('s-r', STICK_R, rx, ry);
       const off = (v) => ((v - 128) / 128);
-      $('s-l').setAttribute('cx', 182 + off(lx) * 12); $('s-l').setAttribute('cy', 178 + off(ly) * 12);
-      $('s-r').setAttribute('cx', 298 + off(rx) * 12); $('s-r').setAttribute('cy', 178 + off(ry) * 12);
       $('m-l').setAttribute('cx', 42 + off(lx) * 33); $('m-l').setAttribute('cy', 42 + off(ly) * 33);
       $('m-r').setAttribute('cx', 42 + off(rx) * 33); $('m-r').setAttribute('cy', 42 + off(ry) * 33);
-      $('t-l2').setAttribute('width', 74 * l2 / 255); $('t-r2').setAttribute('width', 74 * r2 / 255);
+      $('t-l2').setAttribute('width', TRIG_W * l2 / 255); $('t-r2').setAttribute('width', TRIG_W * r2 / 255);
       $('v-lx').textContent = lx; $('v-ly').textContent = ly; $('v-rx').textContent = rx; $('v-ry').textContent = ry;
       $('v-l2').textContent = l2; $('v-r2').textContent = r2;
       $('b-l2').style.width = `${l2 / 2.55}%`; $('b-r2').style.width = `${r2 / 2.55}%`;
 
       const pressed = BTN.filter(([, bit]) => btn & bit).map(([, , label]) => label);
       const chips = $('chips');
-      const sig = pressed.join('|');
+      const sig = lang + pressed.join('|');
       if (chips.dataset.sig !== sig) {
         chips.dataset.sig = sig;
         chips.innerHTML = '';
@@ -477,7 +575,7 @@
       $('vInj').className = 'v' + (free || inj == null ? '' : (s.status === ST_READY ? (inj >= 200 ? ' ok' : ' warn') : ''));
       $('vAge').innerHTML = free ? '—' : (gotInput ? `${fmtDur(s.input_age_ms)} <small>${T.ago}</small>` : T.never);
       $('vUp').textContent = free ? '—' : fmtDur(s.connected_ms);
-      $('vConn').textContent = free ? '—' : connPill(s.conn);
+      $('vConn').textContent = free ? '—' : connName(s.conn);
       $('vId').textContent = free || (!s.vid && !s.pid) ? '—' : `${hex4(s.vid)}:${hex4(s.pid)}`;
       $('vState').textContent = T.st[s.status] || '—';
       $('vState').className = 'v ' + ({ 3: 'ok', 1: 'warn', 2: 'warn', 4: 'bad' }[s.status] || '');
@@ -610,8 +708,11 @@
     }
 
     function wire() {
-      document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => {
-        lang = b.dataset.lang; safeStore('omnipad.lang', lang); applyLang();
+      document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => {
+        lang = b.dataset.lang; save('omnipad.lang', lang); applyLang();
+      }));
+      document.querySelectorAll('#themeSeg [data-set-theme]').forEach(b => b.addEventListener('click', () => {
+        theme = b.dataset.setTheme; save('omnipad.theme', theme); applyTheme();
       }));
       $('btnPS').addEventListener('click', () => post(`/api/press_ps?slot=${selected}`));
       $('btnDrop').addEventListener('click', () => post(`/api/disconnect?slot=${selected}`));
@@ -624,6 +725,7 @@
 
     buildSlots();
     wire();
+    applyTheme();
     applyLang();
     setLink('');
     pollState();
