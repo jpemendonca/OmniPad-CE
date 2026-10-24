@@ -153,9 +153,18 @@ Games and emulators receive the inputs directly from the kernel, recognizing you
 
 ## 🌐 Web Dashboard (Port 8095)
 
-An embedded zero-dependency HTTP server serves the dashboard:
-- **`GET /`**: Glassmorphism Dark UI for smartphone, PC, or console browsers.
+An embedded zero-dependency HTTP server serves the dashboard from its own thread, so a slow client never delays the 250Hz injection loop:
+- **`GET /`**: the dashboard page. Its source is `web/index.html`; the build embeds it into the payload with `tools/embed_web.py`.
+- **`GET /api/state`**: live view polled ~30 times per second: per slot, the buttons, sticks and triggers the controller is sending (also before the slot is ready), VID:PID, time since the last report, report and injection counters, and the idle-release time (0 = never).
 - **`GET /api/status`**: JSON telemetry for all virtual slots, power telemetry, and connection types.
+- **`GET /api/log`**: the last 32 KB of the payload log. With `?since=<offset>` it returns only what was written after that byte, and the `X-Log-Offset` header says where the next call starts.
 - **`POST /api/pair`**: Reserved endpoint for the upcoming v1.1.0 Bluetooth pairing window (currently reports USB Plug & Play status).
 - **`POST /api/press_ps`**: Remotely triggers the PS button to open profile selection or wake the console.
 - **`POST /api/disconnect`**: Frees a specific slot on demand.
+- **`POST /api/exit`**: Stops the payload.
+
+### Working on the dashboard
+
+- `python tools/mock_dashboard.py` serves `web/index.html` with a simulated API (a DualShock 4 on a cable and a 2.4G dongle that only reports on change), so the page can be changed without a PS5.
+- `python tools/mock_dashboard.py 8096 --proxy http://<PS5_IP>:8095` serves the local page but forwards `/api/*` to a running OmniPad, to test page changes against real controllers without rebuilding the payload.
+- `node tools/screenshot_dashboard.mjs <url> <out.png> [width] [height] [lang] [mobile]` captures the page with headless Chrome, waiting in real time so the rate counters show real values. The README images in `docs/images/` come from it; `docs/images/mockup.html` composes `dashboard-mockup.png`.

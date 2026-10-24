@@ -48,7 +48,7 @@ graph TD
         HOTPLUG["Dynamic USB Hotplug Driver<br/>(250Hz Polling / 4ms Tick)"]
         NORM["Canonical Input Normalizer<br/>(pad_packet_t & Deadzones)"]
         SLOTS["3-Slot Multi-Device Multiplexer<br/>(Virtual DualSense Pool)"]
-        WEB["Web Server & REST API<br/>(Port 8095 - Dark UI)"]
+        WEB["Web Server & REST API<br/>(Port 8095 - Dashboard)"]
         TCP["Local LAN Testing Socket<br/>(Port 9045 - TCP Stream)"]
 
         USB --> HOTPLUG
@@ -84,7 +84,7 @@ graph TD
 | **Bypass Error `0x803B0006`** | Non-destructive `ptrace` code cave in `SceShellUI` respecting W^X protections. |
 | **Multi-Player (Up to 4 Players)** | 3 virtual DualSense slots (Players 2–4) + 1 official DualSense (Player 1). |
 | **Dynamic Bus Discovery** | Automatically scans `/dev/ugen*.*` nodes across PS5 Fat, Slim (CFI-2000), and Pro (CFI-7000). |
-| **Embedded Web Dashboard** | Dark UI dashboard on port 8095 for real-time slot status, battery monitoring, and manual controls. |
+| **Embedded Web Dashboard** | Dashboard on port 8095 with a live controller test, connection health, live log and manual controls. |
 | **LAN Test Port** | Inject test frames over TCP port 9045 without needing physical hardware connected. |
 
 ---
@@ -173,10 +173,16 @@ Open the control center from any smartphone, PC, or console browser on your loca
 http://<PS5_IP>:8095/
 ```
 
-- 🎮 **Slot Status:** Real-time visibility of all 4 player slots (connected gamepads and connection types).
-- ⚡ **Power Telemetry:** Live power status (`⚡ USB Cable / 5V` for wired controllers and dongles).
-- 🔘 **Simulate PS Button:** Remotely trigger the PS button to change accounts or open the system menu.
-- 🔄 **Disconnect Slot:** Free any individual slot instantly without unplugging hardware.
+![OmniPad PS5 dashboard on a PC browser and a phone](docs/images/dashboard-mockup.png)
+
+- 🎮 **Live controller test:** a DualSense drawing lights up every button you press, with both sticks, analog triggers and a list of the buttons held. It works as soon as the controller is plugged in, even while the PS5 is still asking for a profile.
+- 📈 **Connection health:** reports per second from the controller, time since its last report, injections per second into the PS5 (should stay close to 250), connection type, VID:PID and the slot state on the console.
+- ⏱️ **Idle rule:** for 2.4G dongles that release the slot after a period without input, the page shows the countdown. Controllers that announce when they switch off (8BitDo Ultimate 2C) don't have this rule.
+- 📜 **Live log:** the payload log streams into the page, with a filter and quick views for USB, slots and errors.
+- 🔘 **Actions:** simulate the PS button or free a slot, per controller; disconnect everything or stop OmniPad.
+- 🌗 **Light and dark themes, Portuguese and English,** and a compact layout for phones.
+
+The dashboard runs on its own thread, so keeping it open does not delay controller input.
 
 ---
 
