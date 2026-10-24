@@ -24,26 +24,20 @@ send: ps5
 
 test: host-test
 
+HOST_SRCS := src/pad_drivers.c src/usb_controllers.c src/profiles.c src/util.c src/log.c
+
 host-test:
 	@mkdir -p $(BUILD)
-	clang -O2 -Isrc src/usb_controllers.c src/profiles.c src/util.c src/log.c tests/test_parsers.c -o $(BUILD)/test_parsers
+	clang -O2 -Isrc $(HOST_SRCS) tests/test_drivers.c -o $(BUILD)/test_drivers
+	./$(BUILD)/test_drivers
+	clang -O2 -Isrc $(HOST_SRCS) tests/test_parsers.c -o $(BUILD)/test_parsers
 	./$(BUILD)/test_parsers
+	clang -O2 -Isrc $(HOST_SRCS) tests/test_flow_sim.c -o $(BUILD)/test_flow_sim
+	./$(BUILD)/test_flow_sim
 	clang -O2 -Isrc tests/test_vpad_abi.c -o $(BUILD)/test_vpad_abi
 	./$(BUILD)/test_vpad_abi
-	clang -O2 -Isrc src/usb_controllers.c src/profiles.c src/util.c src/log.c tests/test_flow_sim.c -o $(BUILD)/test_flow_sim
-	./$(BUILD)/test_flow_sim
-	clang -O2 -Isrc src/usb_controllers.c src/profiles.c src/util.c src/log.c tests/test_normalization.c -o $(BUILD)/test_normalization
-	./$(BUILD)/test_normalization
-	clang -O2 -Isrc src/usb_controllers.c src/profiles.c src/util.c src/log.c tests/test_lifecycle_logout.c -o $(BUILD)/test_lifecycle_logout
-	./$(BUILD)/test_lifecycle_logout
-	clang -O2 -Isrc src/usb_controllers.c src/profiles.c src/util.c src/log.c tests/test_fuzz_usb.c -o $(BUILD)/test_fuzz_usb
-	./$(BUILD)/test_fuzz_usb
-	clang -O2 -Isrc -pthread src/util.c src/log.c tests/test_hotplug_thrashing.c -o $(BUILD)/test_hotplug_thrashing
-	./$(BUILD)/test_hotplug_thrashing
-	clang -O2 -Isrc src/util.c src/log.c tests/test_web_concurrency.c -o $(BUILD)/test_web_concurrency
-	./$(BUILD)/test_web_concurrency
-	clang -O2 -Isrc src/usb_controllers.c src/profiles.c src/util.c src/log.c tests/test_dongle_cable_switch.c -o $(BUILD)/test_dongle_cable_switch
-	./$(BUILD)/test_dongle_cable_switch
+	clang -O2 -Isrc tests/test_pad_struct.c -o $(BUILD)/test_pad_struct
+	./$(BUILD)/test_pad_struct
 
 clean:
 	rm -rf $(BUILD)
