@@ -33,6 +33,7 @@ typedef struct {
     pad_conn_type_t       conn_type;
     pthread_t             thread;
     volatile int          stop_thread;
+    long                  idle_release_ms;  /* free the slot after this long without input; 0 = never */
 
 #ifdef __PROSPERO__
     struct usb_fs_endpoint endpoints[4];
@@ -453,10 +454,11 @@ static void *usb_reader_worker(void *arg)
             last_log_t = cur_time;
             log_line("usb_hotplug: slot %d idle/standby (n=%d, use_fs=%d)",
                      dev->slot, n, dev->use_fs);
-            /* If 2.4G dongle receives no packets for > 60 seconds (1 minute), release vpad to free user profile */
-            if (dev->conn_type == CONN_USB_DONGLE_24G && (cur_time - last_data_time > 60000)) {
+            /* No packets for idle_release_ms: assume the pad behind the dongle was switched off and release the vpad to free the user profile */
+            if (dev->idle_release_ms > 0 && (cur_time - last_data_time > dev->idle_release_ms)) {
                 if (!vpad_slot_is_free(dev->slot)) {
-                    log_line("usb_hotplug: slot %d 2.4G dongle idle for 60s — releasing virtual pad to standby", dev->slot);
+                    log_line("usb_hotplug: slot %d 2.4G dongle idle for %lds — releasing virtual pad to standby",
+                             dev->slot, dev->idle_release_ms / 1000);
                     vpad_remove(dev->slot);
                 }
             }
@@ -642,10 +644,28 @@ static void probe_usb_devices(void)
                                            strstr(ctrl_name, "Receiver") != NULL));
             sdev->conn_type = is_dongle ? CONN_USB_DONGLE_24G : CONN_USB_WIRED;
 
+            /* A dongle stays on USB when its pad is switched off, so a long silence is the only
+             * hint that the player left. The 8BitDo Ultimate 2C does tell us: switching it off
+             * drops the receiver off USB (it comes back as 2dc8:3016), which frees the slot on its
+             * own. It also reports only on change, so the timeout would kick a player who just
+             * stopped touching it, on the dongle and on the cable alike. */
+            int announces_power_off = (vid == 0x2dc8 && pid == 0x3106);
+            sdev->idle_release_ms = (is_dongle && !announces_power_off) ? 60000 : 0;
+            if (is_dongle) {
+                log_line("usb_hotplug: slot %d idle release %s", slot,
+                         sdev->idle_release_ms ? "after 60s without input" : "off (pad announces power-off)");
+            }
+
             vpad_add(slot, sdev->conn_type, ctrl_name);
             pthread_create(&sdev->thread, NULL, usb_reader_worker, sdev);
         }
     }
+}
+
+long usb_hotplug_idle_release_ms(int slot)
+{
+    if (slot < 0 || slot >= MAX_SLOTS || !g_usb_hotplug.devices[slot].active) return 0;
+    return g_usb_hotplug.devices[slot].idle_release_ms;
 }
 
 int usb_hotplug_init(void)
