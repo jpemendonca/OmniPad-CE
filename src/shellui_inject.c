@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -25,6 +26,11 @@
 #include <ps5/nid.h>
 extern uint64_t sceKernelGetProcessTime(void);
 #endif
+
+/* Serializes every ptrace session into SceShellUI/SceShellCore. They are started from the
+ * main loop, the USB reader threads and the web server thread, and two attaches to the
+ * same process at once would fail or corrupt each other's code-cave patch. */
+static pthread_mutex_t g_ptrace_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static uint64_t g_orig_authid = 0;
 static uint8_t  g_orig_caps[16] = {0};
@@ -237,7 +243,7 @@ static int64_t pt_call_remote(pid_t pid, intptr_t fn, intptr_t trap_rip,
 
 #endif /* __PROSPERO__ */
 
-int shellui_press_ps_button(int32_t handle)
+static int press_ps_button_unlocked(int32_t handle)
 {
 #ifdef __PROSPERO__
     pid_t pid = find_process_by_name("SceShellUI");
@@ -377,7 +383,15 @@ int shellui_press_ps_button(int32_t handle)
 #endif
 }
 
-int shellcore_vda(int *code)
+int shellui_press_ps_button(int32_t handle)
+{
+    pthread_mutex_lock(&g_ptrace_mutex);
+    int r = press_ps_button_unlocked(handle);
+    pthread_mutex_unlock(&g_ptrace_mutex);
+    return r;
+}
+
+static int shellcore_vda_unlocked(int *code)
 {
 #ifdef __PROSPERO__
     pid_t pid = find_process_by_name("SceShellCore");
@@ -442,7 +456,15 @@ int shellcore_vda(int *code)
 #endif
 }
 
-static int call_remote_mbus(const char *proc_name, const char *sym, uint64_t a1, uint64_t a2, int64_t *out_res)
+int shellcore_vda(int *code)
+{
+    pthread_mutex_lock(&g_ptrace_mutex);
+    int r = shellcore_vda_unlocked(code);
+    pthread_mutex_unlock(&g_ptrace_mutex);
+    return r;
+}
+
+static int call_remote_mbus_unlocked(const char *proc_name, const char *sym, uint64_t a1, uint64_t a2, int64_t *out_res)
 {
     pid_t pid = find_process_by_name(proc_name);
     if (pid <= 0) return -1;
@@ -473,6 +495,14 @@ static int call_remote_mbus(const char *proc_name, const char *sym, uint64_t a1,
     pt_io_rw(pid, PIOD_WRITE_D, trap, &orig_byte, 1);
     sys_ptrace_wrap(PT_DETACH, pid, (caddr_t)1, 0);
     return 0;
+}
+
+static int call_remote_mbus(const char *proc_name, const char *sym, uint64_t a1, uint64_t a2, int64_t *out_res)
+{
+    pthread_mutex_lock(&g_ptrace_mutex);
+    int r = call_remote_mbus_unlocked(proc_name, sym, a1, a2, out_res);
+    pthread_mutex_unlock(&g_ptrace_mutex);
+    return r;
 }
 
 int shellui_remote_bind_device(uint64_t device_id, int32_t user_id)

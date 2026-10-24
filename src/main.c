@@ -138,7 +138,6 @@ int main(int argc, char **argv)
 
         vpad_poll(now);
         usb_hotplug_poll(now);
-        web_poll(now);
         tcp_stream_poll(now);
 
         check_flags();

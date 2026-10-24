@@ -12,12 +12,17 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <poll.h>
+#include <pthread.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
 
 static int g_server_fd = -1;
+static pthread_t g_server_thread;
+static volatile int g_server_running = 0;
+
+static void *web_server_worker(void *arg);
 
 static const char HTML_INDEX[] =
 "<!DOCTYPE html>\n"
@@ -230,18 +235,22 @@ int web_init(int port)
         return 0;
     }
 
-    fcntl(g_server_fd, F_SETFL, fcntl(g_server_fd, F_GETFL) | O_NONBLOCK);
+    g_server_running = 1;
+    if (pthread_create(&g_server_thread, NULL, web_server_worker, NULL) != 0) {
+        log_line("web: failed to start server thread");
+        g_server_running = 0;
+        close(g_server_fd);
+        g_server_fd = -1;
+        return 0;
+    }
+
     log_line("web: Dashboard server listening at http://0.0.0.0:%d/", port);
     return 1;
 }
 
 static void handle_client(int cfd)
 {
-    /* Clear O_NONBLOCK inherited from listening socket */
-    int flags = fcntl(cfd, F_GETFL, 0);
-    if (flags >= 0) fcntl(cfd, F_SETFL, flags & ~O_NONBLOCK);
-
-    /* Set 100ms socket read timeout to prevent stalling the main 250Hz loop */
+    /* Bound how long one slow client can hold the server thread */
     struct timeval tv;
     tv.tv_sec = 0;
     tv.tv_usec = 100000; /* 100 ms */
@@ -502,21 +511,31 @@ static void handle_client(int cfd)
     close(cfd);
 }
 
-void web_poll(long now)
+/* Requests are served on their own thread so a slow client (or the 100-150ms waits in the
+ * PS/button endpoints) never delays the 250Hz injection loop in main(). */
+static void *web_server_worker(void *arg)
 {
-    (void)now;
-    if (g_server_fd < 0) return;
+    (void)arg;
+    while (g_server_running) {
+        struct pollfd pfd;
+        pfd.fd = g_server_fd;
+        pfd.events = POLLIN;
+        if (poll(&pfd, 1, 200) <= 0) continue;
 
-    struct sockaddr_in client_addr;
-    socklen_t addr_len = sizeof(client_addr);
-    int cfd = accept(g_server_fd, (struct sockaddr *)&client_addr, &addr_len);
-    if (cfd >= 0) {
-        handle_client(cfd);
+        struct sockaddr_in client_addr;
+        socklen_t addr_len = sizeof(client_addr);
+        int cfd = accept(g_server_fd, (struct sockaddr *)&client_addr, &addr_len);
+        if (cfd >= 0) handle_client(cfd);
     }
+    return NULL;
 }
 
 void web_cleanup(void)
 {
+    if (g_server_running) {
+        g_server_running = 0;
+        pthread_join(g_server_thread, NULL);
+    }
     if (g_server_fd >= 0) {
         close(g_server_fd);
         g_server_fd = -1;
