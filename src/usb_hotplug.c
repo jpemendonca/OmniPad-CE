@@ -662,6 +662,14 @@ static void probe_usb_devices(void)
     }
 }
 
+int usb_hotplug_slot_ids(int slot, uint16_t *vid, uint16_t *pid)
+{
+    if (slot < 0 || slot >= MAX_SLOTS || !g_usb_hotplug.devices[slot].active) return 0;
+    *vid = g_usb_hotplug.devices[slot].vid;
+    *pid = g_usb_hotplug.devices[slot].pid;
+    return 1;
+}
+
 long usb_hotplug_idle_release_ms(int slot)
 {
     if (slot < 0 || slot >= MAX_SLOTS || !g_usb_hotplug.devices[slot].active) return 0;

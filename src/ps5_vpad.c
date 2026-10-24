@@ -449,6 +449,7 @@ int vpad_add(int slot, pad_conn_type_t type, const char *name)
     }
 
     memset(&g_slots[slot], 0, sizeof(internal_slot_t));
+    pad_state_neutral(&g_slots[slot].last_input);  /* sticks centred until the first report */
     g_slots[slot].status = VP_QUEUED;
     g_slots[slot].handle = -1;
     g_slots[slot].alt_handle = -1;

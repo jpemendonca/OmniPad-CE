@@ -162,6 +162,8 @@ static void handle_client(int cfd)
             vpad_slot_info_t info;
             vpad_get_slot_info(i, &info);
             const pad_state_t *in = &info.last_input;
+            uint16_t vid = in->vid, pid = in->pid;
+            if (!vid && !pid) usb_hotplug_slot_ids(i, &vid, &pid);  /* before the first report */
             char name[96];
             json_escape(name, sizeof(name), info.name);
             jlen += snprintf(json + jlen, sizeof(json) - (size_t)jlen,
@@ -170,7 +172,7 @@ static void handle_client(int cfd)
                 "\"connected_ms\":%ld,\"idle_release_ms\":%ld,"
                 "\"buttons\":%u,\"lx\":%d,\"ly\":%d,\"rx\":%d,\"ry\":%d,\"l2\":%d,\"r2\":%d}",
                 i > 0 ? "," : "",
-                info.status, name, info.conn_type, in->vid, in->pid, info.user_id,
+                info.status, name, info.conn_type, vid, pid, info.user_id,
                 info.battery_level, info.battery_charging,
                 (unsigned)info.packets_injected, (unsigned)info.inputs_received,
                 info.last_input_time ? now - info.last_input_time : -1L,
