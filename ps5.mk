@@ -13,7 +13,7 @@ CFLAGS    := -std=c11 -Wall -Wextra -O2 -Isrc -I$(GEN)
 LDLIBS    += -lScePad -lSceUserService -lSceSystemService -lSceAppInstUtil -ldl
 
 SRCS := src/util.c src/log.c src/profiles.c \
-        src/usb_controllers.c src/usb_hotplug.c \
+        src/usb_controllers.c src/pad_drivers.c src/usb_hotplug.c \
         src/shellui_inject.c src/ps5_vpad.c \
         src/web.c src/tcp_stream.c src/main.c
 

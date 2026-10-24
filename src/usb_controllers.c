@@ -1,4 +1,5 @@
 #include "usb_controllers.h"
+#include "pad_drivers.h"
 #include "pad_types.h"
 #include "log.h"
 #include "util.h"
@@ -16,79 +17,10 @@
 
 usb_controller_type_t usb_identify_controller(uint16_t vid, uint16_t pid, const char **name_out)
 {
-    /* Nintendo Switch controllers */
-    if (vid == 0x057e) {
-        if (pid == 0x2009) {
-            if (name_out) *name_out = "Nintendo Switch Pro (USB)";
-            return CTRL_NINTENDO_SWITCH_PRO;
-        }
-        if (pid == 0x2017 || pid == 0x2019 || pid == 0x201a) {
-            if (name_out) *name_out = "Nintendo NSO Controller (USB)";
-            return CTRL_NINTENDO_SWITCH_PRO;
-        }
-    }
-
-    /* Sony DualShock 4 */
-    if (vid == 0x054c) {
-        if (pid == 0x05c4 || pid == 0x09cc || pid == 0x0ba0) {
-            if (name_out) *name_out = "Sony DualShock 4 (USB)";
-            return CTRL_SONY_DS4;
-        }
-        if (pid == 0x0268) {
-            if (name_out) *name_out = "Sony DualShock 3 (USB)";
-            return CTRL_SONY_DS3;
-        }
-    }
-
-    /* Xbox / XInput controllers */
-    if (vid == 0x045e) {
-        if (pid == 0x028e) {
-            if (name_out) *name_out = "Xbox 360 / Machenike (XInput)";
-            return CTRL_XBOX_XINPUT;
-        }
-        if (pid == 0x02d1 || pid == 0x02dd ||
-            pid == 0x02e3 || pid == 0x02ea || pid == 0x0b00 ||
-            pid == 0x0b05 || pid == 0x0b12 || pid == 0x0b13) {
-            if (name_out) *name_out = "Xbox Controller (USB/XInput)";
-            return CTRL_XBOX_XINPUT;
-        }
-    }
-
-    /* Machenike, ShanWan & Thunderobot native VIDs (Wired USB-C, Dongle & PC modes) */
-    if (vid == 0x2345 || vid == 0x2563 || vid == 0x2f24 || vid == 0x20bc || vid == 0x3537 || vid == 0x0e8f) {
-        if (name_out) *name_out = "MACHENIKE G5 Pro / ShanWan Pad";
-        return CTRL_XBOX_XINPUT;
-    }
-
-    /* ShanWan / Machenike 2.4G wireless dongle receiver */
-    if (vid == 0x1a34 && pid == 0xf517) {
-        if (name_out) *name_out = "Machenike 2.4G Wireless Dongle";
-        return CTRL_XBOX_XINPUT;
-    }
-    if (vid == 0x1a34) {
-        if (name_out) *name_out = "ShanWan Gamepad";
-        return CTRL_XBOX_XINPUT;
-    }
-
-    /* 8BitDo adapters & controllers */
-    if (vid == 0x2dc8) {
-        if (pid == 0x310a || pid == 0x310b || pid == 0x2100 || pid == 0x3012) {
-            if (name_out) *name_out = "8BitDo Adapter/Pad (USB)";
-            return CTRL_8BITDO_ADAPTER;
-        }
-    }
-
-    /* Generic PC/HID Gamepad known VIDs (DragonRise, Betop, Retro-Bit, Mayflash, etc.) */
-    if (vid == 0x0079 || vid == 0x0810 || vid == 0x11ff || vid == 0x12bd ||
-        vid == 0x20d6 || vid == 0x24c6 || vid == 0x146b || vid == 0x0738 ||
-        vid == 0x1038 || vid == 0x1532) {
-        if (name_out) *name_out = "Generic USB HID Gamepad";
-        return CTRL_GENERIC_HID;
-    }
-
-    /* Isolate non-gamepad devices (USB flash drives, SSDs, keyboards, webcams) */
-    if (name_out) *name_out = "Unknown / Non-Gamepad USB Device";
-    return CTRL_UNKNOWN;
+    /* The per-model table in pad_drivers.c is the single source of truth */
+    const pad_driver_t *drv = pad_driver_lookup(vid, pid);
+    if (name_out) *name_out = drv ? drv->name : "Unknown / Non-Gamepad USB Device";
+    return drv ? drv->type : CTRL_UNKNOWN;
 }
 
 int usb_init_controller_handshake(int fd, usb_controller_type_t type)

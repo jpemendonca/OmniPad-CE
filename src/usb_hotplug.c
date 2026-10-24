@@ -1,5 +1,6 @@
 #include "usb_hotplug.h"
 #include "usb_controllers.h"
+#include "pad_drivers.h"
 #include "ps5_vpad.h"
 #include "log.h"
 #include "util.h"
@@ -28,6 +29,7 @@ typedef struct {
     int                   fd;        /* /dev/ugenX.Y control device */
     char                  dev_path[32];
     uint16_t              vid, pid;
+    const pad_driver_t   *drv;       /* per-model behaviour, see pad_drivers.c */
     usb_controller_type_t type;
     const char           *name;
     pad_conn_type_t       conn_type;
@@ -63,7 +65,7 @@ static uint32_t s_last_seen[6][21] = {{0}};
 
 #ifdef __PROSPERO__
 
-static void find_usb_endpoints(int fd, usb_controller_type_t type, uint16_t vid, uint16_t pid, uint8_t *in_addr, uint8_t *out_addr)
+static void find_usb_endpoints(int fd, int gip, uint8_t *in_addr, uint8_t *out_addr)
 {
     *in_addr = 0;
     *out_addr = 0;
@@ -95,9 +97,7 @@ static void find_usb_endpoints(int fd, usb_controller_type_t type, uint16_t vid,
         offset += entry;
     }
 
-    int is_xbox_one = (type == CTRL_XBOX_XINPUT && vid == 0x045e && pid != 0x028e);
-
-    if (is_xbox_one) {
+    if (gip) {
         /* Only Xbox One / Series X|S (GIP) uses EP 0x82 IN and 0x02 OUT */
         for (int i = 0; i < in_cnt; i++) {
             if (ins[i] == 0x82) { *in_addr = 0x82; break; }
@@ -136,14 +136,14 @@ static int usb_fs_setup_device(usb_slot_device_t *sdev)
     }
 
     uint8_t in_addr = 0, out_addr = 0;
-    find_usb_endpoints(sdev->fd, sdev->type, sdev->vid, sdev->pid, &in_addr, &out_addr);
+    int gip = (sdev->drv->flags & PADDRV_GIP) != 0;
+    find_usb_endpoints(sdev->fd, gip, &in_addr, &out_addr);
 
-    int is_xbox_one = (sdev->type == CTRL_XBOX_XINPUT && sdev->vid == 0x045e && sdev->pid != 0x028e);
     if (in_addr == 0) {
-        in_addr = is_xbox_one ? 0x82 : 0x81;
+        in_addr = gip ? 0x82 : 0x81;
     }
     if (out_addr == 0 && (sdev->type == CTRL_XBOX_XINPUT)) {
-        out_addr = is_xbox_one ? 0x02 : 0x01;
+        out_addr = gip ? 0x02 : 0x01;
     }
 
     struct usb_fs_init init;
@@ -354,8 +354,8 @@ static void *usb_reader_worker(void *arg)
              dev->slot, dev->name, dev->dev_path);
 
 #ifdef __PROSPERO__
-    int is_xbox_one = (dev->type == CTRL_XBOX_XINPUT && dev->vid == 0x045e && dev->pid != 0x028e);
-    int is_genuine_x360 = (dev->type == CTRL_XBOX_XINPUT && dev->vid == 0x045e && dev->pid == 0x028e);
+    int is_xbox_one = (dev->drv->flags & PADDRV_GIP) != 0;
+    int is_genuine_x360 = (dev->drv->flags & PADDRV_X360_KEEPALIVE) != 0;
     if (dev->use_fs && dev->has_out && is_xbox_one) {
         static const uint8_t power_on[] = {0x05, 0x20, 0x00, 0x01, 0x00};
         static const uint8_t s_init[] = {
@@ -370,7 +370,7 @@ static void *usb_reader_worker(void *arg)
         usb_fs_send_packet(dev, led_on, sizeof(led_on), 80);
         log_line("usb_hotplug: GIP power/s_init/led sent on slot %d", dev->slot);
     }
-    if (dev->use_fs && dev->has_out && dev->type == CTRL_XBOX_XINPUT && !is_xbox_one) {
+    if (dev->use_fs && dev->has_out && (dev->drv->flags & PADDRV_XINPUT_LED_OUT)) {
         /* XInput hosts set the player LED on the interrupt OUT endpoint right after
          * connecting. Without it the 8BitDo Ultimate 2C stays silent and re-enumerates
          * after a few seconds; the SET_REPORT handshake does not count. */
@@ -415,10 +415,7 @@ static void *usb_reader_worker(void *arg)
 
         if (n > 0) {
             consecutive_errors = 0;
-            int parsed = usb_parse_input_report(dev->type, report, (size_t)n, &st);
-            if (!parsed) {
-                parsed = usb_parse_input_report(CTRL_GENERIC_HID, report, (size_t)n, &st);
-            }
+            int parsed = pad_driver_parse(dev->drv, report, (size_t)n, &st);
             if (parsed) {
                 st.conn_type = dev->conn_type;
                 st.vid = dev->vid;
@@ -573,13 +570,13 @@ static void probe_usb_devices(void)
                 continue;
             }
 
-            const char *ctrl_name = NULL;
-            usb_controller_type_t ctype = usb_identify_controller(vid, pid, &ctrl_name);
-
-            /* If not found by VID/PID, inspect raw USB descriptors for XInput or HID classes */
-            if (ctype == CTRL_UNKNOWN) {
-                ctype = usb_inspect_descriptors(fd, &ctrl_name);
+            /* Per-model driver by VID/PID; otherwise an XInput interface descriptor picks a class driver */
+            const pad_driver_t *drv = pad_driver_lookup(vid, pid);
+            if (!drv && usb_inspect_descriptors(fd, NULL) == CTRL_XBOX_XINPUT) {
+                drv = pad_driver_for_xinput_class(vid, pid);
             }
+            usb_controller_type_t ctype = drv ? drv->type : CTRL_UNKNOWN;
+            const char *ctrl_name = drv ? drv->name : "Unknown / Non-Gamepad USB Device";
 
             if (vid != 0 || pid != 0) {
                 uint32_t packed = ((uint32_t)vid << 16) | pid;
@@ -616,6 +613,7 @@ static void probe_usb_devices(void)
             snprintf(sdev->dev_path, sizeof(sdev->dev_path), "%s", path);
             sdev->vid = vid;
             sdev->pid = pid;
+            sdev->drv = drv;
             sdev->type = ctype;
             sdev->name = ctrl_name;
             sdev->stop_thread = 0;
@@ -634,26 +632,17 @@ static void probe_usb_devices(void)
                 sdev->ep_fd[ep - 1] = open(ep_path, O_RDONLY | O_NONBLOCK);
             }
 #endif
-            int is_dongle = (vid == 0x045e && pid == 0x0719) ||
-                            (vid == 0x045e && (pid == 0x02e6 || pid == 0x02fe)) ||
-                            (vid == 0x1a34) ||
-                            (vid == 0x2345 && pid == 0xe02f) ||
-                            (vid == 0x2dc8) ||
-                            (ctrl_name && (strstr(ctrl_name, "Dongle") != NULL ||
-                                           strstr(ctrl_name, "Adapter") != NULL ||
-                                           strstr(ctrl_name, "Receiver") != NULL));
-            sdev->conn_type = is_dongle ? CONN_USB_DONGLE_24G : CONN_USB_WIRED;
-
-            /* A dongle stays on USB when its pad is switched off, so a long silence is the only
-             * hint that the player left. The 8BitDo Ultimate 2C does tell us: switching it off
-             * drops the receiver off USB (it comes back as 2dc8:3016), which frees the slot on its
-             * own. It also reports only on change, so the timeout would kick a player who just
-             * stopped touching it, on the dongle and on the cable alike. */
-            int announces_power_off = (vid == 0x2dc8 && pid == 0x3106);
-            sdev->idle_release_ms = (is_dongle && !announces_power_off) ? 60000 : 0;
-            if (is_dongle) {
-                log_line("usb_hotplug: slot %d idle release %s", slot,
-                         sdev->idle_release_ms ? "after 60s without input" : "off (pad announces power-off)");
+            sdev->conn_type = drv->conn;
+            sdev->idle_release_ms = drv->idle_release_ms;
+            if (drv->conn == CONN_USB_DONGLE_24G) {
+                if (drv->idle_release_ms) {
+                    log_line("usb_hotplug: slot %d idle release after %lds without input", slot, drv->idle_release_ms / 1000);
+                } else {
+                    log_line("usb_hotplug: slot %d idle release off (pad announces power-off)", slot);
+                }
+            }
+            if (drv->verified) {
+                log_line("usb_hotplug: slot %d driver '%s' verified on %s", slot, drv->name, drv->verified);
             }
 
             vpad_add(slot, sdev->conn_type, ctrl_name);
