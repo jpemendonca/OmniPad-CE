@@ -2,8 +2,8 @@
 """Serve web/index.html with a fake OmniPad API, to work on the dashboard without a PS5.
 
 Slot 1 is a DualShock 4 on a cable that never stops reporting, cycling through every button.
-Slot 2 is an 8BitDo dongle that only reports on change: it moves for a few seconds, then goes
-quiet long enough to show the 60s idle countdown. Slot 3 is free.
+Slot 2 is a generic 2.4G dongle under the 60s idle rule that only reports on change: it moves for
+a few seconds, then goes quiet long enough to show the idle countdown. Slot 3 is free.
 
 With --proxy, /api/* goes to a real OmniPad instead (the page is still served from disk), so the
 dashboard can be worked on against live controllers without rebuilding the payload.
@@ -52,7 +52,7 @@ def ds4_slot(t):
         "status": 3, "name": "Sony DualShock 4 (USB)", "conn": 3, "vid": 0x054C, "pid": 0x05C4,
         "user_id": 0x10000001, "battery": 100, "charging": 1,
         "injected": int(t * 250), "inputs": int(t * 250), "input_age_ms": 4,
-        "connected_ms": int(t * 1000), "buttons": 1 << BITS[phase],
+        "connected_ms": int(t * 1000), "idle_release_ms": 0, "buttons": 1 << BITS[phase],
         "lx": int(128 + 120 * math.cos(a)), "ly": int(128 + 120 * math.sin(a)),
         "rx": int(128 + 90 * math.sin(a * 0.7)), "ry": 128,
         "l2": int(127 + 127 * math.sin(t * 2)), "r2": int(127 + 127 * math.cos(t * 2)),
@@ -74,10 +74,10 @@ class Dongle:
             self.last_input = t
         age = int((t - self.last_input) * 1000)
         return {
-            "status": 3, "name": "XInput Compatible Controller", "conn": 4, "vid": 0x2DC8, "pid": 0x3106,
+            "status": 3, "name": "ShanWan 2.4G Gamepad", "conn": 4, "vid": 0x1A34, "pid": 0xF517,
             "user_id": 0x10000002, "battery": 100, "charging": 0,
             "injected": int(t * 250), "inputs": self.inputs, "input_age_ms": age,
-            "connected_ms": int(t * 1000),
+            "connected_ms": int(t * 1000), "idle_release_ms": 60000,
             "buttons": (1 << 14) if active and int(t * 2) % 2 else 0,
             "lx": 128, "ly": 128 if not active else int(128 + 100 * math.sin(t * 3)),
             "rx": 128, "ry": 128, "l2": 0, "r2": 255 if active and cycle > 4 else 0,
@@ -86,7 +86,7 @@ class Dongle:
 
 dongle = Dongle()
 FREE = {"status": 0, "name": "", "conn": 0, "vid": 0, "pid": 0, "user_id": 0, "battery": 0, "charging": 0,
-        "injected": 0, "inputs": 0, "input_age_ms": -1, "connected_ms": -1,
+        "injected": 0, "inputs": 0, "input_age_ms": -1, "connected_ms": -1, "idle_release_ms": 0,
         "buttons": 0, "lx": 128, "ly": 128, "rx": 128, "ry": 128, "l2": 0, "r2": 0}
 
 
@@ -147,7 +147,7 @@ def background_log():
     log("OmniPad PS5 v1.0.4-mock (Build 0)")
     log("usb_hotplug: Device discovered on /dev/ugen1.2 (VID 0x054c, PID 0x05c4, type 2: Sony DualShock 4 (USB))")
     log("vpad: slot 0 ready (handle 1, alt -1, dev 0x1, user 0x10000001)")
-    log("usb_hotplug: Device discovered on /dev/ugen1.3 (VID 0x2dc8, PID 0x3106, type 4: XInput Compatible Controller)")
+    log("usb_hotplug: Device discovered on /dev/ugen1.3 (VID 0x1a34, PID 0xf517, type 4: ShanWan 2.4G Gamepad)")
     log("usb_hotplug: XInput player LED sent on OUT for slot 1 -> 3")
     log("vpad: slot 1 AddDevice -> 0x803b0006")
     log("vpad: slot 1 ready (handle 2, alt -1, dev 0x2, user 0x10000002)")

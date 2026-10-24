@@ -291,9 +291,9 @@
         kRate: 'Relatórios/s', kAge: 'Último relatório', kInj: 'Injeções/s', kUp: 'Conectado há',
         kConn: 'Conexão', kState: 'Estado no PS5',
         ago: 'atrás', never: 'nunca',
-        idle: (s) => s < 60
-          ? `Sem dados há ${s}s. Pela regra dos 60 s do dongle, o slot é liberado em ${60 - s}s e a tela de perfil volta no próximo botão.`
-          : `Sem dados há ${s}s. Pela regra dos 60 s do dongle, o slot é liberado a qualquer momento e a tela de perfil volta no próximo botão.`,
+        idle: (s, lim) => s < lim
+          ? `Sem dados há ${s}s. Pela regra de inatividade (${lim} s), o slot é liberado em ${lim - s}s e a tela de perfil volta no próximo botão.`
+          : `Sem dados há ${s}s. Pela regra de inatividade (${lim} s), o slot é liberado a qualquer momento e a tela de perfil volta no próximo botão.`,
         quiet: 'Este controle só manda dados quando algo muda. Parado, os relatórios/s caem a zero, e isso é normal.',
         ps: 'Simular botão PS', drop: 'Desconectar slot', dropAll: 'Desconectar todos', stop: 'Parar o OmniPad',
         confirmStop: 'Parar o OmniPad? Os controles param de funcionar até você carregar o payload de novo.',
@@ -315,9 +315,9 @@
         kRate: 'Reports/s', kAge: 'Last report', kInj: 'Injections/s', kUp: 'Connected for',
         kConn: 'Connection', kState: 'State on PS5',
         ago: 'ago', never: 'never',
-        idle: (s) => s < 60
-          ? `No data for ${s}s. Under the 60 s dongle rule, the slot is released in ${60 - s}s and the profile screen returns on the next press.`
-          : `No data for ${s}s. Under the 60 s dongle rule, the slot is about to be released and the profile screen returns on the next press.`,
+        idle: (s, lim) => s < lim
+          ? `No data for ${s}s. Under the idle rule (${lim} s), the slot is released in ${lim - s}s and the profile screen returns on the next press.`
+          : `No data for ${s}s. Under the idle rule (${lim} s), the slot is about to be released and the profile screen returns on the next press.`,
         quiet: 'This controller only sends data when something changes. Idle, reports/s drop to zero, which is normal.',
         ps: 'Simulate PS button', drop: 'Disconnect slot', dropAll: 'Disconnect all', stop: 'Stop OmniPad',
         confirmStop: 'Stop OmniPad? Controllers stop working until you load the payload again.',
@@ -336,7 +336,7 @@
       ['tri', 1 << 12, '△'], ['cir', 1 << 13, '○'], ['crs', 1 << 14, '✕'], ['sqr', 1 << 15, '□'],
       ['ps', 1 << 16, 'PS'], ['mute', 1 << 18, 'Mute'], ['touch', 1 << 20, 'Touchpad']
     ];
-    const ST_FREE = 0, ST_READY = 3, CONN_DONGLE = 4;
+    const ST_FREE = 0, ST_READY = 3;
     const STATE_EVERY_MS = 33, LOG_EVERY_MS = 1000, MAX_LOG_LINES = 1500;
 
     const $ = (id) => document.getElementById(id);
@@ -484,8 +484,9 @@
 
       const note = $('idleNote');
       const idleS = gotInput ? Math.floor(s.input_age_ms / 1000) : 0;
-      if (!free && s.conn === CONN_DONGLE && s.status === ST_READY && idleS >= 10) {
-        note.className = 'note warn'; note.textContent = T.idle(idleS);
+      const limS = Math.round((s.idle_release_ms || 0) / 1000);
+      if (!free && limS > 0 && s.status === ST_READY && idleS >= 10) {
+        note.className = 'note warn'; note.textContent = T.idle(idleS, limS);
       } else if (!free && gotInput && r === 0) {
         note.className = 'note'; note.textContent = T.quiet;
       } else { note.className = 'note'; note.textContent = ''; }
