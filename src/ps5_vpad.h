@@ -25,6 +25,9 @@ typedef struct {
     uint32_t        packets_injected;
     long            connected_time;
     long            last_update_time;
+    pad_state_t     last_input;       /* last controller report, also before the slot is ready */
+    long            last_input_time;  /* 0 if nothing arrived yet */
+    uint32_t        inputs_received;  /* reports since the slot was added */
 } vpad_slot_info_t;
 
 int vpad_init(void);

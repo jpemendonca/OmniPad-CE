@@ -25,6 +25,21 @@ static volatile int g_server_running = 0;
 
 static void *web_server_worker(void *arg);
 
+static long g_started_at = 0;
+
+/* Copies s into a JSON string body, escaping quotes, backslashes and control chars */
+static void json_escape(char *out, size_t cap, const char *s)
+{
+    size_t o = 0;
+    for (; s && *s && o + 7 < cap; s++) {
+        unsigned char c = (unsigned char)*s;
+        if (c == '"' || c == '\\') { out[o++] = '\\'; out[o++] = (char)c; }
+        else if (c < 0x20) o += (size_t)snprintf(out + o, cap - o, "\\u%04x", c);
+        else out[o++] = (char)c;
+    }
+    out[o] = '\0';
+}
+
 /* write() may send only part of a large body (the page is tens of KB) */
 static void write_all(int fd, const void *buf, size_t len)
 {
@@ -83,6 +98,7 @@ int web_init(int port)
         return 0;
     }
 
+    g_started_at = now_ms();
     g_server_running = 1;
     if (pthread_create(&g_server_thread, NULL, web_server_worker, NULL) != 0) {
         log_line("web: failed to start server thread");
@@ -132,7 +148,47 @@ static void handle_client(int cfd)
         return;
     }
 
-    if (strncmp(req, "GET /api/status", 15) == 0) {
+    if (strncmp(req, "GET /api/state", 14) == 0) {
+        /* Live view for the dashboard, polled ~30 times per second: what each controller
+         * is sending right now, plus counters the page turns into rates. */
+        long now = now_ms();
+        char json[3072];
+        int jlen = snprintf(json, sizeof(json),
+            "{\"version\":\"%s\",\"build\":%d,\"uptime_ms\":%ld,\"now_ms\":%ld,\"slots\":[",
+            ANYPAD_VERSION, ANYPAD_BUILD, now - g_started_at, now);
+
+        for (int i = 0; i < MAX_SLOTS; i++) {
+            vpad_slot_info_t info;
+            vpad_get_slot_info(i, &info);
+            const pad_state_t *in = &info.last_input;
+            char name[96];
+            json_escape(name, sizeof(name), info.name);
+            jlen += snprintf(json + jlen, sizeof(json) - (size_t)jlen,
+                "%s{\"status\":%d,\"name\":\"%s\",\"conn\":%d,\"vid\":%u,\"pid\":%u,\"user_id\":%d,"
+                "\"battery\":%d,\"charging\":%d,\"injected\":%u,\"inputs\":%u,\"input_age_ms\":%ld,"
+                "\"connected_ms\":%ld,\"buttons\":%u,\"lx\":%d,\"ly\":%d,\"rx\":%d,\"ry\":%d,\"l2\":%d,\"r2\":%d}",
+                i > 0 ? "," : "",
+                info.status, name, info.conn_type, in->vid, in->pid, info.user_id,
+                info.battery_level, info.battery_charging,
+                (unsigned)info.packets_injected, (unsigned)info.inputs_received,
+                info.last_input_time ? now - info.last_input_time : -1L,
+                info.connected_time ? now - info.connected_time : -1L,
+                (unsigned)in->buttons, in->lx, in->ly, in->rx, in->ry, in->l2, in->r2);
+        }
+        jlen += snprintf(json + jlen, sizeof(json) - (size_t)jlen, "]}");
+        if (jlen >= (int)sizeof(json)) jlen = (int)sizeof(json) - 1;
+
+        res_len = snprintf(res, sizeof(res),
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Cache-Control: no-store\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Content-Length: %d\r\n"
+            "Connection: close\r\n\r\n", jlen);
+        write(cfd, res, (size_t)res_len);
+        write_all(cfd, json, (size_t)jlen);
+    }
+    else if (strncmp(req, "GET /api/status", 15) == 0) {
         char json[2048];
         int jlen = snprintf(json, sizeof(json),
             "{\"version\":\"%s\",\"build\":%d,\"slots\":[",
@@ -234,19 +290,30 @@ static void handle_client(int cfd)
             off_t sz = lseek(lfd, 0, SEEK_END);
             off_t start = 0;
             if (sz > 32768) start = sz - 32768;
+            /* ?since=<offset> returns only what was appended after that byte, so the
+             * dashboard can tail the log; X-Log-Offset is where the next call starts. */
+            char *ps = strstr(req, "since=");
+            char *eol = strstr(req, "\r\n");
+            if (ps && (!eol || ps < eol)) {
+                off_t since = (off_t)strtoll(ps + 6, NULL, 10);
+                if (since >= 0 && since <= sz) start = since;
+            }
             lseek(lfd, start, SEEK_SET);
-            char logbuf[32768];
+            static char logbuf[32768];  /* only the server thread uses it */
             ssize_t rb = read(lfd, logbuf, sizeof(logbuf));
             close(lfd);
             if (rb < 0) rb = 0;
             res_len = snprintf(res, sizeof(res),
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: text/plain; charset=utf-8\r\n"
+                "Cache-Control: no-store\r\n"
                 "Access-Control-Allow-Origin: *\r\n"
+                "Access-Control-Expose-Headers: X-Log-Offset\r\n"
+                "X-Log-Offset: %lld\r\n"
                 "Content-Length: %zd\r\n"
-                "Connection: close\r\n\r\n", rb);
+                "Connection: close\r\n\r\n", (long long)(start + rb), rb);
             write(cfd, res, (size_t)res_len);
-            if (rb > 0) write(cfd, logbuf, (size_t)rb);
+            if (rb > 0) write_all(cfd, logbuf, (size_t)rb);
         } else {
             const char *err = "Log file not found";
             res_len = snprintf(res, sizeof(res),

@@ -56,6 +56,9 @@ typedef struct {
     long            connected_time;
     long            last_update_time;
     pad_state_t     pad_state;      /* Latch state for continuous 250Hz injection */
+    pad_state_t     last_input;     /* Last report from the controller, kept even before the slot is ready */
+    long            last_input_time;
+    uint32_t        inputs_received;
     int             consecutive_insert_errors;
     int             ps_pending_on_ready;
 } internal_slot_t;
@@ -846,6 +849,12 @@ void vpad_update(int slot, const pad_state_t *st)
         }
     }
 
+    if (g_slots[slot].status != VP_FREE) {
+        g_slots[slot].last_input = *st;
+        g_slots[slot].last_input_time = now_ms();
+        g_slots[slot].inputs_received++;
+    }
+
     if (g_slots[slot].status != VP_READY || (g_slots[slot].handle <= 0 && g_slots[slot].alt_handle <= 0)) {
         pthread_mutex_unlock(&g_vpad_mutex);
         return;
@@ -897,6 +906,9 @@ void vpad_get_slot_info(int slot, vpad_slot_info_t *out)
     out->packets_injected = g_slots[slot].packets_injected;
     out->connected_time = g_slots[slot].connected_time;
     out->last_update_time = g_slots[slot].last_update_time;
+    out->last_input = g_slots[slot].last_input;
+    out->last_input_time = g_slots[slot].last_input_time;
+    out->inputs_received = g_slots[slot].inputs_received;
     pthread_mutex_unlock(&g_vpad_mutex);
 }
 
