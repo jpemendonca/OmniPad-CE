@@ -4,13 +4,13 @@
 #define ANYPAD_NAME             "OmniPad PS5"
 /* Test builds pass their own label and number (make -f ps5.mk VERSION=... BUILD_NUM=...) */
 #ifndef ANYPAD_VERSION
-#define ANYPAD_VERSION          "1.0.4"
+#define ANYPAD_VERSION          "1.1.0"
 #endif
 #ifndef ANYPAD_BUILD
-#define ANYPAD_BUILD            19
+#define ANYPAD_BUILD            38
 #endif
 #define ANYPAD_AUTHOR           "Diego Lima & PS5 Scene Community"
-#define ANYPAD_DESCRIPTION      "Plug & Play USB & 2.4G Dongle Gamepad Engine for PS5 (FW 7.00 - 13.60)"
+#define ANYPAD_DESCRIPTION      "USB, 2.4G dongle and Bluetooth (own USB adapter) gamepads for PS5 (FW 7.00 - 13.60)"
 
 /* Supported firmware bounds: Relapse exploit enables 7.00 through 13.60 */
 #define ANYPAD_MIN_FW           0x07000000  /* 7.00 */

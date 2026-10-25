@@ -12,15 +12,15 @@ The engine is organized into **6 core layers**:
 ```
  ┌─────────────────────────────────────────────────────────────┐
  │                      1. INPUT SOURCES                       │
- │   • 2.4GHz Dongles & USB Cables (Active in v1.0.4)          │
- │   • Console Internal Bluetooth (Roadmap for v1.1.0)         │
+ │   • 2.4GHz Dongles & USB Cables (250Hz)                     │
+ │   • Bluetooth through a USB adapter (v1.1.0)                │
  │   • Local Network Injections (TCP Stream Port 9045)         │
  └──────────────────────────────┬──────────────────────────────┘
                                 │
  ┌──────────────────────────────▼──────────────────────────────┐
  │              2. HARDWARE & DRIVER LAYER                     │
  │   • usb_hotplug.c (Dynamic Hotplug Monitor + Wake Packets)  │
- │   • bt_hci_usb.c (Dynamic /dev/ugen*.* Scanner - Roadmap)   │
+ │   • bt_adapter.c + src/bt/ (own USB Bluetooth adapter)      │
  └──────────────────────────────┬──────────────────────────────┘
                                 │
  ┌──────────────────────────────▼──────────────────────────────┐
@@ -60,11 +60,12 @@ The engine is organized into **6 core layers**:
 3. If the controller requires a proprietary initialization handshake (e.g., **Nintendo Switch Pro** via USB-C or **DualShock 3** requiring magic wake packet `0xF4 0x42 0x03`), the engine transmits the exact initialization sequence.
 4. A dedicated asynchronous thread polls the IN interrupt endpoint at **250 Hz** (~4ms latency).
 
-#### B. Wireless Bluetooth (Console's Internal Radio — Roadmap / v1.1.0)
-> ⚠️ **Roadmap Notice:** In **v1.0.4**, direct Bluetooth communication via the console's internal radio is intentionally dormant in `main.c` while the BLE SMP cryptographic handshake is being completed. Direct pairing through the console antenna is scheduled for **v1.1.0**. In v1.0.4, all wireless gaming is handled through physical USB adapters (e.g. 8BitDo or manufacturer 2.4GHz dongles).
-1. The PS5 motherboard hosts an internal Bluetooth radio chip connected via an internal USB interface.
-2. The `bt_hci_usb.c` module dynamically scans `/dev/ugen*.*` nodes, matching class `0xE0:0x01:0x01` (Wireless Bluetooth HCI).
-3. The upcoming v1.1.0 engine will communicate over HCI/L2CAP and BLE SMP, decoding radio frames over the air.
+#### B. Bluetooth Through a USB Adapter (v1.1.0)
+The console's internal radio stays with the DualSense. OmniPad drives its own USB Bluetooth adapter instead:
+1. `bt_adapter.c` scans `/dev/ugen*.*` every 2 s for an HCI interface (class `0xE0:0x01:0x01`). It skips MediaTek (`0e8d`), the console's own radio, before sending it any request.
+2. It resets the chip. A Realtek RTL8761B still on its ROM gets the linux-firmware patch, sent in 252-byte fragments with vendor command `0xFC20`.
+3. The transport keeps one read queued on the event endpoint (interrupt) and one on the ACL endpoint (bulk). It joins packets that arrive in several pieces.
+4. The AnyPad host (`src/bt/host.c`) takes over. It handles inquiry, Secure Simple Pairing, link keys, L2CAP, SDP (client and a one-record server) and the HID channels. Each connected pad gets a virtual DualSense slot through the same `vpad_*` calls the USB pads use.
 
 ---
 
@@ -158,7 +159,9 @@ An embedded zero-dependency HTTP server serves the dashboard from its own thread
 - **`GET /api/state`**: live view polled ~30 times per second: per slot, the buttons, sticks and triggers the controller is sending (also before the slot is ready), VID:PID, time since the last report, report and injection counters, and the idle-release time (0 = never).
 - **`GET /api/status`**: JSON telemetry for all virtual slots, power telemetry, and connection types.
 - **`GET /api/log`**: the last 32 KB of the payload log. With `?since=<offset>` it returns only what was written after that byte, and the `X-Log-Offset` header says where the next call starts.
-- **`POST /api/pair`**: Reserved endpoint for the upcoming v1.1.0 Bluetooth pairing window (currently reports USB Plug & Play status).
+- **`POST /api/pair?seconds=N`**: opens a Bluetooth search for pads in pairing mode on the USB adapter (0 stops it).
+- **`POST /api/bt_forget`**: forgets every paired Bluetooth pad.
+- `/api/state` also carries a `bt` object: the adapter state, its address, the pairing time left, the paired count and the connected pads.
 - **`POST /api/press_ps`**: Remotely triggers the PS button to open profile selection or wake the console.
 - **`POST /api/disconnect`**: Frees a specific slot on demand.
 - **`POST /api/exit`**: Stops the payload.
