@@ -402,8 +402,8 @@
         bt: 'Bluetooth (adaptador USB)', btAdapter: 'Adaptador', btAddr: 'Endereço', btPaired: 'Pareados', btPads: 'Conectados',
         btState: { 'no adapter': 'Sem adaptador', starting: 'Iniciando', ready: 'Pronto', stopping: 'Parando' },
         btNoAdapter: 'Plugue um adaptador Bluetooth USB no PS5. O DualSense continua no rádio do próprio PS5.',
-        btIdle: 'Controles já pareados voltam sozinhos ao apertar PS. Pra um controle novo, toque em Parear e coloque ele em pareamento (DS4: segure Share + PS).',
-        btPairing: (s) => `Procurando controles em modo de pareamento… ${s}s restantes.`,
+        btIdle: 'Pra conectar, coloque o controle em modo de pareamento (DS4: segure Share + PS). O OmniPad procura sozinho. Controles já pareados voltam ao apertar PS.',
+        btPairing: () => 'Procurando controles em modo de pareamento…',
         btPair: 'Parear controle', btCancel: 'Parar busca', btForget: 'Esquecer pareados',
         confirmForget: 'Esquecer todos os controles pareados? Eles vão precisar ser pareados de novo.'
       },
@@ -433,8 +433,8 @@
         bt: 'Bluetooth (USB adapter)', btAdapter: 'Adapter', btAddr: 'Address', btPaired: 'Paired', btPads: 'Connected',
         btState: { 'no adapter': 'No adapter', starting: 'Starting', ready: 'Ready', stopping: 'Stopping' },
         btNoAdapter: 'Plug a USB Bluetooth adapter into the PS5. The DualSense stays on the console’s own radio.',
-        btIdle: 'Paired controllers come back on their own when you press PS. For a new one, tap Pair and put it in pairing mode (DS4: hold Share + PS).',
-        btPairing: (s) => `Looking for controllers in pairing mode… ${s}s left.`,
+        btIdle: 'To connect, put the controller in pairing mode (DS4: hold Share + PS). OmniPad searches on its own. Paired controllers come back when you press PS.',
+        btPairing: () => 'Looking for controllers in pairing mode…',
         btPair: 'Pair controller', btCancel: 'Stop search', btForget: 'Forget paired',
         confirmForget: 'Forget every paired controller? They will need to be paired again.'
       }

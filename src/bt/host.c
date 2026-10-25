@@ -2265,7 +2265,8 @@ int host_pair(host_t *h, int seconds)
     h->pair_pending_s = 0;
     h->pair_until = now + (long)seconds * 1000;
     h->search_started = now;
-    log_line("pairing: searching for %d s", seconds);
+    /* OmniPad: the short background searches (see bt_adapter.c) would fill the log */
+    if (seconds >= 30) log_line("pairing: searching for %d s", seconds);
     return 1;
 }
 

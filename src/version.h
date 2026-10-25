@@ -2,8 +2,13 @@
 #define VERSION_H
 
 #define ANYPAD_NAME             "OmniPad PS5"
+/* Test builds pass their own label and number (make -f ps5.mk VERSION=... BUILD_NUM=...) */
+#ifndef ANYPAD_VERSION
 #define ANYPAD_VERSION          "1.0.4"
+#endif
+#ifndef ANYPAD_BUILD
 #define ANYPAD_BUILD            19
+#endif
 #define ANYPAD_AUTHOR           "Diego Lima & PS5 Scene Community"
 #define ANYPAD_DESCRIPTION      "Plug & Play USB & 2.4G Dongle Gamepad Engine for PS5 (FW 7.00 - 13.60)"
 

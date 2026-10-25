@@ -28,7 +28,12 @@
 
 #define BT_SCAN_INTERVAL_MS 2000
 #define BT_DB_PATH          "/data/anypad/omnipad_bt.db"  /* not PR 18's pads.db: those keys are for the internal radio */
-#define BT_FIRST_PAIR_S     120   /* pairing window opened by itself when no pad is paired yet */
+enum { AUTO_OFF, AUTO_FULL, AUTO_PEEK };
+#define AUTO_FULL_S    600        /* renewed while no pad of ours is connected */
+#define AUTO_FULL_INQ  8          /* inquiry rounds of 10.24 s */
+#define AUTO_PEEK_S    4          /* with a pad connected: a 3.84 s round ... */
+#define AUTO_PEEK_INQ  3
+#define AUTO_PEEK_MS   20000      /* ... every 20 s */
 
 #define EVQ_LEN   32
 #define ACLQ_LEN  32
@@ -857,13 +862,14 @@ static void run_host(bt_dev_t *d)
     }
     set_state("ready", NULL);
     log_line("bt: ready, %d paired pad(s). Paired pads connect when switched on.", host_paired_count(h));
-    if (host_paired_count(h) == 0) {
-        log_line("bt: no pad paired yet: searching for %d s. Put the DS4 in pairing mode (hold Share + PS).",
-                 BT_FIRST_PAIR_S);
-        host_pair(h, BT_FIRST_PAIR_S);
-    }
+    log_line("bt: searching on its own: put a pad in pairing mode (DS4: hold Share + PS) to connect it");
 
     long last_publish = 0, last_alive = now_ms();
+    /* Searching on its own, so a pad only has to be put in pairing mode: all the time while no pad
+     * of ours is connected, and a short look every AUTO_PEEK_MS once one is (a search takes radio
+     * time from the pads). None when every slot is taken. */
+    int auto_mode = -1, auto_window = 0;
+    long next_auto = 0;
     while (!g_bt.stop && !host_transport_lost(h)) {
         int pair = -1, forget = 0;
         pthread_mutex_lock(&g_bt.lock);
@@ -873,7 +879,10 @@ static void run_host(bt_dev_t *d)
         g_bt.forget_req = 0;
         pthread_mutex_unlock(&g_bt.lock);
         if (forget) log_line("bt: forgot %d paired pad(s)", host_forget_all(h));
-        if (pair >= 0) host_pair(h, pair);
+        if (pair >= 0) {
+            host_pair(h, pair);
+            auto_window = 0;      /* the page's own search is not cut short below */
+        }
 
         host_poll(h, 10);
 
@@ -882,6 +891,26 @@ static void run_host(bt_dev_t *d)
             last_publish = now;
             publish(h);
         }
+        int connected = 0, slot_free = 0;
+        for (int i = 0; i < HOST_MAX_PADS; i++) connected += g_bt.pads[i].vslot >= 0;
+        for (int i = 0; i < MAX_SLOTS; i++) {
+            uint16_t vid, pid;
+            if (!usb_hotplug_slot_ids(i, &vid, &pid) && vpad_slot_is_free(i)) slot_free = 1;
+        }
+        int mode = !slot_free ? AUTO_OFF : connected ? AUTO_PEEK : AUTO_FULL;
+        if (mode != auto_mode) {
+            auto_mode = mode;
+            host_tune_set(h, "inq_len", mode == AUTO_PEEK ? AUTO_PEEK_INQ : AUTO_FULL_INQ);
+            if (auto_window && host_pairing_left(h) > 0) host_pair(h, 0);
+            auto_window = 0;
+            next_auto = now + (mode == AUTO_PEEK ? AUTO_PEEK_MS : 0);
+        }
+        if (mode != AUTO_OFF && host_pairing_left(h) == 0 && now >= next_auto) {
+            host_pair(h, mode == AUTO_PEEK ? AUTO_PEEK_S : AUTO_FULL_S);
+            auto_window = 1;
+            next_auto = now + (mode == AUTO_PEEK ? AUTO_PEEK_MS : 0);
+        }
+
         /* While nothing is connected, a line now and then shows the adapter is still being heard */
         int any = 0;
         for (int i = 0; i < HOST_MAX_PADS; i++) any |= g_bt.pads[i].vslot >= 0;

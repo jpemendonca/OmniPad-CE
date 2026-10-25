@@ -10,6 +10,7 @@ BUILD     := build/ps5
 GEN       := $(BUILD)/gen
 
 CFLAGS    := -std=c11 -Wall -Wextra -O2 -Isrc -I$(GEN)
+CFLAGS    += -DANYPAD_VERSION='"$(VERSION)"' -DANYPAD_BUILD=$(BUILD_NUM)
 LDLIBS    += -lScePad -lSceUserService -lSceSystemService -lSceAppInstUtil -ldl
 
 SRCS := src/util.c src/log.c src/profiles.c \
@@ -41,6 +42,13 @@ $(GEN)/web_index.h: web/index.html tools/embed_web.py
 	python3 tools/embed_web.py $< $@ HTML_INDEX
 
 $(BUILD)/web.o: $(GEN)/web_index.h
+
+# The label and number are compiled in: a stamp rebuilds main.o and web.o when they change
+$(GEN)/version.stamp: FORCE
+	@mkdir -p $(GEN)
+	@echo '$(VERSION) $(BUILD_NUM)' | cmp -s - $@ || echo '$(VERSION) $(BUILD_NUM)' > $@
+FORCE:
+$(BUILD)/main.o $(BUILD)/web.o: $(GEN)/version.stamp
 
 # Realtek Bluetooth firmware from linux-firmware (tools/get-bt-firmware.sh), embedded when present
 RTL_DIR := firmware/rtl_bt
