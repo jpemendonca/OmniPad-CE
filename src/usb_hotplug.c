@@ -1,6 +1,7 @@
 #include "usb_hotplug.h"
 #include "usb_controllers.h"
 #include "pad_drivers.h"
+#include "bt_adapter.h"
 #include "ps5_vpad.h"
 #include "log.h"
 #include "util.h"
@@ -543,7 +544,7 @@ static void probe_usb_devices(void)
         for (int dev = 1; dev <= 20; dev++) {
             snprintf(path, sizeof(path), "/dev/ugen%d.%d", bus, dev);
 
-            if (is_device_claimed(path)) continue;
+            if (is_device_claimed(path) || bt_adapter_owns(path)) continue;
 
             int fd = open(path, O_RDWR | O_NONBLOCK);
             if (fd < 0) continue;

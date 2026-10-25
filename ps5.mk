@@ -14,6 +14,7 @@ LDLIBS    += -lScePad -lSceUserService -lSceSystemService -lSceAppInstUtil -ldl
 
 SRCS := src/util.c src/log.c src/profiles.c \
         src/usb_controllers.c src/pad_drivers.c src/usb_hotplug.c \
+        src/bt_rtl.c src/bt_adapter.c \
         src/shellui_inject.c src/ps5_vpad.c \
         src/web.c src/tcp_stream.c src/main.c
 
@@ -39,6 +40,18 @@ $(GEN)/web_index.h: web/index.html tools/embed_web.py
 	python3 tools/embed_web.py $< $@ HTML_INDEX
 
 $(BUILD)/web.o: $(GEN)/web_index.h
+
+# Realtek Bluetooth firmware from linux-firmware (tools/get-bt-firmware.sh), embedded when present
+RTL_DIR := firmware/rtl_bt
+$(GEN)/rtl8761bu_fw.h: $(wildcard $(RTL_DIR)/rtl8761bu_fw.bin) tools/embed_web.py
+	@mkdir -p $(GEN)
+	python3 tools/embed_web.py --optional $(RTL_DIR)/rtl8761bu_fw.bin $@ RTL8761BU_FW
+
+$(GEN)/rtl8761bu_config.h: $(wildcard $(RTL_DIR)/rtl8761bu_config.bin) tools/embed_web.py
+	@mkdir -p $(GEN)
+	python3 tools/embed_web.py --optional $(RTL_DIR)/rtl8761bu_config.bin $@ RTL8761BU_CONFIG
+
+$(BUILD)/bt_adapter.o: $(GEN)/rtl8761bu_fw.h $(GEN)/rtl8761bu_config.h
 
 clean:
 	rm -rf $(BUILD)

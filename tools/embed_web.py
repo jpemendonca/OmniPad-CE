@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
 """Embed a web asset into a C header as a NUL-terminated byte array.
 
-Usage: embed_web.py <input file> <output header> <C symbol>
+Usage: embed_web.py [--optional] <input file> <output header> <C symbol>
 The header defines `static const char <symbol>[]` and `<SYMBOL>_LEN` (without the NUL).
+With --optional a missing input gives an empty array (length 0) instead of an error.
 """
+import os
 import sys
 
 
 def main():
-    if len(sys.argv) != 4:
+    args = sys.argv[1:]
+    optional = args[:1] == ["--optional"]
+    if optional:
+        args = args[1:]
+    if len(args) != 3:
         sys.exit(__doc__)
-    src, dst, sym = sys.argv[1:]
-    data = open(src, "rb").read()
+    src, dst, sym = args
+    if optional and not os.path.exists(src):
+        data = b""
+    else:
+        data = open(src, "rb").read()
     lines = []
     for off in range(0, len(data), 16):
         lines.append("    " + ", ".join(f"0x{b:02x}" for b in data[off:off + 16]) + ",")

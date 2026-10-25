@@ -38,6 +38,8 @@ host-test:
 	./$(BUILD)/test_vpad_abi
 	clang -O2 -Isrc tests/test_pad_struct.c -o $(BUILD)/test_pad_struct
 	./$(BUILD)/test_pad_struct
+	clang -O2 -Isrc src/bt_rtl.c tests/test_bt_rtl.c -o $(BUILD)/test_bt_rtl
+	./$(BUILD)/test_bt_rtl
 
 clean:
 	rm -rf $(BUILD)

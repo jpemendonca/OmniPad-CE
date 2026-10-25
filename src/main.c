@@ -2,6 +2,7 @@
 #include "pad_types.h"
 #include "ps5_vpad.h"
 #include "usb_hotplug.h"
+#include "bt_adapter.h"
 #include "web.h"
 #include "tcp_stream.h"
 #include "shellui_inject.h"
@@ -122,6 +123,9 @@ int main(int argc, char **argv)
         log_line("main: Warning: usb_hotplug_init failed (USB disabled)");
     }
 
+    /* 3b. Our own USB Bluetooth adapter, for wireless pads (the internal radio stays with the DualSense) */
+    bt_adapter_init();
+
     /* 4. Initialize Web Dashboard */
     if (!web_init(ANYPAD_DEFAULT_PORT)) {
         log_line("main: Warning: web_init failed");
@@ -147,6 +151,7 @@ int main(int argc, char **argv)
     log_line("main: Shutting down OmniPad PS5...");
     tcp_stream_cleanup();
     web_cleanup();
+    bt_adapter_cleanup();
     usb_hotplug_cleanup();
     vpad_cleanup_all();
     log_close();
