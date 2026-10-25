@@ -46,6 +46,7 @@
 #define CID_SDP         0x0040
 #define CID_CTRL        0x0041
 #define CID_INTR        0x0042
+#define CID_SDP_SRV     0x0043  /* OmniPad: SDP opened by the pad, answered by our server */
 
 /* L2CAP signaling codes. */
 #define SIG_REJECT      0x01
@@ -235,6 +236,7 @@ typedef struct {
     int sdp_nrec, sdp_irec;         /* handles known, the one being read */
 
     chan sdp, ctrl, intr;
+    chan sdps;                      /* OmniPad: the pad's SDP channel to our server */
     int ready, disconnecting;
 
     unsigned char rx[1024];

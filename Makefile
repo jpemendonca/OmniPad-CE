@@ -40,6 +40,8 @@ host-test:
 	./$(BUILD)/test_pad_struct
 	clang -O2 -Isrc src/bt_rtl.c tests/test_bt_rtl.c -o $(BUILD)/test_bt_rtl
 	./$(BUILD)/test_bt_rtl
+	clang -O1 -Isrc -Isrc/bt -Wno-unused-function tests/test_bt_sdp.c src/bt/le.c src/bt/smp_crypto.c src/bt/bt_profiles.c src/bt/generic.c src/bt/crc32.c src/util.c src/log.c -o $(BUILD)/test_bt_sdp
+	./$(BUILD)/test_bt_sdp
 
 clean:
 	rm -rf $(BUILD)

@@ -125,6 +125,7 @@ link_t *link_new(host_t *h, const unsigned char *addr)
         chan_init(&l->sdp, PSM_SDP, CID_SDP);
         chan_init(&l->ctrl, PSM_HID_CTRL, CID_CTRL);
         chan_init(&l->intr, PSM_HID_INTR, CID_INTR);
+        chan_init(&l->sdps, PSM_SDP, CID_SDP_SRV);
         pad_state_reset(&l->st);
         l->out = k_player_colours[i];
         acl_reads_for(h, g_tune.acl_reads);     /* before its first packet, not at the next poll */
@@ -360,6 +361,7 @@ static chan *chan_by_scid(link_t *l, unsigned cid)
     if (l->sdp.st != CH_CLOSED && l->sdp.scid == cid) return &l->sdp;
     if (l->ctrl.st != CH_CLOSED && l->ctrl.scid == cid) return &l->ctrl;
     if (l->intr.st != CH_CLOSED && l->intr.scid == cid) return &l->intr;
+    if (l->sdps.st != CH_CLOSED && l->sdps.scid == cid) return &l->sdps;
     return NULL;
 }
 
@@ -367,7 +369,8 @@ static chan *chan_by_psm(link_t *l, unsigned psm)
 {
     if (psm == PSM_HID_CTRL) return &l->ctrl;
     if (psm == PSM_HID_INTR) return &l->intr;
-    return NULL;            /* SDP is only ever opened by us */
+    if (psm == PSM_SDP) return &l->sdps;    /* OmniPad: the pad asking about us */
+    return NULL;
 }
 
 static void chan_set(chan *c, chan_state st)
@@ -428,7 +431,7 @@ static void chan_close(host_t *h, link_t *l, chan *c)
 static void chan_lost(host_t *h, link_t *l, chan *c)
 {
     chan_set(c, CH_CLOSED);
-    if (c != &l->sdp && l->ready) link_disconnect(h, l, "HID channel closed");
+    if (c != &l->sdp && c != &l->sdps && l->ready) link_disconnect(h, l, "HID channel closed");
 }
 
 static void chan_tick(host_t *h, link_t *l, chan *c, long now)
@@ -899,6 +902,160 @@ static void sdp_step(host_t *h, link_t *l, long now)
 
 /* Sends an output report: buf[1..n] is the report, id first; buf[0] is
  * room for the Classic HID header. */
+/* ---- OmniPad: SDP server ---------------------------------------------------
+ *
+ * A DualShock 4 calling back opens SDP on the host before its HID channels and
+ * hangs up when that is refused (PS5, 25 Oct). The upstream stack never needed
+ * a server: on the shared radio the system's own answered. One record is
+ * served, Device ID, as BlueZ does by default. */
+
+#define SDP_SRV_HANDLE 0x00010001u
+
+static const unsigned char k_did_attrs[] = {
+    0x09, 0x00, 0x00, 0x0A, 0x00, 0x01, 0x00, 0x01,     /* record handle */
+    0x09, 0x00, 0x01, 0x35, 0x03, 0x19, 0x12, 0x00,     /* class: PnP Information */
+    0x09, 0x00, 0x05, 0x35, 0x03, 0x19, 0x10, 0x02,     /* browse group: public */
+    0x09, 0x02, 0x00, 0x09, 0x01, 0x03,                 /* specification 1.3 */
+    0x09, 0x02, 0x01, 0x09, 0x1D, 0x6B,                 /* vendor: Linux Foundation */
+    0x09, 0x02, 0x02, 0x09, 0x02, 0x46,                 /* product */
+    0x09, 0x02, 0x03, 0x09, 0x05, 0x37,                 /* version */
+    0x09, 0x02, 0x04, 0x28, 0x01,                       /* primary record */
+    0x09, 0x02, 0x05, 0x09, 0x00, 0x02,                 /* vendor id source: USB */
+};
+
+/* 1 if the search pattern (a sequence of UUIDs) names our record */
+static int sdp_pattern_matches(const unsigned char *p, int n)
+{
+    int type, clen, hl = de_header(p, n, &type, &clen), i;
+
+    if (!hl || type != 6) return 0;
+    for (i = hl; i < hl + clen;) {
+        int t, cl, h2 = de_header(p + i, hl + clen - i, &t, &cl);
+        if (!h2) return 0;
+        if (t == 3) {
+            unsigned u = cl == 2 ? be16(p + i + h2) : cl >= 4 ? be16(p + i + h2 + 2) : 0;
+            if (u == 0x1200 || u == 0x1002) return 1;
+        }
+        i += h2 + cl;
+    }
+    return 0;
+}
+
+/* Our attributes whose ids the list asks for (single ids or 32-bit ranges);
+ * returns their length, or -1 if the list is malformed */
+static int sdp_pick_attrs(const unsigned char *ids, int n, unsigned char *out, int max)
+{
+    int type, clen, hl = de_header(ids, n, &type, &clen), len = 0, i;
+
+    if (!hl || type != 6) return -1;
+    for (i = 0; i < (int)sizeof k_did_attrs;) {
+        unsigned id = be16(k_did_attrs + i + 1);
+        int t, vl, vh = de_header(k_did_attrs + i + 3, (int)sizeof k_did_attrs - i - 3, &t, &vl);
+        int alen = 3 + vh + vl, want = 0, k;
+        for (k = hl; k < hl + clen && !want;) {
+            int t2, cl2, h2 = de_header(ids + k, hl + clen - k, &t2, &cl2);
+            if (!h2) break;
+            if (cl2 == 2) want = be16(ids + k + h2) == id;
+            else if (cl2 == 4) want = id >= be16(ids + k + h2) && id <= be16(ids + k + h2 + 2);
+            k += h2 + cl2;
+        }
+        if (want && len + alen <= max) {
+            memcpy(out + len, k_did_attrs + i, (size_t)alen);
+            len += alen;
+        }
+        i += alen;
+    }
+    return len;
+}
+
+static void sdp_reply(host_t *h, link_t *l, unsigned char pdu, unsigned tid, const unsigned char *p, int n)
+{
+    unsigned char b[160];
+
+    if (n > (int)sizeof b - 5) return;
+    b[0] = pdu;
+    b[1] = (unsigned char)(tid >> 8);
+    b[2] = (unsigned char)tid;
+    b[3] = (unsigned char)(n >> 8);
+    b[4] = (unsigned char)n;
+    memcpy(b + 5, p, (size_t)n);
+    l2_send(h, l, l->sdps.dcid, b, 5 + n);
+}
+
+static void sdp_error(host_t *h, link_t *l, unsigned tid, unsigned code)
+{
+    unsigned char e[2] = { (unsigned char)(code >> 8), (unsigned char)code };
+
+    sdp_reply(h, l, 0x01, tid, e, 2);
+}
+
+static void sdp_serve(host_t *h, link_t *l, const unsigned char *d, int len)
+{
+    unsigned char r[140], attrs[96];
+    const unsigned char *p;
+    unsigned tid;
+    int n, type, clen, hl, k, a, matches;
+    char hex[3 * 24 + 1];
+
+    if (len < 5) return;
+    for (k = 0; k < len && k < 24; k++) snprintf(hex + 3 * k, 4, "%02x ", d[k]);
+    hex[3 * k] = 0;
+    log_line("pad %s: SDP request to us: %s(len %d)", addr_str(l->addr), hex, len);
+    tid = be16(d + 1);
+    p = d + 5;
+    n = len - 5;
+    if ((int)be16(d + 3) < n) n = (int)be16(d + 3);
+
+    switch (d[0]) {
+    case 0x02:      /* Service Search: pattern, max count, continuation */
+        matches = sdp_pattern_matches(p, n);
+        r[0] = 0; r[1] = (unsigned char)matches;        /* total, big-endian */
+        r[2] = 0; r[3] = (unsigned char)matches;        /* in this answer */
+        k = 4;
+        if (matches) { r[k++] = 0x00; r[k++] = 0x01; r[k++] = 0x00; r[k++] = 0x01; }
+        r[k++] = 0;                                     /* no continuation */
+        sdp_reply(h, l, 0x03, tid, r, k);
+        break;
+
+    case 0x04:      /* Service Attribute: handle, max bytes, attribute ids, continuation */
+        if (n < 6 || be32(p) != SDP_SRV_HANDLE) { sdp_error(h, l, tid, 0x0002); break; }
+        a = sdp_pick_attrs(p + 6, n - 6, attrs, sizeof attrs);
+        if (a < 0) { sdp_error(h, l, tid, 0x0003); break; }
+        r[0] = 0; r[1] = (unsigned char)(2 + a);
+        r[2] = 0x35; r[3] = (unsigned char)a;
+        memcpy(r + 4, attrs, (size_t)a);
+        r[4 + a] = 0;
+        sdp_reply(h, l, 0x05, tid, r, 5 + a);
+        break;
+
+    case 0x06:      /* Service Search Attribute: pattern, max bytes, attribute ids, continuation */
+        hl = de_header(p, n, &type, &clen);
+        if (!hl || type != 6 || hl + clen + 2 > n) { sdp_error(h, l, tid, 0x0003); break; }
+        matches = sdp_pattern_matches(p, n);
+        a = matches ? sdp_pick_attrs(p + hl + clen + 2, n - hl - clen - 2, attrs, sizeof attrs) : 0;
+        if (a < 0) { sdp_error(h, l, tid, 0x0003); break; }
+        k = 2;
+        r[k++] = 0x35;
+        if (matches) {
+            r[k++] = (unsigned char)(2 + a);
+            r[k++] = 0x35;
+            r[k++] = (unsigned char)a;
+            memcpy(r + k, attrs, (size_t)a);
+            k += a;
+        } else {
+            r[k++] = 0;
+        }
+        r[0] = 0; r[1] = (unsigned char)(k - 2);
+        r[k++] = 0;
+        sdp_reply(h, l, 0x07, tid, r, k);
+        break;
+
+    default:
+        sdp_error(h, l, tid, 0x0003);
+        break;
+    }
+}
+
 static int send_report(host_t *h, link_t *l, unsigned char *buf, int n)
 {
     if (l->le) return le_send_report(h, l, buf + 1, n);
@@ -1091,7 +1248,8 @@ static void on_frame(host_t *h, link_t *l, unsigned cid, const unsigned char *d,
     }
     c = chan_by_scid(l, cid);
     if (!c) return;
-    if (c == &l->sdp) on_sdp(h, l, d, len);
+    if (c == &l->sdps) sdp_serve(h, l, d, len);
+    else if (c == &l->sdp) on_sdp(h, l, d, len);
     else on_hid(h, l, c, d, len);
 }
 
