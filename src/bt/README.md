@@ -14,3 +14,4 @@ The upstream stack shares the PS5's internal radio with the system. Here it runs
 
 - `host_int.h`: `T_SELF_AUTH` and `T_SELF_ENCRYPT` are 0. A DS4 that calls back dropped the link about 170 ms after it came up, long before the old 800 ms wait ran out.
 - `host.c`: a failed authentication on reconnect only forgets the key when the pad refused it (status 0x05 or 0x06). A collision or a timeout keeps the key.
+- `host.c`: `host_pair` only logs searches of 30 s or more. The short background searches from `bt_adapter.c` would fill the log.
