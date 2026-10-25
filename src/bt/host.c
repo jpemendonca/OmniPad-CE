@@ -1645,7 +1645,9 @@ static void on_event(host_t *h, const unsigned char *ev, int len)
             h->pin_addr_set = 1;
             log_line("pad %s: it refused the PIN 0000; next time this console's address", addr_str(l->addr));
         }
-        if (!l->pairing) db_forget(h, l->addr);     /* the pad lost its key */
+        /* OmniPad: only a refused key means the pad lost it; a collision (0x23, 0x2a) or a
+         * timeout is no reason to make the user pair again */
+        if (!l->pairing && (ev[2] == 0x05 || ev[2] == 0x06)) db_forget(h, l->addr);     /* the pad lost its key */
         link_disconnect(h, l, "authentication failed");
         break;
 

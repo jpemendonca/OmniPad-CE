@@ -67,8 +67,11 @@
 
 /* ---- timing (ms) -------------------------------------------------------- */
 
-#define T_SELF_AUTH      800    /* a reconnecting pad may authenticate itself */
-#define T_SELF_ENCRYPT  1500    /* ... and start encryption itself */
+/* OmniPad: 0 on its own adapter. A DualShock 4 calling back dropped the link ~170 ms after it came
+ * up, with the host still waiting out these delays (PS5, 25 Oct). They were for the shared radio,
+ * where the system's driver might be the one answering. */
+#define T_SELF_AUTH        0    /* a reconnecting pad may authenticate itself */
+#define T_SELF_ENCRYPT     0    /* ... and start encryption itself */
 #define T_SELF_CHANNELS 1200    /* ... and open its own HID channels */
 #define T_INTR_AFTER     500    /* interrupt channel after control */
 #define T_CONN_TIMEOUT 20000    /* paging a pad */

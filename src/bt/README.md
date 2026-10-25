@@ -10,4 +10,7 @@ Copied from there:
 - `generic.c`: the generic HID profile.
 - `crc32.c`, `crc32.h` and `pad.h`.
 
-The upstream stack shares the PS5's internal radio with the system. Here it runs on OmniPad's own USB adapter instead: see `src/bt_adapter.c`, which provides the `hci_ops` transport. The optional sharing hooks (`yield`, `event_reads`, `acl_reads`) are left out, so the host keeps every read. The only change in these files is the profiles rename.
+The upstream stack shares the PS5's internal radio with the system. Here it runs on OmniPad's own USB adapter instead: see `src/bt_adapter.c`, which provides the `hci_ops` transport. The optional sharing hooks (`yield`, `event_reads`, `acl_reads`) are left out, so the host keeps every read. Changes in these files, besides the profiles rename:
+
+- `host_int.h`: `T_SELF_AUTH` and `T_SELF_ENCRYPT` are 0. A DS4 that calls back dropped the link about 170 ms after it came up, long before the old 800 ms wait ran out.
+- `host.c`: a failed authentication on reconnect only forgets the key when the pad refused it (status 0x05 or 0x06). A collision or a timeout keeps the key.

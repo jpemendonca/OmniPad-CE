@@ -305,14 +305,18 @@ static int arm_read(bt_dev_t *d, int k)
 
 /* Connection events as the adapter sends them, before the host sees them: shows whether a pad's
  * call reached the adapter at all. Link keys are blanked. */
+static int s_acl_log_left;     /* ACL packets still to log after a link comes up */
+
 static void log_link_event(const uint8_t *ev, int len)
 {
-    static int budget = 200;
+    static int budget = 300;
     switch (ev[0]) {
-    case 0x03: case 0x04: case 0x05: case 0x16: case 0x17: case 0x18:
-    case 0x31: case 0x32: case 0x33: case 0x34: break;
-    default: return;
+    case 0x01: case 0x02: case 0x22: case 0x2F:     /* inquiry: the host logs what matters */
+    case 0x0E: case 0x0F: case 0x13: case 0x3E:     /* command replies, completed packets, LE */
+        return;
+    default: break;
     }
+    if (ev[0] == 0x03) s_acl_log_left = 16;
     if (budget <= 0) return;
     budget--;
     char hex[3 * 24 + 1];
@@ -337,6 +341,15 @@ static void take_events(bt_dev_t *d)
     }
 }
 
+static void log_acl(const char *dir, const uint8_t *pkt, int len)
+{
+    char hex[3 * 20 + 1];
+    int k;
+    for (k = 0; k < len && k < 20; k++) snprintf(hex + 3 * k, 4, "%02x ", pkt[k]);
+    hex[3 * k] = 0;
+    log_line("bt: ACL %s %s(len %d)", dir, hex, len);
+}
+
 static void take_acl(bt_dev_t *d)
 {
     while (d->acl_acc_len >= 4) {
@@ -347,6 +360,10 @@ static void take_acl(bt_dev_t *d)
             return;
         }
         if (d->acl_acc_len < total) return;
+        if (s_acl_log_left > 0) {
+            s_acl_log_left--;
+            log_acl("in", d->acl_acc, total);
+        }
         queue_push(&d->aclq, d->acl_acc, total);
         d->acl_in++;
         d->acl_acc_len -= total;
@@ -444,6 +461,10 @@ static int hci_send(bt_dev_t *d, uint16_t opcode, const uint8_t *params, int len
 static int acl_send(bt_dev_t *d, const uint8_t *pkt, int len)
 {
     if (d->gone || len <= 0 || len > HCI_PKT_MAX) return 0;
+    if (s_acl_log_left > 0) {
+        s_acl_log_left--;
+        log_acl("out", pkt, len);
+    }
     memcpy(d->tx_acl, pkt, (size_t)len);
     d->frame_len[EP_ACL_OUT] = (uint32_t)len;
     d->out_done = 0;

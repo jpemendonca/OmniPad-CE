@@ -337,6 +337,21 @@
       </section>
     </div>
 
+    <section class="panel" aria-labelledby="hBt">
+      <h2><span id="hBt"></span><span class="pill" id="btPill">—</span></h2>
+      <div class="stats">
+        <div class="stat"><div class="k" id="kBtAdapter"></div><div class="v" id="vBtAdapter">—</div></div>
+        <div class="stat"><div class="k" id="kBtAddr"></div><div class="v" id="vBtAddr">—</div></div>
+        <div class="stat"><div class="k" id="kBtPaired"></div><div class="v" id="vBtPaired">—</div></div>
+        <div class="stat wide"><div class="k" id="kBtPads"></div><div class="v" id="vBtPads">—</div></div>
+      </div>
+      <div class="note" id="btNote"></div>
+      <div class="actions">
+        <button type="button" id="btnBtPair"></button>
+        <button type="button" id="btnBtForget" class="danger"></button>
+      </div>
+    </section>
+
     <section class="panel" aria-labelledby="hLog">
       <h2><span id="hLog"></span><span class="pill" id="logCount">0</span></h2>
       <div class="log-tools">
@@ -383,7 +398,14 @@
         confirmDropAll: 'Desconectar todos os controles virtuais?',
         log: 'Log ao vivo', filter: 'Filtrar o log…', pause: 'Pausar', resume: 'Continuar', clear: 'Limpar',
         qAll: 'Tudo', qUsb: 'USB', qSlot: 'Slots', qErr: 'Erros',
-        raw: 'log bruto', up: 'ligado há', light: 'Tema claro', dark: 'Tema escuro'
+        raw: 'log bruto', up: 'ligado há', light: 'Tema claro', dark: 'Tema escuro',
+        bt: 'Bluetooth (adaptador USB)', btAdapter: 'Adaptador', btAddr: 'Endereço', btPaired: 'Pareados', btPads: 'Conectados',
+        btState: { 'no adapter': 'Sem adaptador', starting: 'Iniciando', ready: 'Pronto', stopping: 'Parando' },
+        btNoAdapter: 'Plugue um adaptador Bluetooth USB no PS5. O DualSense continua no rádio do próprio PS5.',
+        btIdle: 'Controles já pareados voltam sozinhos ao apertar PS. Pra um controle novo, toque em Parear e coloque ele em pareamento (DS4: segure Share + PS).',
+        btPairing: (s) => `Procurando controles em modo de pareamento… ${s}s restantes.`,
+        btPair: 'Parear controle', btCancel: 'Parar busca', btForget: 'Esquecer pareados',
+        confirmForget: 'Esquecer todos os controles pareados? Eles vão precisar ser pareados de novo.'
       },
       en: {
         linkOk: 'Connected to PS5', linkWait: 'Connecting…', linkBad: 'No response',
@@ -407,7 +429,14 @@
         confirmDropAll: 'Disconnect all virtual controllers?',
         log: 'Live log', filter: 'Filter the log…', pause: 'Pause', resume: 'Resume', clear: 'Clear',
         qAll: 'All', qUsb: 'USB', qSlot: 'Slots', qErr: 'Errors',
-        raw: 'raw log', up: 'up for', light: 'Light theme', dark: 'Dark theme'
+        raw: 'raw log', up: 'up for', light: 'Light theme', dark: 'Dark theme',
+        bt: 'Bluetooth (USB adapter)', btAdapter: 'Adapter', btAddr: 'Address', btPaired: 'Paired', btPads: 'Connected',
+        btState: { 'no adapter': 'No adapter', starting: 'Starting', ready: 'Ready', stopping: 'Stopping' },
+        btNoAdapter: 'Plug a USB Bluetooth adapter into the PS5. The DualSense stays on the console's own radio.',
+        btIdle: 'Paired controllers come back on their own when you press PS. For a new one, tap Pair and put it in pairing mode (DS4: hold Share + PS).',
+        btPairing: (s) => `Looking for controllers in pairing mode… ${s}s left.`,
+        btPair: 'Pair controller', btCancel: 'Stop search', btForget: 'Forget paired',
+        confirmForget: 'Forget every paired controller? They will need to be paired again.'
       }
     };
 
@@ -461,6 +490,9 @@
       $('btnLight').setAttribute('aria-label', T.light); $('btnLight').title = T.light;
       $('btnDark').setAttribute('aria-label', T.dark); $('btnDark').title = T.dark;
       $('hTest').textContent = T.test; $('hHealth').textContent = T.health; $('hLog').textContent = T.log;
+      $('hBt').textContent = T.bt; $('kBtAdapter').textContent = T.btAdapter; $('kBtAddr').textContent = T.btAddr;
+      $('kBtPaired').textContent = T.btPaired; $('kBtPads').textContent = T.btPads; $('btnBtForget').textContent = T.btForget;
+      if (last) renderBt(last.bt);
       $('lblLS').textContent = T.ls; $('lblRS').textContent = T.rs;
       $('kRate').textContent = T.kRate; $('kAge').textContent = T.kAge; $('kInj').textContent = T.kInj;
       $('kUp').textContent = T.kUp; $('kConn').textContent = T.kConn; $('kState').textContent = T.kState;
@@ -515,7 +547,22 @@
       $(id).setAttribute('transform', `translate(${cx + off(x)} ${cy + off(y)})`);
     }
 
+    function renderBt(bt) {
+      if (!bt) return;
+      const ready = bt.state === 'ready', pairing = ready && bt.pairing_left > 0;
+      $('btPill').textContent = T.btState[bt.state] || bt.state;
+      $('vBtAdapter').textContent = bt.adapter || '—';
+      $('vBtAddr').textContent = bt.address || '—';
+      $('vBtPaired').textContent = ready ? String(bt.paired) : '—';
+      $('vBtPads').textContent = bt.pads.length ? bt.pads.map(p => `${p.name} · slot ${p.slot}`).join(', ') : '—';
+      $('btNote').textContent = bt.state === 'no adapter' ? T.btNoAdapter : pairing ? T.btPairing(bt.pairing_left) : T.btIdle;
+      $('btnBtPair').textContent = pairing ? T.btCancel : T.btPair;
+      $('btnBtPair').disabled = !ready;
+      $('btnBtForget').disabled = !ready || bt.paired === 0;
+    }
+
     function render(d) {
+      renderBt(d.bt);
       $('ver').textContent = `v${d.version} · build ${d.build} · ${T.up} ${fmtDur(d.uptime_ms)}`;
       $('foot').textContent = `OmniPad PS5 v${d.version} (build ${d.build})`;
 
@@ -633,6 +680,7 @@
     const QUICK = {
       all: null,
       usb: /usb_hotplug|usb_ctrl|ugen|VID|dongle|player LED/i,
+      bt: /bt:|pad [0-9A-F]{2}:|pairing|inquiry|controller|link |le:/,
       slot: /vpad:|slot \d|AddDevice|released|releasing|re-arming|profile|ready|removed/i,
       err: /error|fail|disconnect|unparsed|timeout|warning|idle for/i
     };
@@ -640,7 +688,7 @@
     function buildQuick() {
       const box = $('quick');
       box.innerHTML = '';
-      [['all', T.qAll], ['usb', T.qUsb], ['slot', T.qSlot], ['err', T.qErr]].forEach(([k, label]) => {
+      [['all', T.qAll], ['usb', T.qUsb], ['bt', 'Bluetooth'], ['slot', T.qSlot], ['err', T.qErr]].forEach(([k, label]) => {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'ghost'; b.textContent = label;
         b.setAttribute('aria-pressed', String(k === quick));
@@ -718,6 +766,11 @@
       $('btnDrop').addEventListener('click', () => post(`/api/disconnect?slot=${selected}`));
       $('btnDropAll').addEventListener('click', () => { if (confirm(T.confirmDropAll)) post('/api/disconnect?slot=-1'); });
       $('btnStop').addEventListener('click', () => { if (confirm(T.confirmStop)) post('/api/exit'); });
+      $('btnBtPair').addEventListener('click', () => {
+        const pairing = last && last.bt && last.bt.pairing_left > 0;
+        post(`/api/pair?seconds=${pairing ? 0 : 120}`);
+      });
+      $('btnBtForget').addEventListener('click', () => { if (confirm(T.confirmForget)) post('/api/bt_forget'); });
       $('logFilter').addEventListener('input', renderLog);
       $('btnPause').addEventListener('click', () => { logPaused = !logPaused; $('btnPause').textContent = logPaused ? T.resume : T.pause; if (!logPaused) renderLog(); });
       $('btnClear').addEventListener('click', () => { logLines = []; renderLog(); });
