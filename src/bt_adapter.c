@@ -284,6 +284,9 @@ static void bt_close(bt_dev_t *d)
     ioctl(d->fd, USB_FS_UNINIT, &un);
     close(d->fd);
     d->fd = -1;
+    memset(d->pending, 0, sizeof(d->pending));
+    d->evt_acc_len = d->acl_acc_len = 0;
+    d->evq.count = d->aclq.count = 0;
 }
 
 static int arm_read(bt_dev_t *d, int k)
@@ -300,10 +303,33 @@ static int arm_read(bt_dev_t *d, int k)
     return 1;
 }
 
+/* Connection events as the adapter sends them, before the host sees them: shows whether a pad's
+ * call reached the adapter at all. Link keys are blanked. */
+static void log_link_event(const uint8_t *ev, int len)
+{
+    static int budget = 200;
+    switch (ev[0]) {
+    case 0x03: case 0x04: case 0x05: case 0x16: case 0x17: case 0x18:
+    case 0x31: case 0x32: case 0x33: case 0x34: break;
+    default: return;
+    }
+    if (budget <= 0) return;
+    budget--;
+    char hex[3 * 24 + 1];
+    int k;
+    for (k = 0; k < len && k < 24; k++) {
+        int blank = ev[0] == 0x18 && k >= 8 && k < 24;
+        snprintf(hex + 3 * k, 4, blank ? "-- " : "%02x ", ev[k]);
+    }
+    hex[3 * k] = 0;
+    log_line("bt: adapter event %s(len %d)", hex, len);
+}
+
 static void take_events(bt_dev_t *d)
 {
     while (d->evt_acc_len >= 2 && d->evt_acc_len >= 2 + d->evt_acc[1]) {
         int total = 2 + d->evt_acc[1];
+        log_link_event(d->evt_acc, total);
         queue_push(&d->evq, d->evt_acc, total);
         d->events_in++;
         d->evt_acc_len -= total;
@@ -816,7 +842,7 @@ static void run_host(bt_dev_t *d)
         host_pair(h, BT_FIRST_PAIR_S);
     }
 
-    long last_publish = 0;
+    long last_publish = 0, last_alive = now_ms();
     while (!g_bt.stop && !host_transport_lost(h)) {
         int pair = -1, forget = 0;
         pthread_mutex_lock(&g_bt.lock);
@@ -834,6 +860,15 @@ static void run_host(bt_dev_t *d)
         if (now - last_publish > 250) {
             last_publish = now;
             publish(h);
+        }
+        /* While nothing is connected, a line now and then shows the adapter is still being heard */
+        int any = 0;
+        for (int i = 0; i < HOST_MAX_PADS; i++) any |= g_bt.pads[i].vslot >= 0;
+        if (any) last_alive = now;
+        else if (now - last_alive > 60000) {
+            last_alive = now;
+            log_line("bt: waiting for a paired pad (%d paired); %u events from the adapter so far",
+                     host_paired_count(h), d->events_in);
         }
     }
     if (host_transport_lost(h)) log_line("bt: adapter lost (unplugged or rest mode)");
@@ -859,6 +894,15 @@ static void *bt_worker(void *arg)
         log_line("bt: using adapter %04x:%04x on %s (events 0x%02x, ACL 0x%02x/0x%02x)",
                  d->vid, d->pid, d->path, d->ep_addr[EP_EVT], d->ep_addr[EP_ACL_IN], d->ep_addr[EP_ACL_OUT]);
         int started = bt_open(d) && bring_up(d);
+        /* An instance being replaced may still hold the adapter for a moment: try again before giving up */
+        for (int tries = 1; !started && !d->gone && tries < 3 && !g_bt.stop; tries++) {
+            log_line("bt: retrying adapter start (%d)", tries + 1);
+            bt_close(d);
+            sleep_ms(1500);
+            d->fd = open(d->path, O_RDWR | O_NONBLOCK);
+            if (d->fd < 0) break;
+            started = bt_open(d) && bring_up(d);
+        }
         if (started) run_host(d);
         else log_line("bt: adapter did not start; unplug and plug it again to retry");
         bt_close(d);
