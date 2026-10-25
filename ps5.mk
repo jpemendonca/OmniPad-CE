@@ -15,6 +15,7 @@ LDLIBS    += -lScePad -lSceUserService -lSceSystemService -lSceAppInstUtil -ldl
 SRCS := src/util.c src/log.c src/profiles.c \
         src/usb_controllers.c src/pad_drivers.c src/usb_hotplug.c \
         src/bt_rtl.c src/bt_adapter.c \
+        src/bt/host.c src/bt/le.c src/bt/smp_crypto.c src/bt/bt_profiles.c src/bt/generic.c src/bt/crc32.c \
         src/shellui_inject.c src/ps5_vpad.c \
         src/web.c src/tcp_stream.c src/main.c
 
@@ -28,7 +29,7 @@ $(ELF): $(OBJS)
 	@echo "[+] Built successfully: $@"
 	@echo "[+] Canonical artifact: dist/OmniPad-PS5.elf"
 
-HEADERS := $(wildcard src/*.h)
+HEADERS := $(wildcard src/*.h src/bt/*.h)
 
 $(BUILD)/%.o: src/%.c $(HEADERS)
 	@mkdir -p $(dir $@)

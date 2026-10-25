@@ -1,6 +1,7 @@
 #include "web.h"
 #include "ps5_vpad.h"
 #include "usb_hotplug.h"
+#include "bt_adapter.h"
 #include "shellui_inject.h"
 #include "version.h"
 #include "log.h"
@@ -153,7 +154,7 @@ static void handle_client(int cfd)
         /* Live view for the dashboard, polled ~30 times per second: what each controller
          * is sending right now, plus counters the page turns into rates. */
         long now = now_ms();
-        char json[3072];
+        char json[4096];
         int jlen = snprintf(json, sizeof(json),
             "{\"version\":\"%s\",\"build\":%d,\"uptime_ms\":%ld,\"now_ms\":%ld,\"slots\":[",
             ANYPAD_VERSION, ANYPAD_BUILD, now - g_started_at, now);
@@ -180,7 +181,9 @@ static void handle_client(int cfd)
                 usb_hotplug_idle_release_ms(i),
                 (unsigned)in->buttons, in->lx, in->ly, in->rx, in->ry, in->l2, in->r2);
         }
-        jlen += snprintf(json + jlen, sizeof(json) - (size_t)jlen, "]}");
+        jlen += snprintf(json + jlen, sizeof(json) - (size_t)jlen, "],\"bt\":");
+        if (jlen < (int)sizeof(json)) jlen += bt_adapter_status_json(json + jlen, (int)sizeof(json) - jlen);
+        if (jlen < (int)sizeof(json)) jlen += snprintf(json + jlen, sizeof(json) - (size_t)jlen, "}");
         if (jlen >= (int)sizeof(json)) jlen = (int)sizeof(json) - 1;
 
         res_len = snprintf(res, sizeof(res),
@@ -221,7 +224,17 @@ static void handle_client(int cfd)
         write(cfd, res, (size_t)res_len);
     }
     else if (strncmp(req, "POST /api/pair", 14) == 0) {
-        const char *ok = "{\"status\":\"usb_plug_and_play_active\"}";
+        /* Bluetooth pairing window on our own adapter; seconds=0 closes it */
+        char *p = strstr(req, "seconds=");
+        int seconds = p ? atoi(p + 8) : 90;
+        const char *ok = bt_adapter_pair(seconds) ? "{\"status\":\"ok\"}" : "{\"status\":\"no_adapter\"}";
+        res_len = snprintf(res, sizeof(res),
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n%s",
+            strlen(ok), ok);
+        write(cfd, res, (size_t)res_len);
+    }
+    else if (strncmp(req, "POST /api/bt_forget", 19) == 0) {
+        const char *ok = bt_adapter_forget_all() ? "{\"status\":\"ok\"}" : "{\"status\":\"no_adapter\"}";
         res_len = snprintf(res, sizeof(res),
             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n%s",
             strlen(ok), ok);

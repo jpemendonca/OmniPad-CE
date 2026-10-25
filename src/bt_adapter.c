@@ -1,5 +1,9 @@
 #include "bt_adapter.h"
 #include "bt_rtl.h"
+#include "bt/host.h"
+#include "ps5_vpad.h"
+#include "usb_hotplug.h"
+#include "pad_types.h"
 #include "log.h"
 #include "util.h"
 
@@ -23,34 +27,58 @@
 #endif
 
 #define BT_SCAN_INTERVAL_MS 2000
-#define BT_INQUIRY_ROUNDS   8     /* about three minutes to put a pad in pairing mode */
-#define BT_INQUIRY_LEN      16    /* x 1.28 s */
-#define BT_MAX_SEEN         32
+#define BT_DB_PATH          "/data/anypad/omnipad_bt.db"  /* not PR 18's pads.db: those keys are for the internal radio */
+#define BT_FIRST_PAIR_S     120   /* pairing window opened by itself when no pad is paired yet */
+
+#define EVQ_LEN   32
+#define ACLQ_LEN  32
+#define ACL_RX    2048
 
 typedef struct {
-    uint8_t  addr[6];
-    uint8_t  psrm;           /* page scan repetition mode */
-    uint16_t clock_offset;
-    uint32_t cod;
-} bt_seen_t;
+    uint8_t data[HCI_PKT_MAX];
+    int     len;
+} bt_pkt_t;
+
+typedef struct {
+    bt_pkt_t pkt[ACLQ_LEN];
+    int      head, count, cap;
+    unsigned dropped;
+} bt_queue_t;
+
+enum { EP_EVT = 0, EP_ACL_IN = 1, EP_ACL_OUT = 2, EP_COUNT = 3 };
 
 typedef struct {
     int      fd;
     char     path[32];
     uint16_t vid, pid;
-    uint8_t  ep_evt;
-    uint16_t mps_evt;
+    uint8_t  ep_addr[EP_COUNT];
+    uint16_t ep_mps[EP_COUNT];
 #ifdef __PROSPERO__
-    struct usb_fs_endpoint eps[1];
+    struct usb_fs_endpoint eps[EP_COUNT];
 #endif
-    void    *frame[1];
-    uint32_t frame_len[1];
-    uint8_t  rx[64];
-    int      pending;
-    uint8_t  acc[512];       /* event bytes not yet consumed; events span several packets */
-    int      acc_len;
-    int      gone;           /* the adapter stopped answering (unplugged) */
+    void    *frame[EP_COUNT];
+    uint32_t frame_len[EP_COUNT];
+    int      pending[EP_COUNT];
+    uint8_t  rx_evt[64];
+    uint8_t  rx_acl[ACL_RX];
+    uint8_t  tx_acl[HCI_PKT_MAX];
+    int      out_done, out_status;
+
+    uint8_t  evt_acc[512];   /* events span several interrupt packets */
+    int      evt_acc_len;
+    uint8_t  acl_acc[2 * ACL_RX];
+    int      acl_acc_len;
+    bt_queue_t evq, aclq;
+    unsigned events_in, acl_in, acl_out;
+    int      gone;           /* the adapter stopped answering (unplugged, rest mode) */
 } bt_dev_t;
+
+/* One pad of the host and the virtual DualSense slot it was given */
+typedef struct {
+    int      vslot;          /* -1: none */
+    pad_info info;
+    char     name[64];
+} bt_pad_t;
 
 static struct {
     pthread_t       thread;
@@ -58,10 +86,24 @@ static struct {
     int             running;
     pthread_mutex_t lock;
     char            owned[32];
-    char            done[32];      /* adapter already tested; retried after it is replugged */
+    char            done[32];      /* adapter that failed to start; retried after it is replugged */
     uint32_t        done_ids;
     uint32_t        logged_ids[6][21];
-} g_bt = { .lock = PTHREAD_MUTEX_INITIALIZER };
+
+    /* Requests from the web thread, applied by the worker (the host is not thread-safe) */
+    int             pair_req;      /* seconds, -1 none */
+    int             forget_req;
+
+    /* What the dashboard shows, written by the worker */
+    const char     *state;
+    char            adapter[96];
+    char            address[18];
+    int             pairing_left;
+    int             paired;
+    bt_pad_t        pads[HOST_MAX_PADS];
+} g_bt = { .lock = PTHREAD_MUTEX_INITIALIZER, .pair_req = -1, .state = "no adapter" };
+
+static bt_dev_t g_dev;
 
 int bt_adapter_owns(const char *dev_path)
 {
@@ -71,14 +113,15 @@ int bt_adapter_owns(const char *dev_path)
     return owns;
 }
 
-static void set_owned(const char *path)
+static void set_state(const char *state, const char *path)
 {
     pthread_mutex_lock(&g_bt.lock);
-    snprintf(g_bt.owned, sizeof(g_bt.owned), "%s", path ? path : "");
+    g_bt.state = state;
+    if (path) snprintf(g_bt.owned, sizeof(g_bt.owned), "%s", path);
     pthread_mutex_unlock(&g_bt.lock);
 }
 
-static void addr_str(const uint8_t *a, char *out)
+static void fmt_addr(const uint8_t *a, char *out)
 {
     snprintf(out, 18, "%02X:%02X:%02X:%02X:%02X:%02X", a[5], a[4], a[3], a[2], a[1], a[0]);
 }
@@ -97,13 +140,34 @@ static const char *manufacturer_name(uint16_t m)
     }
 }
 
-static int is_gamepad(uint32_t cod)
+static void queue_push(bt_queue_t *q, const uint8_t *data, int len)
 {
-    /* Major class Peripheral, minor Gamepad */
-    return ((cod >> 8) & 0x1f) == 0x05 && ((cod >> 2) & 0x0f) == 0x02;
+    if (len > HCI_PKT_MAX) len = HCI_PKT_MAX;
+    if (q->count == q->cap) {
+        q->head = (q->head + 1) % q->cap;
+        q->count--;
+        q->dropped++;
+    }
+    bt_pkt_t *p = &q->pkt[(q->head + q->count) % q->cap];
+    memcpy(p->data, data, (size_t)len);
+    p->len = len;
+    q->count++;
+}
+
+static int queue_pop(bt_queue_t *q, uint8_t *out, int max)
+{
+    if (q->count == 0) return 0;
+    bt_pkt_t *p = &q->pkt[q->head];
+    int len = p->len < max ? p->len : max;
+    memcpy(out, p->data, (size_t)len);
+    q->head = (q->head + 1) % q->cap;
+    q->count--;
+    return len;
 }
 
 #ifdef __PROSPERO__
+
+/* ---- USB transport -------------------------------------------------------- */
 
 /* The console's own radio. Only MediaTek has been seen there (0e8d:3603 on ugen0.2); external
  * MediaTek USB adapters are rare, so the whole vendor is left alone. */
@@ -113,8 +177,8 @@ static int is_internal_radio(uint16_t vid, uint16_t pid)
     return vid == 0x0e8d;
 }
 
-/* Finds the HCI interface (class E0/01/01) and its event endpoint */
-static int find_hci_interface(int fd, uint8_t *ep_evt, uint16_t *mps_evt)
+/* Finds the HCI interface (class E0/01/01): its event, ACL in and ACL out endpoints */
+static int find_hci_interface(int fd, bt_dev_t *d)
 {
     uint8_t raw[1024];
     struct usb_gen_descriptor desc;
@@ -126,22 +190,28 @@ static int find_hci_interface(int fd, uint8_t *ep_evt, uint16_t *mps_evt)
     if (len <= 0 || len > (int)sizeof(raw)) return 0;
 
     int in_hci = 0;
-    *ep_evt = 0;
+    memset(d->ep_addr, 0, sizeof(d->ep_addr));
     for (int off = 0; off + 2 <= len;) {
         int dl = raw[off];
         if (dl < 2 || off + dl > len) break;
         if (raw[off + 1] == 0x04 && dl >= 9) {
             in_hci = raw[off + 2] == 0 && raw[off + 3] == 0 &&
                      raw[off + 5] == 0xE0 && raw[off + 6] == 0x01 && raw[off + 7] == 0x01;
-        } else if (raw[off + 1] == 0x05 && dl >= 7 && in_hci && !*ep_evt) {
-            if ((raw[off + 2] & 0x80) && (raw[off + 3] & 0x03) == 0x03) {
-                *ep_evt = raw[off + 2];
-                *mps_evt = (uint16_t)(raw[off + 4] | (raw[off + 5] & 0x07) << 8);
+        } else if (raw[off + 1] == 0x05 && dl >= 7 && in_hci) {
+            uint8_t addr = raw[off + 2], type = raw[off + 3] & 0x03;
+            uint16_t mps = (uint16_t)(raw[off + 4] | (raw[off + 5] & 0x07) << 8);
+            int k = -1;
+            if (type == 0x03 && (addr & 0x80)) k = EP_EVT;
+            else if (type == 0x02 && (addr & 0x80)) k = EP_ACL_IN;
+            else if (type == 0x02) k = EP_ACL_OUT;
+            if (k >= 0 && !d->ep_addr[k]) {
+                d->ep_addr[k] = addr;
+                d->ep_mps[k] = mps;
             }
         }
         off += dl;
     }
-    return *ep_evt != 0;
+    return d->ep_addr[EP_EVT] && d->ep_addr[EP_ACL_IN] && d->ep_addr[EP_ACL_OUT];
 }
 
 static int bt_open(bt_dev_t *d)
@@ -167,40 +237,47 @@ static int bt_open(bt_dev_t *d)
     memset(d->eps, 0, sizeof(d->eps));
     memset(&init, 0, sizeof(init));
     init.pEndpoints = d->eps;
-    init.ep_index_max = 1;
+    init.ep_index_max = EP_COUNT;
     if (ioctl(d->fd, USB_FS_INIT, &init) != 0) {
         log_line("bt: USB_FS_INIT failed on %s (%s)", d->path, strerror(errno));
         return 0;
     }
 
-    struct usb_fs_open op;
-    memset(&op, 0, sizeof(op));
-    op.max_bufsize = sizeof(d->rx);
-    op.max_frames = 1;
-    op.ep_index = 0;
-    op.ep_no = d->ep_evt;
-    if (ioctl(d->fd, USB_FS_OPEN, &op) != 0) {
-        log_line("bt: cannot open event endpoint 0x%02x on %s (%s)", d->ep_evt, d->path, strerror(errno));
-        struct usb_fs_uninit un = {0};
-        ioctl(d->fd, USB_FS_UNINIT, &un);
-        return 0;
+    static const uint32_t bufsize[EP_COUNT] = { 64, ACL_RX, HCI_PKT_MAX };
+    d->frame[EP_EVT] = d->rx_evt;
+    d->frame[EP_ACL_IN] = d->rx_acl;
+    d->frame[EP_ACL_OUT] = d->tx_acl;
+    for (int k = 0; k < EP_COUNT; k++) {
+        struct usb_fs_open op;
+        memset(&op, 0, sizeof(op));
+        op.max_bufsize = bufsize[k];
+        op.max_frames = 1;
+        op.ep_index = (uint8_t)k;
+        op.ep_no = d->ep_addr[k];
+        if (ioctl(d->fd, USB_FS_OPEN, &op) != 0) {
+            log_line("bt: cannot open endpoint 0x%02x on %s (%s)", d->ep_addr[k], d->path, strerror(errno));
+            struct usb_fs_uninit un = {0};
+            ioctl(d->fd, USB_FS_UNINIT, &un);
+            return 0;
+        }
+        d->eps[k].ppBuffer = &d->frame[k];
+        d->eps[k].pLength = &d->frame_len[k];
+        d->eps[k].nFrames = 1;
+        d->eps[k].flags = USB_FS_FLAG_SINGLE_SHORT_OK;
+        d->eps[k].timeout = k == EP_ACL_OUT ? 1000 : USB_FS_TIMEOUT_NONE;
     }
-    if (d->mps_evt == 0 || d->mps_evt > sizeof(d->rx)) d->mps_evt = sizeof(d->rx);
-
-    d->frame[0] = d->rx;
-    d->eps[0].ppBuffer = d->frame;
-    d->eps[0].pLength = d->frame_len;
-    d->eps[0].nFrames = 1;
-    d->eps[0].flags = USB_FS_FLAG_SINGLE_SHORT_OK;
-    d->eps[0].timeout = USB_FS_TIMEOUT_NONE;
+    if (d->ep_mps[EP_EVT] == 0 || d->ep_mps[EP_EVT] > sizeof(d->rx_evt)) d->ep_mps[EP_EVT] = sizeof(d->rx_evt);
+    d->evq.cap = EVQ_LEN;
+    d->aclq.cap = ACLQ_LEN;
     return 1;
 }
 
 static void bt_close(bt_dev_t *d)
 {
     if (d->fd < 0) return;
-    if (d->pending) {
-        struct usb_fs_stop st = { .ep_index = 0 };
+    for (int k = 0; k < EP_COUNT; k++) {
+        if (!d->pending[k]) continue;
+        struct usb_fs_stop st = { .ep_index = (uint8_t)k };
         ioctl(d->fd, USB_FS_STOP, &st);
     }
     struct usb_fs_uninit un = {0};
@@ -209,74 +286,114 @@ static void bt_close(bt_dev_t *d)
     d->fd = -1;
 }
 
-/* One interrupt packet from the event endpoint into acc; 1 on data, 0 on timeout, -1 on error.
- * The IN transfer stays queued across calls so no event is lost between them. */
-static int read_packet(bt_dev_t *d, int timeout_ms)
+static int arm_read(bt_dev_t *d, int k)
 {
-    if (!d->pending) {
-        d->frame_len[0] = d->mps_evt;
-        struct usb_fs_start start = { .ep_index = 0 };
-        if (ioctl(d->fd, USB_FS_START, &start) != 0 && errno != EBUSY) {
-            d->gone = 1;
-            return -1;
-        }
-        d->pending = 1;
+    if (d->pending[k]) return 1;
+    /* One interrupt packet per event read; ACL reads end on the short last packet */
+    d->frame_len[k] = k == EP_EVT ? d->ep_mps[EP_EVT] : ACL_RX;
+    struct usb_fs_start start = { .ep_index = (uint8_t)k };
+    if (ioctl(d->fd, USB_FS_START, &start) != 0 && errno != EBUSY) {
+        d->gone = 1;
+        return 0;
     }
+    d->pending[k] = 1;
+    return 1;
+}
+
+static void take_events(bt_dev_t *d)
+{
+    while (d->evt_acc_len >= 2 && d->evt_acc_len >= 2 + d->evt_acc[1]) {
+        int total = 2 + d->evt_acc[1];
+        queue_push(&d->evq, d->evt_acc, total);
+        d->events_in++;
+        d->evt_acc_len -= total;
+        memmove(d->evt_acc, d->evt_acc + total, (size_t)d->evt_acc_len);
+    }
+}
+
+static void take_acl(bt_dev_t *d)
+{
+    while (d->acl_acc_len >= 4) {
+        int total = 4 + (int)le16(d->acl_acc + 2);
+        if (total > HCI_PKT_MAX) {
+            log_line("bt: ACL packet of %d bytes does not fit, stream reset", total);
+            d->acl_acc_len = 0;
+            return;
+        }
+        if (d->acl_acc_len < total) return;
+        queue_push(&d->aclq, d->acl_acc, total);
+        d->acl_in++;
+        d->acl_acc_len -= total;
+        memmove(d->acl_acc, d->acl_acc + total, (size_t)d->acl_acc_len);
+    }
+}
+
+/* Collects finished transfers, waiting up to timeout_ms for the first one, and keeps one read
+ * queued on each IN endpoint so nothing is missed between calls. Returns -1 once the adapter is gone. */
+static int service(bt_dev_t *d, int timeout_ms)
+{
+    if (d->gone) return -1;
+    if (!arm_read(d, EP_EVT) || !arm_read(d, EP_ACL_IN)) return -1;
 
     long deadline = now_ms() + timeout_ms;
+    int got = 0;
     for (;;) {
         struct usb_fs_complete c;
         memset(&c, 0, sizeof(c));
         if (ioctl(d->fd, USB_FS_COMPLETE, &c) == 0) {
-            d->pending = 0;
-            int st = d->eps[0].status;
-            if (st != USB_ERR_NORMAL_COMPLETION && st != USB_ERR_SHORT_XFER) {
-                log_line("bt: event endpoint error %d", st);
+            int k = c.ep_index;
+            if (k < 0 || k >= EP_COUNT) continue;
+            d->pending[k] = 0;
+            int st = d->eps[k].status;
+            int ok = st == USB_ERR_NORMAL_COMPLETION || st == USB_ERR_SHORT_XFER;
+            got++;
+            if (k == EP_ACL_OUT) {
+                d->out_done = 1;
+                d->out_status = ok ? 0 : st;
+                continue;
+            }
+            if (!ok) {
+                if (st == USB_ERR_CANCELLED) continue;
+                log_line("bt: %s endpoint error %d", k == EP_EVT ? "event" : "ACL", st);
                 d->gone = 1;
                 return -1;
             }
-            int n = (int)d->frame_len[0];
-            if (n > (int)sizeof(d->acc) - d->acc_len) n = (int)sizeof(d->acc) - d->acc_len;
-            memcpy(d->acc + d->acc_len, d->rx, (size_t)n);
-            d->acc_len += n;
-            return 1;
+            int n = (int)d->frame_len[k];
+            if (k == EP_EVT) {
+                if (n > (int)sizeof(d->evt_acc) - d->evt_acc_len) d->evt_acc_len = 0;
+                memcpy(d->evt_acc + d->evt_acc_len, d->rx_evt, (size_t)n);
+                d->evt_acc_len += n;
+                take_events(d);
+            } else {
+                if (n > (int)sizeof(d->acl_acc) - d->acl_acc_len) d->acl_acc_len = 0;
+                memcpy(d->acl_acc + d->acl_acc_len, d->rx_acl, (size_t)n);
+                d->acl_acc_len += n;
+                take_acl(d);
+            }
+            if (!arm_read(d, k)) return -1;
+            continue;
         }
         if (errno != EBUSY && errno != EAGAIN) {
             d->gone = 1;
             return -1;
         }
         long left = deadline - now_ms();
-        if (left <= 0 || g_bt.stop) return 0;
+        if (got || left <= 0 || g_bt.stop) return got;
 
-        fd_set rset;
+        fd_set rset, wset;
         FD_ZERO(&rset);
+        FD_ZERO(&wset);
         FD_SET(d->fd, &rset);
+        FD_SET(d->fd, &wset);
         struct timeval tv = { 0, (left < 10 ? left : 10) * 1000 };
-        select(d->fd + 1, &rset, NULL, NULL, &tv);
-    }
-}
-
-/* One complete HCI event; returns its parameter length, or -1 on timeout or error */
-static int read_event(bt_dev_t *d, uint8_t *code, uint8_t *params, int max, int timeout_ms)
-{
-    long deadline = now_ms() + timeout_ms;
-    for (;;) {
-        if (d->acc_len >= 2 && d->acc_len >= 2 + d->acc[1]) {
-            int plen = d->acc[1];
-            *code = d->acc[0];
-            memcpy(params, d->acc + 2, (size_t)(plen < max ? plen : max));
-            d->acc_len -= 2 + plen;
-            memmove(d->acc, d->acc + 2 + plen, (size_t)d->acc_len);
-            return plen < max ? plen : max;
-        }
-        long left = deadline - now_ms();
-        if (left <= 0 || read_packet(d, (int)left) < 0) return -1;
+        select(d->fd + 1, &rset, &wset, NULL, &tv);
     }
 }
 
 static int hci_send(bt_dev_t *d, uint16_t opcode, const uint8_t *params, int len)
 {
     uint8_t buf[3 + 255];
+    if (len < 0 || len > 255) return -1;
     buf[0] = (uint8_t)opcode;
     buf[1] = (uint8_t)(opcode >> 8);
     buf[2] = (uint8_t)len;
@@ -298,6 +415,94 @@ static int hci_send(bt_dev_t *d, uint16_t opcode, const uint8_t *params, int len
     return 0;
 }
 
+static int acl_send(bt_dev_t *d, const uint8_t *pkt, int len)
+{
+    if (d->gone || len <= 0 || len > HCI_PKT_MAX) return 0;
+    memcpy(d->tx_acl, pkt, (size_t)len);
+    d->frame_len[EP_ACL_OUT] = (uint32_t)len;
+    d->out_done = 0;
+    struct usb_fs_start start = { .ep_index = EP_ACL_OUT };
+    if (ioctl(d->fd, USB_FS_START, &start) != 0) {
+        log_line("bt: ACL send failed (%s)", strerror(errno));
+        d->gone = 1;
+        return 0;
+    }
+    d->pending[EP_ACL_OUT] = 1;
+    long deadline = now_ms() + 1500;
+    while (!d->out_done && now_ms() < deadline) {
+        if (service(d, 5) < 0) return 0;
+    }
+    if (!d->out_done) {
+        log_line("bt: ACL send timed out");
+        return 0;
+    }
+    d->acl_out++;
+    return d->out_status == 0;
+}
+
+/* ---- hci_ops for the host (src/bt/host.c) ---- */
+
+static int op_cmd(void *ctx, unsigned opcode, const void *params, int plen)
+{
+    return hci_send(ctx, (uint16_t)opcode, params, plen) == 0;
+}
+
+static int op_acl_send(void *ctx, const unsigned char *pkt, int len)
+{
+    return acl_send(ctx, pkt, len);
+}
+
+static int op_pump(void *ctx, int timeout_ms)
+{
+    bt_dev_t *d = ctx;
+    if (d->evq.count || d->aclq.count) {
+        service(d, 0);
+        return d->gone ? -1 : 1;
+    }
+    if (service(d, timeout_ms) < 0) return -1;
+    return d->evq.count || d->aclq.count;
+}
+
+static int op_next_event(void *ctx, unsigned char *out, int max)
+{
+    return queue_pop(&((bt_dev_t *)ctx)->evq, out, max);
+}
+
+static int op_next_acl(void *ctx, unsigned char *out, int max)
+{
+    return queue_pop(&((bt_dev_t *)ctx)->aclq, out, max);
+}
+
+static void op_close(void *ctx)
+{
+    (void)ctx;  /* the worker closes the device itself */
+}
+
+static void op_diag(void *ctx)
+{
+    bt_dev_t *d = ctx;
+    log_line("bt: transport %s: %u events, %u ACL in, %u ACL out, dropped %u events / %u ACL",
+             d->path, d->events_in, d->acl_in, d->acl_out, d->evq.dropped, d->aclq.dropped);
+}
+
+static int op_chip_vendor(void *ctx)
+{
+    return ((bt_dev_t *)ctx)->vid;
+}
+
+static const hci_ops k_usb_ops = {
+    .cmd = op_cmd,
+    .acl_send = op_acl_send,
+    .pump = op_pump,
+    .next_event = op_next_event,
+    .next_acl = op_next_acl,
+    .close = op_close,
+    .diag = op_diag,
+    .chip_vendor = op_chip_vendor,
+};
+
+/* ---- bring-up, before the host takes over ---- */
+
 /* Sends a command and waits for its Command Complete (return parameters, status first) or
  * Command Status (one status byte). Returns the reply length, or -1. */
 static int hci_cmd(bt_dev_t *d, uint16_t opcode, const uint8_t *params, int len,
@@ -305,21 +510,23 @@ static int hci_cmd(bt_dev_t *d, uint16_t opcode, const uint8_t *params, int len,
 {
     if (hci_send(d, opcode, params, len) != 0) return -1;
     long deadline = now_ms() + timeout_ms;
-    uint8_t code, p[255];
-    for (;;) {
-        long left = deadline - now_ms();
-        if (left <= 0) break;
-        int n = read_event(d, &code, p, sizeof(p), (int)left);
-        if (n < 0) break;
-        if (code == 0x0E && n >= 3 && (p[1] | p[2] << 8) == opcode) {
-            int r = n - 3 < max ? n - 3 : max;
-            memcpy(reply, p + 3, (size_t)r);
-            return r;
+    uint8_t ev[HCI_PKT_MAX];
+    while (now_ms() < deadline) {
+        int n;
+        while ((n = queue_pop(&d->evq, ev, sizeof(ev))) > 0) {
+            const uint8_t *p = ev + 2;
+            int plen = n - 2;
+            if (ev[0] == 0x0E && plen >= 3 && (p[1] | p[2] << 8) == opcode) {
+                int r = plen - 3 < max ? plen - 3 : max;
+                memcpy(reply, p + 3, (size_t)r);
+                return r;
+            }
+            if (ev[0] == 0x0F && plen >= 4 && (p[2] | p[3] << 8) == opcode) {
+                if (max > 0) reply[0] = p[0];
+                return 1;
+            }
         }
-        if (code == 0x0F && n >= 4 && (p[2] | p[3] << 8) == opcode) {
-            if (max > 0) reply[0] = p[0];
-            return 1;
-        }
+        if (service(d, 20) < 0) break;
     }
     if (!d->gone) log_line("bt: no reply to command 0x%04x", opcode);
     return -1;
@@ -348,6 +555,10 @@ static void realtek_firmware(bt_dev_t *d, bt_version_t *v)
         log_line("bt: Realtek chip already running patched firmware (subversion 0x%04x)", v->lmp_sub);
         return;
     }
+    if (RTL8761BU_FW_LEN == 0) {
+        log_line("bt: this build carries no Realtek firmware, staying on ROM firmware");
+        return;
+    }
     int want = rtl_expected_project(v->lmp_sub, v->hci_rev);
     uint8_t r[8];
     if (hci_cmd(d, 0xFC6D, NULL, 0, r, sizeof(r), 1000) < 2 || r[0] != 0) {
@@ -356,10 +567,6 @@ static void realtek_firmware(bt_dev_t *d, bt_version_t *v)
     }
     uint8_t rom = r[1];
 
-    if (RTL8761BU_FW_LEN == 0) {
-        log_line("bt: this build carries no Realtek firmware, staying on ROM firmware");
-        return;
-    }
     static uint8_t data[64 * 1024];
     rtl_fw_info_t info;
     int total = rtl_fw_build((const uint8_t *)RTL8761BU_FW, RTL8761BU_FW_LEN,
@@ -398,6 +605,7 @@ static void realtek_firmware(bt_dev_t *d, bt_version_t *v)
     }
 }
 
+/* Reset, firmware and the settings a fresh controller needs; the host sets the rest */
 static int bring_up(bt_dev_t *d)
 {
     uint8_t r[255];
@@ -412,146 +620,24 @@ static int bring_up(bt_dev_t *d)
     }
     log_line("bt: chip %s (0x%04x), HCI %u rev 0x%04x, LMP %u subversion 0x%04x",
              manufacturer_name(v.manufacturer), v.manufacturer, v.hci_ver, v.hci_rev, v.lmp_ver, v.lmp_sub);
-
     if (v.manufacturer == 0x005D) realtek_firmware(d, &v);
-
-    if (hci_cmd(d, 0x1009, NULL, 0, r, sizeof(r), 1000) >= 7 && r[0] == 0) {
-        char a[18];
-        addr_str(r + 1, a);
-        log_line("bt: adapter address %s", a);
-    }
     hci_cmd(d, 0x0C03, NULL, 0, r, sizeof(r), 3000);
-    return !d->gone;
-}
 
-static void eir_name(const uint8_t *eir, int len, char *out, int max)
-{
-    out[0] = 0;
-    for (int i = 0; i + 1 < len && eir[i];) {
-        int ln = eir[i], typ = eir[i + 1];
-        if ((typ == 0x08 || typ == 0x09) && i + 1 + ln <= len) {
-            int n = ln - 1 < max - 1 ? ln - 1 : max - 1;
-            memcpy(out, eir + i + 2, (size_t)n);
-            out[n] = 0;
-            return;
-        }
-        i += ln + 1;
-    }
-}
-
-/* Opens a baseband link to dev and closes it again: proves paging works on the console */
-static void test_link(bt_dev_t *d, const bt_seen_t *dev)
-{
-    char a[18];
-    addr_str(dev->addr, a);
-    uint8_t p[13], r[255], code;
-    r[0] = 0xff;
-    memcpy(p, dev->addr, 6);
-    p[6] = 0x18; p[7] = 0xCC;            /* DM1..DH5 packet types */
-    p[8] = dev->psrm;
-    p[9] = 0;
-    p[10] = (uint8_t)dev->clock_offset;
-    p[11] = (uint8_t)((dev->clock_offset >> 8) | 0x80);
-    p[12] = 1;                            /* allow role switch */
-    if (hci_cmd(d, 0x0405, p, sizeof(p), r, sizeof(r), 2000) < 1 || r[0] != 0) {
-        log_line("bt: link test to %s refused (status 0x%02x)", a, r[0]);
-        return;
-    }
-    long deadline = now_ms() + 15000;
-    while (now_ms() < deadline && !g_bt.stop) {
-        int n = read_event(d, &code, r, sizeof(r), 500);
-        if (n < 0) {
-            if (d->gone) return;
-            continue;
-        }
-        if (code == 0x03 && n >= 3) {
-            uint16_t handle = (uint16_t)((r[1] | r[2] << 8) & 0x0fff);
-            if (r[0] != 0) {
-                log_line("bt: link test to %s failed, status 0x%02x", a, r[0]);
-                return;
-            }
-            log_line("bt: link test to %s OK (handle 0x%03x). The adapter works on this console.", a, handle);
-            sleep_ms(1000);
-            uint8_t dp[3] = { (uint8_t)handle, (uint8_t)(handle >> 8), 0x13 };
-            hci_cmd(d, 0x0406, dp, sizeof(dp), r, sizeof(r), 2000);
-            return;
-        }
-    }
-    log_line("bt: link test to %s timed out", a);
-}
-
-static void run_inquiry(bt_dev_t *d)
-{
-    uint8_t r[255], code;
-    uint8_t mode = 0x02;                  /* extended results carry the name */
+    /* Seen by pads as a console; extended inquiry results carry the pads' names */
+    static const uint8_t cod[3] = { 0x14, 0x08, 0x00 };   /* toy, minor class game */
+    hci_cmd(d, 0x0C24, cod, sizeof(cod), r, sizeof(r), 1000);
+    uint8_t name[248] = "OmniPad";
+    hci_cmd(d, 0x0C13, name, sizeof(name), r, sizeof(r), 1000);
+    uint8_t mode = 0x02;
     hci_cmd(d, 0x0C45, &mode, 1, r, sizeof(r), 1000);
 
-    bt_seen_t seen[BT_MAX_SEEN];
-    int nseen = 0, tested = 0;
-    log_line("bt: searching for %d rounds of %d s. Put the DS4 in pairing mode (hold Share + PS).",
-             BT_INQUIRY_ROUNDS, BT_INQUIRY_LEN * 128 / 100);
-
-    for (int round = 1; round <= BT_INQUIRY_ROUNDS && !tested && !g_bt.stop && !d->gone; round++) {
-        uint8_t iq[5] = { 0x33, 0x8B, 0x9E, BT_INQUIRY_LEN, 0 }; /* GIAC */
-        if (hci_cmd(d, 0x0401, iq, sizeof(iq), r, sizeof(r), 2000) < 1 || r[0] != 0) {
-            log_line("bt: inquiry not started");
-            return;
-        }
-        int found_gamepad = -1;
-        long deadline = now_ms() + BT_INQUIRY_LEN * 1280 + 3000;
-        while (now_ms() < deadline && !g_bt.stop) {
-            int n = read_event(d, &code, r, sizeof(r), 500);
-            if (n < 0) {
-                if (d->gone) return;
-                continue;
-            }
-            if (code == 0x01) break;      /* Inquiry Complete */
-            if ((code != 0x02 && code != 0x22 && code != 0x2F) || n < 15) continue;
-
-            /* Results 0x02 / 0x22 / 0x2F differ only after the page scan repetition mode */
-            const uint8_t *addr = r + 1;
-            uint32_t cod;
-            uint16_t clock;
-            int8_t rssi = 0;
-            char name[40] = "";
-            if (code == 0x02) {
-                cod = r[10] | r[11] << 8 | (uint32_t)r[12] << 16;
-                clock = (uint16_t)(r[13] | r[14] << 8);
-            } else {
-                cod = r[9] | r[10] << 8 | (uint32_t)r[11] << 16;
-                clock = (uint16_t)(r[12] | r[13] << 8);
-                rssi = (int8_t)r[14];
-                if (code == 0x2F) eir_name(r + 15, n - 15, name, sizeof(name));
-            }
-
-            int known = 0;
-            for (int i = 0; i < nseen; i++) {
-                if (memcmp(seen[i].addr, addr, 6) == 0) { known = 1; break; }
-            }
-            if (known || nseen == BT_MAX_SEEN) continue;
-            bt_seen_t *s = &seen[nseen++];
-            memcpy(s->addr, addr, 6);
-            s->psrm = r[7];
-            s->clock_offset = clock;
-            s->cod = cod;
-
-            char a[18];
-            addr_str(addr, a);
-            log_line("bt: found %s class %06x%s rssi %d name '%s'",
-                     a, cod, is_gamepad(cod) ? " (gamepad)" : "", rssi, name);
-            if (is_gamepad(cod) && found_gamepad < 0) found_gamepad = nseen - 1;
-        }
-        if (found_gamepad >= 0) {
-            hci_cmd(d, 0x0402, NULL, 0, r, sizeof(r), 1000); /* Inquiry_Cancel */
-            test_link(d, &seen[found_gamepad]);
-            tested = 1;
-        } else {
-            log_line("bt: round %d done, %d device(s) so far, no gamepad yet", round, nseen);
-        }
-    }
-    if (!tested && !d->gone && !g_bt.stop) {
-        log_line("bt: no gamepad found. Unplug and plug the adapter again to repeat the test.");
-    }
+    char address[18] = "";
+    if (hci_cmd(d, 0x1009, NULL, 0, r, sizeof(r), 1000) >= 7 && r[0] == 0) fmt_addr(r + 1, address);
+    pthread_mutex_lock(&g_bt.lock);
+    snprintf(g_bt.adapter, sizeof(g_bt.adapter), "%s %04x:%04x", manufacturer_name(v.manufacturer), d->vid, d->pid);
+    snprintf(g_bt.address, sizeof(g_bt.address), "%s", address);
+    pthread_mutex_unlock(&g_bt.lock);
+    return !d->gone;
 }
 
 /* Looks for a Bluetooth adapter that is not the console's own radio */
@@ -580,9 +666,7 @@ static int find_adapter(bt_dev_t *d)
                 close(fd);
                 continue;
             }
-            uint8_t ep = 0;
-            uint16_t mps = 0;
-            if (!find_hci_interface(fd, &ep, &mps)) {
+            if (!find_hci_interface(fd, d)) {
                 close(fd);
                 continue;
             }
@@ -598,15 +682,13 @@ static int find_adapter(bt_dev_t *d)
             snprintf(d->path, sizeof(d->path), "%s", path);
             d->vid = vid;
             d->pid = pid;
-            d->ep_evt = ep;
-            d->mps_evt = mps;
             return 1;
         }
     }
     return 0;
 }
 
-/* Forgets the tested adapter once it has been unplugged, so plugging it in again repeats the test */
+/* Forgets the failed adapter once it has been unplugged, so plugging it in again retries */
 static void check_done_unplugged(void)
 {
     if (!g_bt.done[0]) return;
@@ -625,29 +707,176 @@ static void check_done_unplugged(void)
     }
 }
 
+/* ---- pads -> virtual DualSense slots ---------------------------------------- */
+
+static void to_slot_state(pad_state_t *out, const pad_state *in, const pad_info *info)
+{
+    pad_state_neutral(out);
+    out->buttons = in->buttons;
+    out->lx = in->lx; out->ly = in->ly;
+    out->rx = in->rx; out->ry = in->ry;
+    out->l2 = in->l2; out->r2 = in->r2;
+    if (in->has_motion) {
+        memcpy(out->accel, in->accel, sizeof(out->accel));
+        memcpy(out->gyro, in->gyro, sizeof(out->gyro));
+    }
+    if (in->has_touch) {
+        out->touch_down = in->touch[0].down;
+        out->touch_x = in->touch[0].x;
+        out->touch_y = in->touch[0].y;
+    }
+    if (in->has_battery) {
+        out->battery_level = in->battery_pct;
+        out->battery_charging = in->charging;
+    }
+    out->connected = 1;
+    out->conn_type = CONN_BLUETOOTH_CLASSIC;
+    out->vid = info->vid;
+    out->pid = info->pid;
+    memcpy(&out->mac_or_dev_id, info->addr, 6);
+}
+
+static void on_connect(void *ud, int hs, const pad_info *info)
+{
+    (void)ud;
+    if (hs < 0 || hs >= HOST_MAX_PADS) return;
+    bt_pad_t *p = &g_bt.pads[hs];
+    char a[18];
+    fmt_addr(info->addr, a);
+    pthread_mutex_lock(&g_bt.lock);
+    p->info = *info;
+    snprintf(p->name, sizeof(p->name), "%s (Bluetooth)", info->profile ? info->profile : "Bluetooth pad");
+    p->vslot = -1;
+    pthread_mutex_unlock(&g_bt.lock);
+
+    /* The first slot neither a USB pad nor another pad holds; vpad_add takes it atomically */
+    int vslot = -1;
+    for (int i = 0; i < MAX_SLOTS && vslot < 0; i++) {
+        uint16_t vid, pid;
+        if (usb_hotplug_slot_ids(i, &vid, &pid)) continue;
+        if (vpad_add(i, CONN_BLUETOOTH_CLASSIC, p->name)) vslot = i;
+    }
+    pthread_mutex_lock(&g_bt.lock);
+    p->vslot = vslot;
+    pthread_mutex_unlock(&g_bt.lock);
+    if (vslot < 0) log_line("bt: %s %s connected but every slot is taken", p->name, a);
+    else log_line("bt: %s %s (%04x:%04x) on slot %d", p->name, a, info->vid, info->pid, vslot);
+}
+
+static void on_state(void *ud, int hs, const pad_state *st)
+{
+    (void)ud;
+    if (hs < 0 || hs >= HOST_MAX_PADS || g_bt.pads[hs].vslot < 0) return;
+    pad_state_t s;
+    to_slot_state(&s, st, &g_bt.pads[hs].info);
+    vpad_update(g_bt.pads[hs].vslot, &s);
+}
+
+static void on_disconnect(void *ud, int hs)
+{
+    (void)ud;
+    if (hs < 0 || hs >= HOST_MAX_PADS) return;
+    pthread_mutex_lock(&g_bt.lock);
+    int vslot = g_bt.pads[hs].vslot;
+    g_bt.pads[hs].vslot = -1;
+    pthread_mutex_unlock(&g_bt.lock);
+    if (vslot >= 0) {
+        vpad_remove(vslot);
+        log_line("bt: %s left slot %d", g_bt.pads[hs].name, vslot);
+    }
+}
+
+static void publish(host_t *h)
+{
+    pthread_mutex_lock(&g_bt.lock);
+    g_bt.pairing_left = host_pairing_left(h);
+    g_bt.paired = host_paired_count(h);
+    pthread_mutex_unlock(&g_bt.lock);
+}
+
+static void run_host(bt_dev_t *d)
+{
+    hci_t hci = { &k_usb_ops, d };
+    host_events ev = { 0 };
+    ev.on_connect = on_connect;
+    ev.on_state = on_state;
+    ev.on_disconnect = on_disconnect;
+    for (int i = 0; i < HOST_MAX_PADS; i++) g_bt.pads[i].vslot = -1;
+
+    host_t *h = host_open(hci, BT_DB_PATH, &ev);
+    if (!h) {
+        log_line("bt: the Bluetooth host did not start on this adapter");
+        return;
+    }
+    set_state("ready", NULL);
+    log_line("bt: ready, %d paired pad(s). Paired pads connect when switched on.", host_paired_count(h));
+    if (host_paired_count(h) == 0) {
+        log_line("bt: no pad paired yet: searching for %d s. Put the DS4 in pairing mode (hold Share + PS).",
+                 BT_FIRST_PAIR_S);
+        host_pair(h, BT_FIRST_PAIR_S);
+    }
+
+    long last_publish = 0;
+    while (!g_bt.stop && !host_transport_lost(h)) {
+        int pair = -1, forget = 0;
+        pthread_mutex_lock(&g_bt.lock);
+        pair = g_bt.pair_req;
+        forget = g_bt.forget_req;
+        g_bt.pair_req = -1;
+        g_bt.forget_req = 0;
+        pthread_mutex_unlock(&g_bt.lock);
+        if (forget) log_line("bt: forgot %d paired pad(s)", host_forget_all(h));
+        if (pair >= 0) host_pair(h, pair);
+
+        host_poll(h, 10);
+
+        long now = now_ms();
+        if (now - last_publish > 250) {
+            last_publish = now;
+            publish(h);
+        }
+    }
+    if (host_transport_lost(h)) log_line("bt: adapter lost (unplugged or rest mode)");
+    set_state("stopping", NULL);
+    host_close(h);
+    for (int i = 0; i < HOST_MAX_PADS; i++) on_disconnect(NULL, i);
+}
+
 static void *bt_worker(void *arg)
 {
     (void)arg;
     while (!g_bt.stop) {
         check_done_unplugged();
-        bt_dev_t d;
-        memset(&d, 0, sizeof(d));
-        d.fd = -1;
-        if (!find_adapter(&d)) {
+        bt_dev_t *d = &g_dev;
+        memset(d, 0, sizeof(*d));
+        d->fd = -1;
+        if (!find_adapter(d)) {
             sleep_ms(BT_SCAN_INTERVAL_MS);
             continue;
         }
 
-        set_owned(d.path);
-        log_line("bt: using adapter %04x:%04x on %s (events on 0x%02x, %u-byte packets)",
-                 d.vid, d.pid, d.path, d.ep_evt, d.mps_evt);
-        if (bt_open(&d) && bring_up(&d)) run_inquiry(&d);
-        if (d.gone) log_line("bt: adapter stopped answering (unplugged?)");
-        bt_close(&d);
-        set_owned(NULL);
+        set_state("starting", d->path);
+        log_line("bt: using adapter %04x:%04x on %s (events 0x%02x, ACL 0x%02x/0x%02x)",
+                 d->vid, d->pid, d->path, d->ep_addr[EP_EVT], d->ep_addr[EP_ACL_IN], d->ep_addr[EP_ACL_OUT]);
+        int started = bt_open(d) && bring_up(d);
+        if (started) run_host(d);
+        else log_line("bt: adapter did not start; unplug and plug it again to retry");
+        bt_close(d);
 
-        snprintf(g_bt.done, sizeof(g_bt.done), "%s", d.path);
-        g_bt.done_ids = (uint32_t)d.vid << 16 | d.pid;
+        pthread_mutex_lock(&g_bt.lock);
+        g_bt.owned[0] = 0;
+        g_bt.state = "no adapter";
+        g_bt.adapter[0] = 0;
+        g_bt.address[0] = 0;
+        g_bt.pairing_left = 0;
+        g_bt.paired = 0;
+        pthread_mutex_unlock(&g_bt.lock);
+        if (!started) {
+            snprintf(g_bt.done, sizeof(g_bt.done), "%s", d->path);
+            g_bt.done_ids = (uint32_t)d->vid << 16 | d->pid;
+        } else {
+            sleep_ms(BT_SCAN_INTERVAL_MS);   /* a lost adapter may come back after rest mode */
+        }
     }
     return NULL;
 }
@@ -655,6 +884,7 @@ static void *bt_worker(void *arg)
 int bt_adapter_init(void)
 {
     g_bt.stop = 0;
+    for (int i = 0; i < HOST_MAX_PADS; i++) g_bt.pads[i].vslot = -1;
     if (pthread_create(&g_bt.thread, NULL, bt_worker, NULL) != 0) {
         log_line("bt: worker thread not started");
         return 0;
@@ -679,3 +909,41 @@ int bt_adapter_init(void) { return 1; }
 void bt_adapter_cleanup(void) {}
 
 #endif
+
+int bt_adapter_pair(int seconds)
+{
+    pthread_mutex_lock(&g_bt.lock);
+    int ok = strcmp(g_bt.state, "ready") == 0;
+    if (ok) g_bt.pair_req = seconds < 0 ? 0 : seconds;
+    pthread_mutex_unlock(&g_bt.lock);
+    return ok;
+}
+
+int bt_adapter_forget_all(void)
+{
+    pthread_mutex_lock(&g_bt.lock);
+    int ok = strcmp(g_bt.state, "ready") == 0;
+    if (ok) g_bt.forget_req = 1;
+    pthread_mutex_unlock(&g_bt.lock);
+    return ok;
+}
+
+int bt_adapter_status_json(char *out, int n)
+{
+    pthread_mutex_lock(&g_bt.lock);
+    int len = snprintf(out, (size_t)n,
+        "{\"state\":\"%s\",\"adapter\":\"%s\",\"address\":\"%s\",\"pairing_left\":%d,\"paired\":%d,\"pads\":[",
+        g_bt.state, g_bt.adapter, g_bt.address, g_bt.pairing_left, g_bt.paired);
+    int first = 1;
+    for (int i = 0; i < HOST_MAX_PADS && len < n; i++) {
+        if (g_bt.pads[i].vslot < 0) continue;
+        char a[18];
+        fmt_addr(g_bt.pads[i].info.addr, a);
+        len += snprintf(out + len, (size_t)(n - len), "%s{\"slot\":%d,\"name\":\"%s\",\"address\":\"%s\"}",
+                        first ? "" : ",", g_bt.pads[i].vslot, g_bt.pads[i].name, a);
+        first = 0;
+    }
+    if (len < n) len += snprintf(out + len, (size_t)(n - len), "]}");
+    pthread_mutex_unlock(&g_bt.lock);
+    return len < n ? len : n - 1;
+}

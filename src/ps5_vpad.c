@@ -700,10 +700,12 @@ void vpad_poll(long now)
         pthread_mutex_lock(&g_vpad_mutex);
         if (g_slots[i].status == VP_READY && (g_slots[i].handle > 0 || g_slots[i].alt_handle > 0)) {
             /* Reset latched state to neutral if no updates received for > 500ms (avoids stuck buttons on sleep).
-             * USB pads are skipped: many only report on change, so a held button sends nothing new,
-             * and an unplug already removes the slot. */
-            int usb = g_slots[i].conn_type == CONN_USB_WIRED || g_slots[i].conn_type == CONN_USB_DONGLE_24G;
-            if (!usb && now - g_slots[i].last_update_time > 500) {
+             * USB and Bluetooth pads are skipped: many only report on change, so a held button sends
+             * nothing new, and an unplug or a dropped link already removes the slot. */
+            pad_conn_type_t ct = g_slots[i].conn_type;
+            int own_link = ct == CONN_USB_WIRED || ct == CONN_USB_DONGLE_24G ||
+                           ct == CONN_BLUETOOTH_CLASSIC || ct == CONN_BLUETOOTH_LE;
+            if (!own_link && now - g_slots[i].last_update_time > 500) {
                 pad_state_neutral(&g_slots[i].pad_state);
             }
 
