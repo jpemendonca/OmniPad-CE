@@ -48,7 +48,7 @@ No painel você testa os botões do controle, vê se a conexão está boa, parei
 | O DS4 não conecta por Bluetooth | Coloque em pareamento (**Share + PS**, luz piscando rápido) com o adaptador já plugado. |
 | O DS4 pareado não volta só com PS | Coloque em pareamento de novo. Ele conecta e fica salvo outra vez. |
 
-Se ainda assim não der certo, abra o painel e toque em **Copiar diagnóstico**. Ele copia a versão, os controles, o Bluetooth e o fim do log num texto só. Cole no grupo pra pedir ajuda.
+Se ainda assim não der certo, abra o painel e toque em **Copiar diagnóstico**. Ele copia a versão, os controles, o Bluetooth e o fim do log num texto só. Cole no grupo ou numa [issue](https://github.com/jpemendonca/OmniPad-PS5/issues) pra pedir ajuda.
 
 ## Iniciar sozinho
 
