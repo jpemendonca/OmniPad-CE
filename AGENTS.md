@@ -60,6 +60,7 @@ What the gate does not cover: it never runs on a PS5. It does not prove that a c
   3. Tag `vX.Y.Z` on `main`.
   4. Run `gh release create` with `dist/OmniPad-CE.elf` and `firmware/rtl_bt/LICENCE.rtlwifi_firmware.txt`.
   5. Write the release notes in Portuguese: what's new, what was tested on the PS5, what wasn't, the sha256, and the licences.
+  6. Title the release `OmniPad CE X.Y.Z: <one-line summary in Portuguese>`. OmniPad CE is the project, not an unofficial build: never call a release "não oficial".
 
 ## Reading the PS5
 
