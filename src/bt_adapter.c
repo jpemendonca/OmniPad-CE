@@ -702,7 +702,8 @@ static int bring_up(bt_dev_t *d)
     char address[18] = "";
     if (hci_cmd(d, 0x1009, NULL, 0, r, sizeof(r), 1000) >= 7 && r[0] == 0) fmt_addr(r + 1, address);
     pthread_mutex_lock(&g_bt.lock);
-    snprintf(g_bt.adapter, sizeof(g_bt.adapter), "%s %04x:%04x", manufacturer_name(v.manufacturer), d->vid, d->pid);
+    snprintf(g_bt.adapter, sizeof(g_bt.adapter), "%s %04x:%04x",
+             d->fake_csr ? "CSR8510 clone" : manufacturer_name(v.manufacturer), d->vid, d->pid);
     snprintf(g_bt.address, sizeof(g_bt.address), "%s", address);
     pthread_mutex_unlock(&g_bt.lock);
     return !d->gone;

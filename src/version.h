@@ -7,7 +7,7 @@
 #define ANYPAD_VERSION          "1.2.0"
 #endif
 #ifndef ANYPAD_BUILD
-#define ANYPAD_BUILD            40
+#define ANYPAD_BUILD            41
 #endif
 #define ANYPAD_AUTHOR           "Diego Lima & PS5 Scene Community"
 #define ANYPAD_DESCRIPTION      "USB, 2.4G dongle and Bluetooth (own USB adapter) gamepads for PS5 (FW 7.00 - 13.60)"

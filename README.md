@@ -55,10 +55,11 @@ The PS5 has only one Bluetooth radio, and the DualSense needs it. Sharing it wit
 |---|---|:---:|
 | TP-Link UB500 (`2357:0604`) | Realtek RTL8761BU | ✅ Tested. OmniPad loads its firmware by itself. |
 | Other RTL8761B / RTL8761BU adapters | Realtek RTL8761B | Should work: same chip and firmware |
-| Adapters that need no firmware (most CSR8510, some Broadcom) | various | Should work, not yet tested |
+| Generic "CSR 4.0" dongles (`0a12:0001`, CSR8510 clones) | CSR8510 clone | ✅ Tested. With a pad connected they skip the background search, which locked one up, and a locked-up adapter is reset over USB by itself. |
+| Other adapters that need no firmware (genuine CSR8510, some Broadcom) | various | Should work, not yet tested |
 | Other Realtek chips (RTL8821C, RTL8822B, …) | Realtek | Not yet: they need their own firmware |
 
-The adapter can stay plugged in all the time. While no Bluetooth controller is connected, OmniPad keeps searching for pads in pairing mode. Once one is connected, it only takes a quick look every 20 seconds.
+The adapter can stay plugged in all the time. While no Bluetooth controller is connected, OmniPad keeps searching for pads in pairing mode. Once one is connected, it only takes a quick look every 20 seconds (never on CSR8510 clones; use **Pair controller** in the dashboard for a second pad there).
 
 ---
 

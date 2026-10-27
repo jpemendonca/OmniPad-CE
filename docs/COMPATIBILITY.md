@@ -71,7 +71,8 @@ The PS5 has one Bluetooth radio, and the DualSense needs it. Sharing it with the
 |---|---|---|
 | TP-Link UB500 (`2357:0604`) | Realtek RTL8761BU | 🟢 **Verified on PS5 Hardware**: OmniPad uploads the linux-firmware patch on its own (~0.3 s) |
 | Other RTL8761B / RTL8761BU adapters | Realtek RTL8761B | 🟡 Same chip and firmware: expected to work |
-| Adapters that need no firmware (most CSR8510, some Broadcom) | various | 🟡 Expected to work, not tested |
+| Generic "CSR 4.0" dongles (`0a12:0001`, manufacturer not CSR) | CSR8510 clone | 🟢 **Verified on PS5 Hardware**: DS4 and an 8BitDo dongle together. One locked up 25 s after a pad connected, on a background search; with a pad connected these get none, and a locked-up adapter is reset over USB (`USB_DEVICEENUMERATE`) |
+| Other adapters that need no firmware (genuine CSR8510, some Broadcom) | various | 🟡 Expected to work, not tested |
 | Other Realtek chips (RTL8821C, RTL8822B, ...) | Realtek | 🔴 Not yet: each needs its own firmware |
 
 Any USB device with a Bluetooth HCI interface (class `E0/01/01`) is used, except MediaTek (`0e8d`), the vendor of the console's own radio.
