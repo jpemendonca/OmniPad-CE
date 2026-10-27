@@ -4,10 +4,10 @@
 #define ANYPAD_NAME             "OmniPad CE"
 /* Test builds pass their own label and number (make -f ps5.mk VERSION=... BUILD_NUM=...) */
 #ifndef ANYPAD_VERSION
-#define ANYPAD_VERSION          "1.2.0"
+#define ANYPAD_VERSION          "1.3.0"
 #endif
 #ifndef ANYPAD_BUILD
-#define ANYPAD_BUILD            41
+#define ANYPAD_BUILD            44
 #endif
 #define ANYPAD_AUTHOR           "Diego Lima & PS5 Scene Community"
 #define ANYPAD_DESCRIPTION      "USB, 2.4G dongle and Bluetooth (own USB adapter) gamepads for PS5 (FW 7.00 - 13.60)"
