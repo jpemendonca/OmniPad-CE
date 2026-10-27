@@ -1,6 +1,6 @@
 # Technical Guide: Operation on PS5 Firmware 13.60 (Relapse Exploit)
 
-This document details the internal mechanics, architecture updates, and low-level solutions implemented in **OmniPad PS5** to run reliably on modern PlayStation 5 firmwares, specifically up to **FW 13.60**.
+This document details the internal mechanics, architecture updates, and low-level solutions implemented in **OmniPad CE** to run reliably on modern PlayStation 5 firmwares, specifically up to **FW 13.60**.
 
 ---
 
@@ -42,7 +42,7 @@ Pioneering projects were developed and tested almost exclusively on legacy firmw
 
 ```text
 [ Controller ] ─── (USB Cable / 2.4G USB Dongle - Active v1.0.4) ────┐
-                                                                      ├───► [ OmniPad PS5 Core ]
+                                                                      ├───► [ OmniPad CE Core ]
 [ Controller ] ─── (Console Internal Bluetooth - Roadmap v1.1.0) ────┘           │
                                                              │ 1. ucred privilege elevation
                                                              │ 2. ScePad Virtual Device creation (Type 3)
@@ -60,7 +60,7 @@ Pioneering projects were developed and tested almost exclusively on legacy firmw
 
 ## 4. Official Payload Loading Pipeline on FW 13.60
 
-For maximum stability on **Firmware 13.60 (Relapse exploit)**, **OmniPad PS5** is designed to work in synergy with the established payload chain:
+For maximum stability on **Firmware 13.60 (Relapse exploit)**, **OmniPad CE** is designed to work in synergy with the established payload chain:
 
 ### Recommended Payload Execution Order:
 1. **1st: `kstuff-1.13-fpkg-dr-test5.elf`**
@@ -69,7 +69,7 @@ For maximum stability on **Firmware 13.60 (Relapse exploit)**, **OmniPad PS5** i
 2. **2nd: `shadowmountplus v1.7 Beta 4.elf`**
    - High-speed background auto-mounter for PFS containers, exFAT, and game packages.
    - Mounts game access points under `/user/app/`.
-3. **3rd: `OmniPad-PS5.elf`**
+3. **3rd: `OmniPad-CE.elf`**
    - Initializes virtual DualSense controllers directly in the kernel (`libScePad` / MBus).
    - Handles profile assignment and error `0x803B0006` bypass.
    - Starts the Web Dashboard on port **8095** and the LAN testing socket on port **9045**.

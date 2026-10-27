@@ -4,13 +4,13 @@ Guia rápido pra usar o OmniPad no PS5 desbloqueado (FW 7.00 a 13.60). Com ele d
 
 ## 1. Baixe o arquivo
 
-Na página de [Releases](https://github.com/jpemendonca/OmniPad-PS5/releases), baixe o `OmniPad-PS5.elf` da versão mais recente.
+Na página de [Releases](https://github.com/jpemendonca/OmniPad-CE/releases), baixe o `OmniPad-CE.elf` da versão mais recente.
 
 ## 2. Mande pro PS5 e inicie
 
 Use o loader de payloads que você já usa, como o PLK Payload Manager.
 
-1. Mande o `OmniPad-PS5.elf` pro PS5.
+1. Mande o `OmniPad-CE.elf` pro PS5.
 2. **Inicie o payload.** No PLK, depois de mandar o arquivo, aperte **Launch**. Só mandar não basta: se você não iniciar, o OmniPad não roda e nada acontece.
 3. Confira o aviso no canto da tela: **"OmniPad ... ativo"**. Ele também mostra o endereço do painel. Sem esse aviso, o OmniPad não está rodando.
 
@@ -48,8 +48,8 @@ No painel você testa os botões do controle, vê se a conexão está boa, parei
 | O DS4 não conecta por Bluetooth | Coloque em pareamento (**Share + PS**, luz piscando rápido) com o adaptador já plugado. |
 | O DS4 pareado não volta só com PS | Coloque em pareamento de novo. Ele conecta e fica salvo outra vez. |
 
-Se ainda assim não der certo, abra o painel e toque em **Copiar diagnóstico**. Ele copia a versão, os controles, o Bluetooth e o fim do log num texto só. Cole no grupo ou numa [issue](https://github.com/jpemendonca/OmniPad-PS5/issues) pra pedir ajuda.
+Se ainda assim não der certo, abra o painel e toque em **Copiar diagnóstico**. Ele copia a versão, os controles, o Bluetooth e o fim do log num texto só. Cole no grupo ou numa [issue](https://github.com/jpemendonca/OmniPad-CE/issues) pra pedir ajuda.
 
 ## Iniciar sozinho
 
-O OmniPad precisa ser iniciado de novo toda vez que o PS5 desliga ou reinicia. Se o seu loader tiver uma opção de iniciar payloads automaticamente (autoload), coloque o `OmniPad-PS5.elf` nela. Aí ele já sobe junto com o PS5.
+O OmniPad precisa ser iniciado de novo toda vez que o PS5 desliga ou reinicia. Se o seu loader tiver uma opção de iniciar payloads automaticamente (autoload), coloque o `OmniPad-CE.elf` nela. Aí ele já sobe junto com o PS5.

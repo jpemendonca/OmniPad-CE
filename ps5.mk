@@ -1,11 +1,11 @@
-# OmniPad PS5 — PS5 Payload Makefile
+# OmniPad CE — PS5 Payload Makefile
 # Compatible with PS5 Firmware 7.00 through 13.60 (Relapse Exploit)
 
 include $(PS5_PAYLOAD_SDK)/toolchain/prospero.mk
 
 VERSION   := $(shell sed -E -n 's/.*ANYPAD_VERSION[[:space:]]+"([^"]+)".*/\1/p' src/version.h | tr -d '\r')
 BUILD_NUM := $(shell sed -E -n 's/.*ANYPAD_BUILD[[:space:]]+([0-9]+).*/\1/p' src/version.h | tr -d '\r')
-ELF       := dist/OmniPad-PS5-$(VERSION)-b$(BUILD_NUM).elf
+ELF       := dist/OmniPad-CE-$(VERSION)-b$(BUILD_NUM).elf
 BUILD     := build/ps5
 GEN       := $(BUILD)/gen
 
@@ -25,10 +25,10 @@ OBJS := $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS))
 $(ELF): $(OBJS)
 	@mkdir -p dist
 	$(CC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
-	@cp $@ dist/OmniPad-PS5-$(VERSION).elf
-	@cp $@ dist/OmniPad-PS5.elf
+	@cp $@ dist/OmniPad-CE-$(VERSION).elf
+	@cp $@ dist/OmniPad-CE.elf
 	@echo "[+] Built successfully: $@"
-	@echo "[+] Canonical artifact: dist/OmniPad-PS5.elf"
+	@echo "[+] Canonical artifact: dist/OmniPad-CE.elf"
 
 HEADERS := $(wildcard src/*.h src/bt/*.h)
 

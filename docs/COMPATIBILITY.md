@@ -1,6 +1,6 @@
 # Controller Compatibility Guide 🎮
 
-> **OmniPad PS5 v1.1.0** is an open-source controller subsystem for jailbroken PlayStation 5 consoles (FW 7.00 – 13.60).
+> **OmniPad CE v1.1.0** is an open-source controller subsystem for jailbroken PlayStation 5 consoles (FW 7.00 – 13.60).
 >
 > It supports USB cables and 2.4GHz USB dongles at 250Hz. It also supports Bluetooth controllers through a **separate USB Bluetooth adapter** plugged into the PS5 (see section 3). The console's internal radio stays with the DualSense and is never used.
 
@@ -8,7 +8,7 @@
 
 ## 🔬 Developer Hardware Testing Disclosure
 
-OmniPad PS5 is developed and maintained by a solo developer.
+OmniPad CE is developed and maintained by a solo developer.
 - **Currently on the developer's physical test bench:** **Machenike G5 Pro Max SE** (tested with both its 2.4GHz USB Dongle and direct USB-C cable).
 - **Verified by community testers on FW 13.60:** DualShock 4 (USB cable, `054c:05c4`), 8BitDo Ultimate 2C Wireless (2.4GHz dongle and USB-C cable, `2dc8:3106`).
 - **Not yet physically tested on bench:** Xbox Series X\|S, Xbox One, Xbox 360, DualShock 3, Switch Pro.
@@ -99,9 +99,9 @@ OmniPad creates and manages **3 independent virtual DualSense slots** in the Pro
 | Player | Controller Hardware | Managed By |
 |---|---|---|
 | **Player 1** | Official Physical DualSense | Native PS5 Operating System |
-| **Player 2** | Supported USB Controller / Dongle (Slot 1) | OmniPad PS5 Virtual Device Pool |
-| **Player 3** | Supported USB Controller / Dongle (Slot 2) | OmniPad PS5 Virtual Device Pool |
-| **Player 4** | Supported USB Controller / Dongle (Slot 3) | OmniPad PS5 Virtual Device Pool |
+| **Player 2** | Supported USB Controller / Dongle (Slot 1) | OmniPad CE Virtual Device Pool |
+| **Player 3** | Supported USB Controller / Dongle (Slot 2) | OmniPad CE Virtual Device Pool |
+| **Player 4** | Supported USB Controller / Dongle (Slot 3) | OmniPad CE Virtual Device Pool |
 
 **Example 4-Player Local Setup:**
 - **Player 1:** Official DualSense (Primary User)

@@ -1,4 +1,4 @@
-# OmniPad PS5
+# OmniPad CE
 # Universal Controller Engine & Web Control Center for PS5 (FW 7.00 - 13.60)
 # Combines Bluetooth (AnyPad-PS5) + USB Hotplug (Ghostcontrol / PoorDS4) + ShellUI Fixes (YetAnotherControllerEnabler)
 
@@ -19,8 +19,8 @@ endif
 
 send: ps5
 	@echo "[*] Sending payload to PS5 $(PS5_HOST):$(PS5_PORT)..."
-	nc -w 5 $(PS5_HOST) $(PS5_PORT) < dist/OmniPad-PS5-*.elf || \
-	python3 -c "import socket, glob; f=open(glob.glob('dist/OmniPad-PS5-*.elf')[0],'rb').read(); s=socket.create_connection(('$(PS5_HOST)', $(PS5_PORT)), timeout=5); s.sendall(f); s.close(); print('[+] Envio concluido!')"
+	nc -w 5 $(PS5_HOST) $(PS5_PORT) < dist/OmniPad-CE-*.elf || \
+	python3 -c "import socket, glob; f=open(glob.glob('dist/OmniPad-CE-*.elf')[0],'rb').read(); s=socket.create_connection(('$(PS5_HOST)', $(PS5_PORT)), timeout=5); s.sendall(f); s.close(); print('[+] Envio concluido!')"
 
 test: host-test
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# OmniPad PS5 — set up the same toolchain as the Dockerfile inside a WSL/Ubuntu distro (run as root)
+# OmniPad CE — set up the same toolchain as the Dockerfile inside a WSL/Ubuntu distro (run as root)
 set -e
 
 apt-get install -y -qq clang-18 lld-18 make unzip curl >/dev/null

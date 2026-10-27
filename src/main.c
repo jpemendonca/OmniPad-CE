@@ -181,7 +181,7 @@ int main(int argc, char **argv)
         usleep(4000); /* ~250 Hz loop tick */
     }
 
-    log_line("main: Shutting down OmniPad PS5...");
+    log_line("main: Shutting down OmniPad CE...");
     tcp_stream_cleanup();
     web_cleanup();
     bt_adapter_cleanup();

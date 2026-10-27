@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# OmniPad PS5 — Docker Build Script for Linux / macOS
+# OmniPad CE — Docker Build Script for Linux / macOS
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,4 +16,4 @@ else
     docker run --rm -v "$1":/opt/ps5-payload-sdk -v "${PROJ_DIR}":/work -e PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk omnipad-build make ps5
 fi
 
-echo "[+] Done! Check dist/OmniPad-PS5.elf"
+echo "[+] Done! Check dist/OmniPad-CE.elf"

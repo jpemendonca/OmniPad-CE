@@ -1,4 +1,4 @@
-# OmniPad PS5
+# OmniPad CE (Community Edition)
 
 Use third-party controllers on a jailbroken PS5 (FW 7.00 – 13.60). They plug in over USB, connect through a 2.4 GHz dongle, or connect over Bluetooth through a USB adapter. Each one shows up on the console as a DualSense for players 2 to 4.
 
@@ -8,12 +8,15 @@ Use third-party controllers on a jailbroken PS5 (FW 7.00 – 13.60). They plug i
 
 **Em português: [Comece aqui](docs/COMECE_AQUI.md)**, o passo a passo e o que fazer se não funcionar.
 
-> This is a community fork of [diegobarbosaa/OmniPad-PS5](https://github.com/diegobarbosaa/OmniPad-PS5). It adds:
+> OmniPad CE is the community-maintained continuation of [diegobarbosaa/OmniPad-PS5](https://github.com/diegobarbosaa/OmniPad-PS5), which has had no activity since early October 2026. It adds:
 >
 > - Bluetooth controllers through your own USB adapter, so the DualSense keeps the console's internal radio.
 > - The 8BitDo Ultimate 2C.
-> - A new web dashboard.
+> - A dashboard that also opens on the PS5 itself, from the Media tab.
+> - Notifications in the console's language and a Portuguese guide.
 > - One driver per controller model.
+>
+> Bugs and requests go to [Issues](https://github.com/jpemendonca/OmniPad-CE/issues). Paste the dashboard's **Copy diagnostics** text into them.
 
 ---
 
@@ -38,7 +41,7 @@ Full tables with VID:PID: [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 ## Quick start
 
-1. Download `OmniPad-PS5.elf` from [Releases](../../releases).
+1. Download `OmniPad-CE.elf` from [Releases](../../releases).
 2. Send it to the PS5 with your payload loader **and start it** (in PLK, press **Launch**). A notification "OmniPad ... ativo" confirms it is running. No notification means it did not start.
 3. Connect a controller:
    - **USB cable or 2.4 GHz dongle:** plug it into any USB port.
@@ -99,6 +102,8 @@ make test
 `get-bt-firmware.sh` downloads the Realtek firmware from linux-firmware into `firmware/`. That folder is not in the repository. Without it, the build still works, but RTL8761B adapters stay on their factory firmware and won't find any pads.
 
 More detail: [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md) and [docs/FIRMWARE_1360_GUIDE.md](docs/FIRMWARE_1360_GUIDE.md).
+
+This project is developed with AI agents. Agents, and anyone changing the code, start at [AGENTS.md](AGENTS.md), then [CODESTYLE.md](CODESTYLE.md) and [SPECS.md](SPECS.md).
 
 ---
 

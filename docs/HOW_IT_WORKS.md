@@ -1,7 +1,7 @@
-# How OmniPad PS5 Works 📘
+# How OmniPad CE Works 📘
 ### End-to-End Architectural and Technical Guide
 
-This document provides an in-depth breakdown of the internal mechanics of **OmniPad PS5**, tracing the data lifecycle from the moment a button is pressed on a physical controller (via USB cable, 2.4GHz wireless dongle, or Bluetooth) until the event reaches games and the ProsperoOS operating system as an official **DualSense**.
+This document provides an in-depth breakdown of the internal mechanics of **OmniPad CE**, tracing the data lifecycle from the moment a button is pressed on a physical controller (via USB cable, 2.4GHz wireless dongle, or Bluetooth) until the event reaches games and the ProsperoOS operating system as an official **DualSense**.
 
 ---
 

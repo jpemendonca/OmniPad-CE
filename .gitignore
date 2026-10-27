@@ -43,7 +43,6 @@ __pycache__/
 .idea/
 .agents/
 .ai/
-AGENTS.md
 .system_generated/
 .gemini/
 

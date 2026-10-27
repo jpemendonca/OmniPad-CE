@@ -301,7 +301,7 @@ static void test_dongle_standby_isolation(void)
 int main(void)
 {
     printf("========================================\n");
-    printf("Running OmniPad PS5 Parser Tests\n");
+    printf("Running OmniPad CE Parser Tests\n");
     printf("========================================\n");
 
     test_ds4_usb_parsing();

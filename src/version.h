@@ -1,7 +1,7 @@
 #ifndef VERSION_H
 #define VERSION_H
 
-#define ANYPAD_NAME             "OmniPad PS5"
+#define ANYPAD_NAME             "OmniPad CE"
 /* Test builds pass their own label and number (make -f ps5.mk VERSION=... BUILD_NUM=...) */
 #ifndef ANYPAD_VERSION
 #define ANYPAD_VERSION          "1.2.0"

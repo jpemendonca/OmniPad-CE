@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-send_frame.py - Send test controller inputs over LAN to OmniPad PS5
+send_frame.py - Send test controller inputs over LAN to OmniPad CE
 Listens on TCP port 9045
 """
 

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <title>OmniPad PS5</title>
+  <title>OmniPad CE</title>
   <script>
     /* Apply the saved theme before first paint; light is the default */
     try { document.documentElement.dataset.theme = localStorage.getItem('omnipad.theme') === 'dark' ? 'dark' : 'light'; } catch (e) { /* private mode */ }
@@ -263,7 +263,7 @@
   <div class="wrap">
     <header>
       <div class="brand">
-        <h1>OmniPad PS5</h1>
+        <h1>OmniPad CE</h1>
         <span class="ver" id="ver">—</span>
       </div>
       <div class="hdr-right">
@@ -459,7 +459,7 @@
         pads: (n) => n === 0 ? 'Nenhum controle' : n === 1 ? '1 controle' : `${n} controles`,
         btShort: { 'no adapter': 'Bluetooth: sem adaptador', starting: 'Bluetooth: iniciando', ready: 'Bluetooth: pronto', stopping: 'Bluetooth: parando' },
         diag: 'Copiar diagnóstico', hDiag: 'Diagnóstico',
-        diagCopied: 'Copiado. Cole no grupo pra pedir ajuda.',
+        diagCopied: 'Copiado. Cole no grupo ou numa issue do GitHub (OmniPad-CE) pra pedir ajuda.',
         diagManual: 'Não deu pra copiar sozinho. Selecione o texto abaixo e copie.',
         start: 'Primeiros passos',
         steps: [
@@ -503,7 +503,7 @@
         pads: (n) => n === 0 ? 'No controller' : n === 1 ? '1 controller' : `${n} controllers`,
         btShort: { 'no adapter': 'Bluetooth: no adapter', starting: 'Bluetooth: starting', ready: 'Bluetooth: ready', stopping: 'Bluetooth: stopping' },
         diag: 'Copy diagnostics', hDiag: 'Diagnostics',
-        diagCopied: 'Copied. Paste it where you ask for help.',
+        diagCopied: 'Copied. Paste it in a GitHub issue (OmniPad-CE) to ask for help.',
         diagManual: 'Could not copy by itself. Select the text below and copy it.',
         start: 'First steps',
         steps: [
@@ -653,7 +653,7 @@
       renderBt(d.bt);
       renderStatus(d);
       $('ver').textContent = `v${d.version} · build ${d.build} · ${T.up} ${fmtDur(d.uptime_ms)}`;
-      $('foot').textContent = `OmniPad PS5 v${d.version} (build ${d.build})`;
+      $('foot').textContent = `OmniPad CE v${d.version} (build ${d.build})`;
 
       d.slots.forEach((s, i) => {
         const b = $(`slot${i}`);

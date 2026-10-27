@@ -144,7 +144,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def background_log():
-    log("OmniPad PS5 v1.0.4-mock (Build 0)")
+    log("OmniPad CE v1.0.4-mock (Build 0)")
     log("usb_hotplug: Device discovered on /dev/ugen1.2 (VID 0x054c, PID 0x05c4, type 2: Sony DualShock 4 (USB))")
     log("vpad: slot 0 ready (handle 1, alt -1, dev 0x1, user 0x10000001)")
     log("usb_hotplug: Device discovered on /dev/ugen1.3 (VID 0x1a34, PID 0xf517, type 4: ShanWan 2.4G Gamepad)")
