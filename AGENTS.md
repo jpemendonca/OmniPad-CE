@@ -2,7 +2,7 @@
 
 OmniPad CE (Community Edition) is a payload for jailbroken PS5 consoles (FW 7.00 – 13.60), written in C. It makes third-party controllers show up on the console as DualSense pads for players 2 to 4. They can come in over USB, over a 2.4 GHz dongle, or over Bluetooth through a separate USB adapter. The official DualSense stays player 1 on the console's own radio, and OmniPad never touches that radio.
 
-This project is developed by AI agents with one human, the maintainer, who tests on a real PS5. This file is the source of truth for agents. `CLAUDE.md` and any other agent file only point here.
+This project is developed by AI agents with one human, the maintainer, who tests on a real PS5. This file is the source of truth for agents. `CLAUDE.md` and `GEMINI.md` only point here; Cursor and Codex read this file directly.
 
 ## The main path
 
