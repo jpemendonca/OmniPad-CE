@@ -6,6 +6,8 @@ Use third-party controllers on a jailbroken PS5 (FW 7.00 – 13.60). They plug i
 [![Language](https://img.shields.io/badge/Language-C99-f59e0b?style=flat-square)](src/)
 [![License](https://img.shields.io/badge/License-GPL%20v3.0-blue?style=flat-square)](LICENSE)
 
+**Em português: [Comece aqui](docs/COMECE_AQUI.md)**, o passo a passo e o que fazer se não funcionar.
+
 > This is a community fork of [diegobarbosaa/OmniPad-PS5](https://github.com/diegobarbosaa/OmniPad-PS5). It adds:
 >
 > - Bluetooth controllers through your own USB adapter, so the DualSense keeps the console's internal radio.
@@ -37,7 +39,7 @@ Full tables with VID:PID: [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 ## Quick start
 
 1. Download `OmniPad-PS5.elf` from [Releases](../../releases).
-2. Send it to the PS5 with your payload loader. A notification says OmniPad is running.
+2. Send it to the PS5 with your payload loader **and start it** (in PLK, press **Launch**). A notification "OmniPad ... ativo" confirms it is running. No notification means it did not start.
 3. Connect a controller:
    - **USB cable or 2.4 GHz dongle:** plug it into any USB port.
    - **Bluetooth:** plug a USB Bluetooth adapter into the PS5 (see below), then put the controller in pairing mode. On a DS4, hold Share + PS until the light flashes fast. OmniPad finds it by itself. Next time, pressing PS is enough.
@@ -62,7 +64,7 @@ The adapter can stay plugged in all the time. While no Bluetooth controller is c
 
 ## Dashboard
 
-Open `http://<PS5_IP>:8095/` from a phone or PC on the same network.
+On the PS5 itself, open the **OmniPad** icon in the **Media** tab. It is installed the first time OmniPad runs, and it works while OmniPad is running. From a phone or PC on the same network, open `http://<PS5_IP>:8095/`. The start notification shows the IP.
 
 ![OmniPad dashboard on a PC browser and a phone](docs/images/dashboard-mockup.png)
 
@@ -71,6 +73,7 @@ Open `http://<PS5_IP>:8095/` from a phone or PC on the same network.
 - **Bluetooth:** the adapter, its address, the paired and connected pads, plus buttons to pair or to forget the paired pads.
 - **Live log:** with filters for USB, Bluetooth, slots and errors.
 - **Actions:** simulate the PS button, free a slot, or stop OmniPad.
+- **Copy diagnostics:** the version, controllers, Bluetooth state and the end of the log in one text, to paste when asking for help.
 
 Light and dark themes, Portuguese and English.
 

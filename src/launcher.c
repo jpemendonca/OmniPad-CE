@@ -57,7 +57,7 @@ int launcher_install(int port)
         "{\n"
         "  \"applicationCategoryType\": 65536,\n"
         "  \"titleId\": \"%s\",\n"
-        "  \"deeplinkUri\": \"http://127.0.0.1:%d/\",\n"
+        "  \"deeplinkUri\": \"http://127.0.0.1:%d/?tv=1\",\n"
         "  \"localizedParameters\": {\n"
         "    \"defaultLanguage\": \"en-US\",\n"
         "    \"en-US\": { \"titleName\": \"OmniPad\" },\n"

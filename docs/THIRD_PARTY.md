@@ -46,6 +46,10 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
 DAMAGE.
 ```
 
+## Media tab icon
+
+The controller glyph in `assets/launcher/icon0.png` is "sports_esports" from [Material Symbols](https://github.com/google/material-design-icons) by Google, under the Apache License 2.0.
+
 ## Bluetooth host
 
 `src/bt/` comes from AnyPad-PS5 (GPL-3.0-or-later). See [src/bt/README.md](../src/bt/README.md).

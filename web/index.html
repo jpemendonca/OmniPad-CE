@@ -8,6 +8,8 @@
   <script>
     /* Apply the saved theme before first paint; light is the default */
     try { document.documentElement.dataset.theme = localStorage.getItem('omnipad.theme') === 'dark' ? 'dark' : 'light'; } catch (e) { /* private mode */ }
+    /* Opened from the Media tab tile on the PS5 itself: bigger text and targets for a TV */
+    if (/[?&]tv\b/.test(location.search)) document.documentElement.classList.add('tv');
   </script>
   <style>
     :root {
@@ -207,6 +209,36 @@
     pre.log { font-family: var(--mono); font-size: 12px; line-height: 1.55; background: var(--log-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-word; color: var(--log-text); }
     pre.log .w { color: var(--warn); } pre.log .e { color: var(--bad); } pre.log .g { color: var(--ok); } pre.log .t { color: var(--faint); }
 
+    /* Status strip: is OmniPad running, what is connected */
+    .status { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; padding: 12px 14px; margin-bottom: 16px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); }
+    .status .st-main { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; }
+    .status .st-items { display: flex; gap: 6px; flex-wrap: wrap; flex: 1 1 auto; }
+    .diag { display: none; margin-bottom: 16px; }
+    .diag.show { display: block; }
+    .diag textarea { width: 100%; height: 160px; margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--log-text); background: var(--log-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; resize: vertical; }
+
+    /* First steps, while no controller is connected */
+    .start { margin-bottom: 16px; }
+    .start ol { margin-left: 20px; display: grid; gap: 8px; font-size: 14px; }
+
+    button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+    /* TV (the Media tab tile): read from the couch, aimed with the PS5 cursor */
+    html.tv body { font-size: 18px; }
+    html.tv .wrap { max-width: 1500px; padding: 24px; }
+    html.tv button { min-height: 56px; padding: 12px 22px; font-size: 17px; }
+    html.tv .seg button { min-height: 44px; font-size: 16px; }
+    html.tv .brand h1 { font-size: 28px; }
+    html.tv .status .st-main { font-size: 20px; }
+    html.tv .pill { font-size: 15px; padding: 6px 12px; }
+    html.tv .panel h2 { font-size: 15px; }
+    html.tv .slot .nm { font-size: 18px; }
+    html.tv .slot .sub, html.tv .note, html.tv .start ol { font-size: 16px; }
+    html.tv .stat .k { font-size: 13px; }
+    html.tv .stat .v { font-size: 24px; }
+    html.tv pre.log { font-size: 15px; height: 260px; }
+    html.tv :focus-visible { outline-width: 4px; outline-offset: 3px; }
+
     footer { margin-top: 20px; color: var(--faint); font-size: 12px; text-align: center; }
     footer a { color: var(--muted); }
 
@@ -248,6 +280,23 @@
     </header>
 
     <div class="banner" id="offline"></div>
+
+    <div class="status" id="status">
+      <div class="st-main"><span class="led" id="stLed"></span><span id="stText"></span></div>
+      <div class="st-items"><span class="pill" id="stPads">—</span><span class="pill" id="stBt">—</span></div>
+      <button type="button" id="btnDiag"></button>
+    </div>
+
+    <section class="panel diag" id="diagBox" aria-labelledby="hDiag">
+      <h2><span id="hDiag"></span></h2>
+      <p class="note" id="diagNote"></p>
+      <textarea id="diagText" readonly></textarea>
+    </section>
+
+    <section class="panel start" id="start" aria-labelledby="hStart">
+      <h2><span id="hStart"></span></h2>
+      <ol id="startSteps"></ol>
+    </section>
 
     <div class="slots" id="slots" role="tablist"></div>
 
@@ -405,7 +454,20 @@
         btIdle: 'Pra conectar, coloque o controle em modo de pareamento (DS4: segure Share + PS). O OmniPad procura sozinho. Controles já pareados voltam ao apertar PS.',
         btPairing: () => 'Procurando controles em modo de pareamento…',
         btPair: 'Parear controle', btCancel: 'Parar busca', btForget: 'Esquecer pareados',
-        confirmForget: 'Esquecer todos os controles pareados? Eles vão precisar ser pareados de novo.'
+        confirmForget: 'Esquecer todos os controles pareados? Eles vão precisar ser pareados de novo.',
+        stOn: 'OmniPad rodando', stOff: 'Sem resposta do OmniPad',
+        pads: (n) => n === 0 ? 'Nenhum controle' : n === 1 ? '1 controle' : `${n} controles`,
+        btShort: { 'no adapter': 'Bluetooth: sem adaptador', starting: 'Bluetooth: iniciando', ready: 'Bluetooth: pronto', stopping: 'Bluetooth: parando' },
+        diag: 'Copiar diagnóstico', hDiag: 'Diagnóstico',
+        diagCopied: 'Copiado. Cole no grupo pra pedir ajuda.',
+        diagManual: 'Não deu pra copiar sozinho. Selecione o texto abaixo e copie.',
+        start: 'Primeiros passos',
+        steps: [
+          'Controle com fio ou dongle 2.4G: plugue numa porta USB do PS5.',
+          'Controle Bluetooth: plugue um adaptador Bluetooth USB no PS5 e coloque o controle em pareamento (DS4: segure Share + PS até a luz piscar rápido).',
+          'Aperte PS no controle e escolha o perfil na tela que aparecer.',
+          'Este painel também abre no próprio PS5: aba Mídia, ícone OmniPad.'
+        ]
       },
       en: {
         linkOk: 'Connected to PS5', linkWait: 'Connecting…', linkBad: 'No response',
@@ -436,7 +498,20 @@
         btIdle: 'To connect, put the controller in pairing mode (DS4: hold Share + PS). OmniPad searches on its own. Paired controllers come back when you press PS.',
         btPairing: () => 'Looking for controllers in pairing mode…',
         btPair: 'Pair controller', btCancel: 'Stop search', btForget: 'Forget paired',
-        confirmForget: 'Forget every paired controller? They will need to be paired again.'
+        confirmForget: 'Forget every paired controller? They will need to be paired again.',
+        stOn: 'OmniPad running', stOff: 'No response from OmniPad',
+        pads: (n) => n === 0 ? 'No controller' : n === 1 ? '1 controller' : `${n} controllers`,
+        btShort: { 'no adapter': 'Bluetooth: no adapter', starting: 'Bluetooth: starting', ready: 'Bluetooth: ready', stopping: 'Bluetooth: stopping' },
+        diag: 'Copy diagnostics', hDiag: 'Diagnostics',
+        diagCopied: 'Copied. Paste it where you ask for help.',
+        diagManual: 'Could not copy by itself. Select the text below and copy it.',
+        start: 'First steps',
+        steps: [
+          'Wired controller or 2.4G dongle: plug it into a PS5 USB port.',
+          'Bluetooth controller: plug a USB Bluetooth adapter into the PS5 and put the controller in pairing mode (DS4: hold Share + PS until the light flashes fast).',
+          'Press PS on the controller and pick a profile on the screen that appears.',
+          'This page also opens on the PS5 itself: Media tab, OmniPad icon.'
+        ]
       }
     };
 
@@ -492,7 +567,10 @@
       $('hTest').textContent = T.test; $('hHealth').textContent = T.health; $('hLog').textContent = T.log;
       $('hBt').textContent = T.bt; $('kBtAdapter').textContent = T.btAdapter; $('kBtAddr').textContent = T.btAddr;
       $('kBtPaired').textContent = T.btPaired; $('kBtPads').textContent = T.btPads; $('btnBtForget').textContent = T.btForget;
-      if (last) renderBt(last.bt);
+      $('btnDiag').textContent = T.diag; $('hDiag').textContent = T.hDiag; $('hStart').textContent = T.start;
+      $('startSteps').innerHTML = '';
+      T.steps.forEach(t => { const li = document.createElement('li'); li.textContent = t; $('startSteps').appendChild(li); });
+      if (last) { renderBt(last.bt); renderStatus(last); }
       $('lblLS').textContent = T.ls; $('lblRS').textContent = T.rs;
       $('kRate').textContent = T.kRate; $('kAge').textContent = T.kAge; $('kInj').textContent = T.kInj;
       $('kUp').textContent = T.kUp; $('kConn').textContent = T.kConn; $('kState').textContent = T.kState;
@@ -561,8 +639,19 @@
       $('btnBtForget').disabled = !ready || bt.paired === 0;
     }
 
+    function renderStatus(d) {
+      const used = d.slots.filter(s => s.status !== ST_FREE).length;
+      $('stLed').className = 'led ok';
+      $('stText').textContent = T.stOn;
+      $('stPads').textContent = T.pads(used);
+      $('stBt').textContent = d.bt ? (T.btShort[d.bt.state] || d.bt.state) : '';
+      $('stBt').style.display = d.bt ? '' : 'none';
+      $('start').style.display = used ? 'none' : '';
+    }
+
     function render(d) {
       renderBt(d.bt);
+      renderStatus(d);
       $('ver').textContent = `v${d.version} · build ${d.build} · ${T.up} ${fmtDur(d.uptime_ms)}`;
       $('foot').textContent = `OmniPad PS5 v${d.version} (build ${d.build})`;
 
@@ -645,6 +734,7 @@
       $('linkLed').className = 'led ' + state;
       $('linkText').textContent = state === 'ok' ? T.linkOk : state === 'bad' ? T.linkBad : T.linkWait;
       $('offline').classList.toggle('show', state === 'bad');
+      if (state === 'bad') { $('stLed').className = 'led bad'; $('stText').textContent = T.stOff; }
     }
 
     let lastOk = performance.now();
@@ -750,6 +840,29 @@
       setTimeout(pollLog, LOG_EVERY_MS);
     }
 
+    /* ---------- diagnostics ---------- */
+    /* Version, slots, Bluetooth and the end of the log in one text, to paste when asking for help */
+    async function copyDiag() {
+      let log = '';
+      try { log = await (await fetch('/api/log', { cache: 'no-store' })).text(); } catch (e) { log = '(log unavailable)'; }
+      const d = last || { slots: [] };
+      const lines = [`OmniPad ${d.version || '?'} build ${d.build || '?'}, up ${fmtDur(d.uptime_ms)}`];
+      d.slots.forEach((s, i) => lines.push(`P${i + 2}: ` + (s.status === ST_FREE ? 'free'
+        : `${s.name} | ${connName(s.conn)} | ${T.st[s.status] || s.status} | ${hex4(s.vid)}:${hex4(s.pid)} | last report ${fmtDur(s.input_age_ms)}`)));
+      if (d.bt) lines.push(`Bluetooth: ${d.bt.state} | ${d.bt.adapter || '-'} | ${d.bt.address || '-'} | paired ${d.bt.paired} | connected ${d.bt.pads.length}`);
+      lines.push(`Browser: ${navigator.userAgent}`, '', '--- log (last 150 lines) ---', log.split('\n').slice(-150).join('\n'));
+      const text = lines.join('\n');
+      const box = $('diagText');
+      box.value = text;
+      $('diagBox').classList.add('show');
+      let ok = false;
+      try { await navigator.clipboard.writeText(text); ok = true; } catch (e) { /* not on plain http */ }
+      if (!ok) {
+        try { box.focus(); box.select(); ok = document.execCommand('copy'); } catch (e) { /* select by hand */ }
+      }
+      $('diagNote').textContent = ok ? T.diagCopied : T.diagManual;
+    }
+
     /* ---------- actions ---------- */
     async function post(path) {
       try { await fetch(path, { method: 'POST' }); } catch (e) { /* surfaced by the link indicator */ }
@@ -771,6 +884,7 @@
         post(`/api/pair?seconds=${pairing ? 0 : 120}`);
       });
       $('btnBtForget').addEventListener('click', () => { if (confirm(T.confirmForget)) post('/api/bt_forget'); });
+      $('btnDiag').addEventListener('click', copyDiag);
       $('logFilter').addEventListener('input', renderLog);
       $('btnPause').addEventListener('click', () => { logPaused = !logPaused; $('btnPause').textContent = logPaused ? T.resume : T.pause; if (!logPaused) renderLog(); });
       $('btnClear').addEventListener('click', () => { logLines = []; renderLog(); });

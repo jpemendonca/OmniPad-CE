@@ -862,6 +862,7 @@ static void run_host(bt_dev_t *d)
     }
     set_state("ready", NULL);
     log_line("bt: ready, %d paired pad(s). Paired pads connect when switched on.", host_paired_count(h));
+    notify_ps5("OmniPad: adaptador Bluetooth pronto. Coloque o controle em pareamento (DS4: Share + PS)");
     log_line("bt: searching on its own: put a pad in pairing mode (DS4: hold Share + PS) to connect it");
 
     long last_publish = 0, last_alive = now_ms();
@@ -954,7 +955,10 @@ static void *bt_worker(void *arg)
             started = bt_open(d) && bring_up(d);
         }
         if (started) run_host(d);
-        else log_line("bt: adapter did not start; unplug and plug it again to retry");
+        else {
+            log_line("bt: adapter did not start; unplug and plug it again to retry");
+            notify_ps5("OmniPad: o adaptador Bluetooth nao iniciou. Tire e plugue de novo, ou veja o painel");
+        }
         bt_close(d);
 
         pthread_mutex_lock(&g_bt.lock);

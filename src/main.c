@@ -17,6 +17,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <net/if.h>
 
 #ifdef __PROSPERO__
 #include <ps5/kernel.h>
@@ -32,6 +37,22 @@ static void handle_signal(int sig)
 {
     (void)sig;
     g_running = 0;
+}
+
+/* The console's LAN address, for the start notification: the first IPv4 interface that is up
+ * and not loopback */
+static int local_ipv4(char *out, size_t n)
+{
+    struct ifaddrs *list, *ifa;
+    int found = 0;
+    if (getifaddrs(&list) != 0) return 0;
+    for (ifa = list; ifa && !found; ifa = ifa->ifa_next) {
+        if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET) continue;
+        if (!(ifa->ifa_flags & IFF_UP) || (ifa->ifa_flags & IFF_LOOPBACK)) continue;
+        found = inet_ntop(AF_INET, &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr, out, (socklen_t)n) != NULL;
+    }
+    freeifaddrs(list);
+    return found;
 }
 
 static void check_flags(void)
@@ -138,7 +159,12 @@ int main(int argc, char **argv)
     /* 5. Initialize TCP frame testing stream */
     tcp_stream_init(ANYPAD_TCP_STREAM_PORT);
 
-    notify_ps5("OmniPad PS5 v%s-b%d Active! Web UI: port %d", ANYPAD_VERSION, ANYPAD_BUILD, ANYPAD_DEFAULT_PORT);
+    /* The one sign most people see that the payload really started */
+    char ip[INET_ADDRSTRLEN];
+    if (local_ipv4(ip, sizeof(ip)))
+        notify_ps5("OmniPad %s ativo. Painel: aba Midia, ou http://%s:%d no celular", ANYPAD_VERSION, ip, ANYPAD_DEFAULT_PORT);
+    else
+        notify_ps5("OmniPad %s ativo. Painel: aba Midia", ANYPAD_VERSION);
     log_line("main: All subsystems initialized. Entering event loop.");
 
     while (g_running) {
