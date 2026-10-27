@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const [url, out, w = '1200', h = '1350', lang = 'en', mobile = ''] = process.argv.slice(2);
+const scale = +(process.env.SCALE || 2);   // SCALE=1 for an exact-size image (the 512x512 tile icon)
 if (!url || !out) {
   console.error('usage: screenshot_dashboard.mjs <url> <out.png> [width] [height] [lang] [mobile]');
   process.exit(1);
@@ -48,7 +49,7 @@ try {
   });
 
   const isMobile = mobile === 'mobile';
-  await send('Emulation.setDeviceMetricsOverride', { width: +w, height: +h, deviceScaleFactor: 2, mobile: isMobile });
+  await send('Emulation.setDeviceMetricsOverride', { width: +w, height: +h, deviceScaleFactor: scale, mobile: isMobile });
   await send('Emulation.setFocusEmulationEnabled', { enabled: true });
   await send('Emulation.setLocaleOverride', { locale: lang === 'pt' ? 'pt-BR' : 'en-US' });
   await send('Page.enable');

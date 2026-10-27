@@ -3,6 +3,7 @@
 #include "ps5_vpad.h"
 #include "usb_hotplug.h"
 #include "bt_adapter.h"
+#include "launcher.h"
 #include "web.h"
 #include "tcp_stream.h"
 #include "shellui_inject.h"
@@ -130,6 +131,9 @@ int main(int argc, char **argv)
     if (!web_init(ANYPAD_DEFAULT_PORT)) {
         log_line("main: Warning: web_init failed");
     }
+
+    /* 4b. OmniPad tile in the Media tab, opening the dashboard on the console itself */
+    launcher_install(ANYPAD_DEFAULT_PORT);
 
     /* 5. Initialize TCP frame testing stream */
     tcp_stream_init(ANYPAD_TCP_STREAM_PORT);
