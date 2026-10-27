@@ -58,47 +58,68 @@ static void write_all(int fd, const void *buf, size_t len)
 #define SO_REUSEPORT 0x0200
 #endif
 
-int web_init(int port)
+static int g_port;
+
+/* Opens the listening socket on g_port; returns it, or -1 */
+static int open_listener(int quiet)
 {
-    g_server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (g_server_fd < 0) return 0;
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) return -1;
 
     int opt = 1;
-    setsockopt(g_server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 #ifdef SO_REUSEPORT
-    setsockopt(g_server_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+    setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
 #endif
 
     struct sockaddr_in sin;
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
-    sin.sin_port = htons((uint16_t)port);
+    sin.sin_port = htons((uint16_t)g_port);
     sin.sin_addr.s_addr = INADDR_ANY;
 
     int bound = 0;
     for (int retry = 0; retry < 10; retry++) {
-        if (bind(g_server_fd, (struct sockaddr *)&sin, sizeof(sin)) == 0) {
+        if (bind(fd, (struct sockaddr *)&sin, sizeof(sin)) == 0) {
             bound = 1;
             break;
         }
-        if (retry == 0) {
-            log_line("web: port %d busy, waiting for release...", port);
+        if (retry == 0 && !quiet) {
+            log_line("web: port %d busy, waiting for release...", g_port);
         }
         usleep(250000); /* 250ms */
     }
 
-    if (!bound) {
-        log_line("web: bind error on port %d (%s)", port, strerror(errno));
-        close(g_server_fd);
-        g_server_fd = -1;
-        return 0;
+    if (!bound || listen(fd, 8) != 0) {
+        if (!quiet) log_line("web: cannot listen on port %d (%s)", g_port, strerror(errno));
+        close(fd);
+        return -1;
     }
+    return fd;
+}
 
-    if (listen(g_server_fd, 8) != 0) {
-        close(g_server_fd);
-        g_server_fd = -1;
-        return 0;
+/* Rest mode closes the payload's sockets. Without this the server thread spun on a dead socket
+ * and the dashboard stayed refused after the console woke up (PS5, 27 Oct). */
+static void reopen_listener(const char *why)
+{
+    log_line("web: listening socket lost (%s: %s), reopening", why, strerror(errno));
+    close(g_server_fd);
+    g_server_fd = -1;
+    while (g_server_running) {
+        sleep_ms(1000);
+        g_server_fd = open_listener(1);
+        if (g_server_fd >= 0) {
+            log_line("web: dashboard listening again on port %d", g_port);
+            return;
+        }
     }
+}
+
+int web_init(int port)
+{
+    g_port = port;
+    g_server_fd = open_listener(0);
+    if (g_server_fd < 0) return 0;
 
     g_started_at = now_ms();
     g_server_running = 1;
@@ -453,12 +474,20 @@ static void *web_server_worker(void *arg)
         struct pollfd pfd;
         pfd.fd = g_server_fd;
         pfd.events = POLLIN;
-        if (poll(&pfd, 1, 200) <= 0) continue;
+        pfd.revents = 0;
+        int r = poll(&pfd, 1, 200);
+        if (r == 0 || (r < 0 && errno == EINTR)) continue;
+        if (r < 0 || (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))) {
+            reopen_listener("poll");
+            continue;
+        }
 
         struct sockaddr_in client_addr;
         socklen_t addr_len = sizeof(client_addr);
         int cfd = accept(g_server_fd, (struct sockaddr *)&client_addr, &addr_len);
         if (cfd >= 0) handle_client(cfd);
+        else if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR && errno != ECONNABORTED)
+            reopen_listener("accept");
     }
     return NULL;
 }

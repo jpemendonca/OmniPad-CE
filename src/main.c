@@ -170,8 +170,16 @@ int main(int argc, char **argv)
                    ANYPAD_VERSION);
     log_line("main: All subsystems initialized. Entering event loop.");
 
+    long last_tick = now_ms();
     while (g_running) {
         long now = now_ms();
+
+        /* A loop that ticks every 4 ms going silent for seconds means the console was suspended:
+         * mark it, so the log shows what happened right after waking up */
+        if (now - last_tick > 3000) {
+            log_line("main: loop was stopped for %ld ms (rest mode?), resuming", now - last_tick);
+        }
+        last_tick = now;
 
         vpad_poll(now);
         usb_hotplug_poll(now);

@@ -14,9 +14,12 @@
 
 static int g_stream_fd = -1;
 static int g_stream_slot = -1;
+static int g_stream_port;
+static long g_reopen_at;     /* when to open the socket again after rest mode closed it; 0 = never */
 
 int tcp_stream_init(int port)
 {
+    g_stream_port = port;
     g_stream_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (g_stream_fd < 0) return 0;
 
@@ -48,13 +51,26 @@ int tcp_stream_init(int port)
 
 void tcp_stream_poll(long now)
 {
-    (void)now;
-    if (g_stream_fd < 0) return;
+    if (g_stream_fd < 0) {
+        if (g_reopen_at && now >= g_reopen_at) {
+            g_reopen_at = tcp_stream_init(g_stream_port) ? 0 : now + 2000;
+        }
+        return;
+    }
 
     struct sockaddr_in client_addr;
     socklen_t addr_len = sizeof(client_addr);
     int cfd = accept(g_stream_fd, (struct sockaddr *)&client_addr, &addr_len);
-    if (cfd < 0) return;
+    if (cfd < 0) {
+        /* Rest mode closes the payload's sockets: open it again */
+        if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR && errno != ECONNABORTED) {
+            log_line("tcp_stream: listening socket lost (%s), reopening", strerror(errno));
+            close(g_stream_fd);
+            g_stream_fd = -1;
+            g_reopen_at = now + 2000;
+        }
+        return;
+    }
 
     /* 16-byte test frame format:
      * uint32_t buttons (little endian)
