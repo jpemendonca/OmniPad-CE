@@ -217,6 +217,12 @@
     .diag.show { display: block; }
     .diag textarea { width: 100%; height: 160px; margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--log-text); background: var(--log-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; resize: vertical; }
 
+    /* New release on GitHub */
+    .update { display: none; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; padding: 10px 14px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-text); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); font-size: 14px; font-weight: 600; }
+    .update.show { display: flex; }
+    .update a { color: inherit; font-weight: 800; }
+    html.tv .update { font-size: 18px; }
+
     /* First steps, while no controller is connected */
     .start { margin-bottom: 16px; }
     .start ol { margin-left: 20px; display: grid; gap: 8px; font-size: 14px; }
@@ -280,6 +286,7 @@
     </header>
 
     <div class="banner" id="offline"></div>
+    <div class="update" id="update"><span id="updText"></span><a id="updLink" target="_blank" rel="noopener"></a></div>
 
     <div class="status" id="status">
       <div class="st-main"><span class="led" id="stLed"></span><span id="stText"></span></div>
@@ -455,6 +462,7 @@
         btPairing: () => 'Procurando controles em modo de pareamento…',
         btPair: 'Parear controle', btCancel: 'Parar busca', btForget: 'Esquecer pareados',
         confirmForget: 'Esquecer todos os controles pareados? Eles vão precisar ser pareados de novo.',
+        upd: (v) => `Nova versão do OmniPad CE disponível: ${v}.`, updLink: 'Ver e baixar',
         stOn: 'OmniPad rodando', stOff: 'Sem resposta do OmniPad',
         pads: (n) => n === 0 ? 'Nenhum controle' : n === 1 ? '1 controle' : `${n} controles`,
         btShort: { 'no adapter': 'Bluetooth: sem adaptador', starting: 'Bluetooth: iniciando', ready: 'Bluetooth: pronto', stopping: 'Bluetooth: parando' },
@@ -499,6 +507,7 @@
         btPairing: () => 'Looking for controllers in pairing mode…',
         btPair: 'Pair controller', btCancel: 'Stop search', btForget: 'Forget paired',
         confirmForget: 'Forget every paired controller? They will need to be paired again.',
+        upd: (v) => `A new OmniPad CE version is available: ${v}.`, updLink: 'See and download',
         stOn: 'OmniPad running', stOff: 'No response from OmniPad',
         pads: (n) => n === 0 ? 'No controller' : n === 1 ? '1 controller' : `${n} controllers`,
         btShort: { 'no adapter': 'Bluetooth: no adapter', starting: 'Bluetooth: starting', ready: 'Bluetooth: ready', stopping: 'Bluetooth: stopping' },
@@ -570,7 +579,7 @@
       $('btnDiag').textContent = T.diag; $('hDiag').textContent = T.hDiag; $('hStart').textContent = T.start;
       $('startSteps').innerHTML = '';
       T.steps.forEach(t => { const li = document.createElement('li'); li.textContent = t; $('startSteps').appendChild(li); });
-      if (last) { renderBt(last.bt); renderStatus(last); }
+      if (last) { renderBt(last.bt); renderStatus(last); renderUpdate(); }
       $('lblLS').textContent = T.ls; $('lblRS').textContent = T.rs;
       $('kRate').textContent = T.kRate; $('kAge').textContent = T.kAge; $('kInj').textContent = T.kInj;
       $('kUp').textContent = T.kUp; $('kConn').textContent = T.kConn; $('kState').textContent = T.kState;
@@ -750,7 +759,9 @@
         const d = await res.json();
         const t = performance.now();
         d.slots.forEach((s, i) => pushHist(i, t, s));
+        const first = !last;
         last = d; failures = 0; lastOk = t; setLink('ok');
+        if (first) checkUpdate();
         render(d);
       } catch (e) {
         failures++;
@@ -838,6 +849,48 @@
         } catch (e) { /* the state poll already reports the link */ }
       }
       setTimeout(pollLog, LOG_EVERY_MS);
+    }
+
+    /* ---------- update check ---------- */
+    /* Asks GitHub for the latest release at most every 6 hours (its API allows 60 requests an
+     * hour per address) and shows a banner when it is newer than the running build */
+    const RELEASES_API = 'https://api.github.com/repos/jpemendonca/OmniPad-CE/releases/latest';
+    const UPDATE_EVERY_MS = 6 * 3600 * 1000;
+    let latest = null;   // { tag, url }
+
+    function verParts(v) {
+      const m = String(v || '').match(/(\d+)\.(\d+)\.(\d+)/);
+      return m ? m.slice(1, 4).map(Number) : null;
+    }
+    function isNewer(a, b) {
+      if (!a || !b) return false;
+      for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i];
+      return false;
+    }
+    function renderUpdate() {
+      const show = latest && last && isNewer(verParts(latest.tag), verParts(last.version));
+      $('update').classList.toggle('show', !!show);
+      if (!show) return;
+      $('updText').textContent = T.upd(latest.tag);
+      $('updLink').textContent = T.updLink;
+      $('updLink').href = latest.url;
+    }
+    async function checkUpdate() {
+      try {
+        const saved = JSON.parse(load('omnipad.latest', 'null'));
+        if (saved && Date.now() - saved.at < UPDATE_EVERY_MS) latest = saved;
+      } catch (e) { /* nothing saved */ }
+      if (!latest) {
+        try {
+          const res = await fetch(RELEASES_API, { cache: 'no-store', headers: { Accept: 'application/vnd.github+json' } });
+          if (res.ok) {
+            const j = await res.json();
+            latest = { tag: j.tag_name, url: j.html_url, at: Date.now() };
+            save('omnipad.latest', JSON.stringify(latest));
+          }
+        } catch (e) { /* no internet: no banner */ }
+      }
+      renderUpdate();
     }
 
     /* ---------- diagnostics ---------- */
