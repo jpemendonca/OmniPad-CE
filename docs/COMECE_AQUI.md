@@ -47,6 +47,7 @@ No painel você testa os botões do controle, vê se a conexão está boa, parei
 | Segundo controle não conecta num adaptador genérico | Com um controle já conectado, os genéricos "CSR 4.0" não procuram sozinhos. Toque em **Parear controle** no painel e coloque o controle em pareamento. |
 | O DS4 não conecta por Bluetooth | Coloque em pareamento (**Share + PS**, luz piscando rápido) com o adaptador já plugado. |
 | O DS4 pareado não volta só com PS | Coloque em pareamento de novo. Ele conecta e fica salvo outra vez. |
+| Depois do repouso, o controle pede o perfil de novo | É o esperado. No repouso o OmniPad solta os controles, como o PS5 faz com o DualSense. Uns 10 segundos depois de acordar, os controles USB voltam pedindo o perfil. Os controles Bluetooth voltam quando você aperta PS. |
 
 Se ainda assim não der certo, abra o painel e toque em **Copiar diagnóstico**. Ele copia a versão, os controles, o Bluetooth e o fim do log num texto só. Cole no grupo ou numa [issue](https://github.com/jpemendonca/OmniPad-CE/issues) pra pedir ajuda.
 

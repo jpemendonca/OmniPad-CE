@@ -76,6 +76,8 @@ HTTP on port 8095 (`web.c`):
 | `POST /api/disconnect?slot=N` | Free a slot; `-1` frees all |
 | `POST /api/exit` | Stop the payload |
 
+Rest mode (`rest.c`): any thread calls `rest_signal`. Everything that touches the system checks `rest_quiet()` first, and `main.c` releases every slot when `rest_take_resume()` fires.
+
 Notifications (`notify_ps5`, text through `ui_text`): started (with the IP), pad connected/disconnected (player = slot + 2), adapter ready or failed. Portuguese when the system language is 7 or 17, English otherwise.
 
 ## Tests
@@ -108,3 +110,6 @@ GitHub releases on `jpemendonca/OmniPad-CE`. Assets: `OmniPad-CE.elf` and the Re
 - **2026-10-27: notifications follow the system language**, Portuguese or English.
 - **2026-10-27: CSR8510 clones get no background search while linked, and locked-up adapters get a USB reset.** A clone locked up 25 s after a DS4 connected.
 - **2026-10-27: renamed to OmniPad CE**, the community continuation. Upstream has been inactive since early October 2026.
+- **2026-10-27: quiet period around rest mode** (`src/rest.c`). With a pad connected, OmniPad called into SceShellUI and SceShellCore and created a virtual pad at the instant the console woke up, and the console stayed on a grey screen or showed a system software error. Now, for 12 s after any rest signal (the main loop stopped for more than 3 s, or the system closed the sockets), OmniPad injects nothing, adds and removes no virtual pad, calls nothing in the system and runs no Bluetooth search. Bluetooth pads are dropped when the console goes to rest. Every slot is released when the quiet period ends, and USB pads come back on their next input.
+- **2026-10-27: the dashboard reopens its listening socket** when rest mode closes it. Before, the server thread spun on a dead socket after waking up.
+- **2026-10-27: the dashboard checks GitHub for a newer release**, at most every 6 h, and shows a banner.
