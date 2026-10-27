@@ -77,6 +77,22 @@ void log_close(void)
     pthread_mutex_unlock(&g_log_mutex);
 }
 
+#ifdef __PROSPERO__
+int sceSystemServiceParamGetInt(int param_id, int *value);
+#define SYSTEM_PARAM_LANG 1
+#endif
+
+const char *ui_text(const char *pt, const char *en)
+{
+    static int lang = -1;
+#ifdef __PROSPERO__
+    if (lang < 0 && sceSystemServiceParamGetInt(SYSTEM_PARAM_LANG, &lang) != 0) lang = 1;
+#else
+    if (lang < 0) lang = 17;
+#endif
+    return lang == 7 || lang == 17 ? pt : en;   /* Portuguese (Portugal), Portuguese (Brazil) */
+}
+
 void notify_ps5(const char *fmt, ...)
 {
 #ifdef __PROSPERO__

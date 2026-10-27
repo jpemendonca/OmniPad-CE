@@ -162,9 +162,12 @@ int main(int argc, char **argv)
     /* The one sign most people see that the payload really started */
     char ip[INET_ADDRSTRLEN];
     if (local_ipv4(ip, sizeof(ip)))
-        notify_ps5("OmniPad %s ativo. Painel: aba Midia, ou http://%s:%d no celular", ANYPAD_VERSION, ip, ANYPAD_DEFAULT_PORT);
+        notify_ps5(ui_text("OmniPad %s ativo. Painel: aba Midia, ou http://%s:%d no celular",
+                           "OmniPad %s running. Dashboard: Media tab, or http://%s:%d on your phone"),
+                   ANYPAD_VERSION, ip, ANYPAD_DEFAULT_PORT);
     else
-        notify_ps5("OmniPad %s ativo. Painel: aba Midia", ANYPAD_VERSION);
+        notify_ps5(ui_text("OmniPad %s ativo. Painel: aba Midia", "OmniPad %s running. Dashboard: Media tab"),
+                   ANYPAD_VERSION);
     log_line("main: All subsystems initialized. Entering event loop.");
 
     while (g_running) {

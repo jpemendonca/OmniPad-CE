@@ -560,7 +560,8 @@ static void start_identification(int slot)
         }
         if (handle > 0) {
             g_slots[slot].status = VP_READY;
-            notify_ps5("OmniPad: %s conectado (jogador %d)", g_slots[slot].name[0] ? g_slots[slot].name : "controle", slot + 2);
+            notify_ps5(ui_text("OmniPad: %s conectado (jogador %d)", "OmniPad: %s connected (player %d)"),
+                       g_slots[slot].name[0] ? g_slots[slot].name : ui_text("controle", "controller"), slot + 2);
         } else {
             g_slots[slot].status = VP_FAILED;
         }
@@ -621,7 +622,8 @@ static void finish_identification(long now)
 
     s->status = VP_READY;
     s->consecutive_insert_errors = 0;
-    notify_ps5("OmniPad: %s conectado (jogador %d)", s->name[0] ? s->name : "controle", slot + 2);
+    notify_ps5(ui_text("OmniPad: %s conectado (jogador %d)", "OmniPad: %s connected (player %d)"),
+               s->name[0] ? s->name : ui_text("controle", "controller"), slot + 2);
 
     /* Bind device to user in SceShellUI only if the user is confirmed logged in */
     if (s->device_id > 0 && s->user_id > 0 && is_user_logged_in(s->user_id)) {
@@ -808,7 +810,8 @@ void vpad_remove(int slot)
         }
         log_line("vpad: slot %d removed (handle %d, dev 0x%llx, uid 0x%08x)",
                  slot, handle, (unsigned long long)dev_id, (unsigned)uid);
-        notify_ps5("OmniPad: controle desconectado (jogador %d)", slot + 2);
+        notify_ps5(ui_text("OmniPad: controle desconectado (jogador %d)", "OmniPad: controller disconnected (player %d)"),
+                   slot + 2);
     }
 #endif
 }

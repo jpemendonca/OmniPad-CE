@@ -34,6 +34,7 @@ enum { AUTO_OFF, AUTO_FULL, AUTO_PEEK };
 #define AUTO_PEEK_S    4          /* with a pad connected: a 3.84 s round ... */
 #define AUTO_PEEK_INQ  3
 #define AUTO_PEEK_MS   20000      /* ... every 20 s */
+#define BT_USB_RESETS  2          /* tries to revive a locked-up adapter before asking for a replug */
 
 #define EVQ_LEN   32
 #define ACLQ_LEN  32
@@ -75,6 +76,8 @@ typedef struct {
     int      acl_acc_len;
     bt_queue_t evq, aclq;
     unsigned events_in, acl_in, acl_out;
+    long     last_event_at, last_acl_at;   /* for the log when the adapter is lost */
+    int      fake_csr;       /* a CSR8510 clone: see bring_up */
     int      gone;           /* the adapter stopped answering (unplugged, rest mode) */
 } bt_dev_t;
 
@@ -98,6 +101,7 @@ static struct {
     /* Requests from the web thread, applied by the worker (the host is not thread-safe) */
     int             pair_req;      /* seconds, -1 none */
     int             forget_req;
+    int             resets;        /* USB resets tried since the adapter last came up */
 
     /* What the dashboard shows, written by the worker */
     const char     *state;
@@ -341,6 +345,7 @@ static void take_events(bt_dev_t *d)
         log_link_event(d->evt_acc, total);
         queue_push(&d->evq, d->evt_acc, total);
         d->events_in++;
+        d->last_event_at = now_ms();
         d->evt_acc_len -= total;
         memmove(d->evt_acc, d->evt_acc + total, (size_t)d->evt_acc_len);
     }
@@ -371,6 +376,7 @@ static void take_acl(bt_dev_t *d)
         }
         queue_push(&d->aclq, d->acl_acc, total);
         d->acl_in++;
+        d->last_acl_at = now_ms();
         d->acl_acc_len -= total;
         memmove(d->acl_acc, d->acl_acc + total, (size_t)d->acl_acc_len);
     }
@@ -533,8 +539,11 @@ static void op_close(void *ctx)
 static void op_diag(void *ctx)
 {
     bt_dev_t *d = ctx;
-    log_line("bt: transport %s: %u events, %u ACL in, %u ACL out, dropped %u events / %u ACL",
-             d->path, d->events_in, d->acl_in, d->acl_out, d->evq.dropped, d->aclq.dropped);
+    long now = now_ms();
+    log_line("bt: transport %s: %u events, %u ACL in, %u ACL out, dropped %u events / %u ACL; "
+             "last event %ld ms ago, last ACL %ld ms ago",
+             d->path, d->events_in, d->acl_in, d->acl_out, d->evq.dropped, d->aclq.dropped,
+             d->last_event_at ? now - d->last_event_at : -1L, d->last_acl_at ? now - d->last_acl_at : -1L);
 }
 
 static int op_chip_vendor(void *ctx)
@@ -672,6 +681,13 @@ static int bring_up(bt_dev_t *d)
     }
     log_line("bt: chip %s (0x%04x), HCI %u rev 0x%04x, LMP %u subversion 0x%04x",
              manufacturer_name(v.manufacturer), v.manufacturer, v.hci_ver, v.hci_rev, v.lmp_ver, v.lmp_sub);
+
+    /* Clones sold as CSR8510 carry CSR's USB ids (0a12:0001) and another manufacturer. One locked
+     * up 25 s after a DS4 connected, its next command being a background search (PS5, 27 Oct). */
+    d->fake_csr = d->vid == 0x0a12 && d->pid == 0x0001 && v.manufacturer != 0x000A;
+    if (d->fake_csr)
+        log_line("bt: CSR8510 clone (manufacturer 0x%04x): no background search while a pad is connected",
+                 v.manufacturer);
     if (v.manufacturer == 0x005D) realtek_firmware(d, &v);
     hci_cmd(d, 0x0C03, NULL, 0, r, sizeof(r), 3000);
 
@@ -861,8 +877,10 @@ static void run_host(bt_dev_t *d)
         return;
     }
     set_state("ready", NULL);
+    g_bt.resets = 0;
     log_line("bt: ready, %d paired pad(s). Paired pads connect when switched on.", host_paired_count(h));
-    notify_ps5("OmniPad: adaptador Bluetooth pronto. Coloque o controle em pareamento (DS4: Share + PS)");
+    notify_ps5(ui_text("OmniPad: adaptador Bluetooth pronto. Coloque o controle em pareamento (DS4: Share + PS)",
+                       "OmniPad: Bluetooth adapter ready. Put the controller in pairing mode (DS4: Share + PS)"));
     log_line("bt: searching on its own: put a pad in pairing mode (DS4: hold Share + PS) to connect it");
 
     long last_publish = 0, last_alive = now_ms();
@@ -898,7 +916,7 @@ static void run_host(bt_dev_t *d)
             uint16_t vid, pid;
             if (!usb_hotplug_slot_ids(i, &vid, &pid) && vpad_slot_is_free(i)) slot_free = 1;
         }
-        int mode = !slot_free ? AUTO_OFF : connected ? AUTO_PEEK : AUTO_FULL;
+        int mode = !slot_free ? AUTO_OFF : !connected ? AUTO_FULL : d->fake_csr ? AUTO_OFF : AUTO_PEEK;
         if (mode != auto_mode) {
             auto_mode = mode;
             host_tune_set(h, "inq_len", mode == AUTO_PEEK ? AUTO_PEEK_INQ : AUTO_FULL_INQ);
@@ -922,10 +940,36 @@ static void run_host(bt_dev_t *d)
                      host_paired_count(h), d->events_in);
         }
     }
-    if (host_transport_lost(h)) log_line("bt: adapter lost (unplugged or rest mode)");
+    if (host_transport_lost(h)) {
+        log_line("bt: adapter lost (unplugged, rest mode or locked up)");
+        op_diag(d);
+    }
     set_state("stopping", NULL);
     host_close(h);
     for (int i = 0; i < HOST_MAX_PADS; i++) on_disconnect(NULL, i);
+}
+
+/* 1 if the adapter is still on its node with the same ids (not unplugged) */
+static int same_adapter(const bt_dev_t *d)
+{
+    int fd = open(d->path, O_RDWR | O_NONBLOCK);
+    struct usb_device_descriptor dd;
+    int same = fd >= 0 && ioctl(fd, USB_GET_DEVICE_DESC, &dd) == 0 &&
+               UGETW(dd.idVendor) == d->vid && UGETW(dd.idProduct) == d->pid;
+    if (fd >= 0) close(fd);
+    return same;
+}
+
+static int usb_reset(const char *path)
+{
+    int fd = open(path, O_RDWR | O_NONBLOCK);
+    if (fd < 0) return 0;
+    int zero = 0;
+    int ok = ioctl(fd, USB_DEVICEENUMERATE, &zero) == 0;
+    if (ok) log_line("bt: adapter reset over USB (%s)", path);
+    else log_line("bt: USB reset of %s failed (%s)", path, strerror(errno));
+    close(fd);
+    return ok;
 }
 
 static void *bt_worker(void *arg)
@@ -955,10 +999,8 @@ static void *bt_worker(void *arg)
             started = bt_open(d) && bring_up(d);
         }
         if (started) run_host(d);
-        else {
-            log_line("bt: adapter did not start; unplug and plug it again to retry");
-            notify_ps5("OmniPad: o adaptador Bluetooth nao iniciou. Tire e plugue de novo, ou veja o painel");
-        }
+        else log_line("bt: adapter did not start");
+        int failed = !started || d->gone;
         bt_close(d);
 
         pthread_mutex_lock(&g_bt.lock);
@@ -969,7 +1011,18 @@ static void *bt_worker(void *arg)
         g_bt.pairing_left = 0;
         g_bt.paired = 0;
         pthread_mutex_unlock(&g_bt.lock);
+        /* A locked-up adapter is reset at the USB level, as unplugging it would, before asking the
+         * user to do it. Still there with the same ids, it is the same adapter. */
+        if (failed && !g_bt.stop && g_bt.resets < BT_USB_RESETS && same_adapter(d)) {
+            g_bt.resets++;
+            if (usb_reset(d->path)) {
+                sleep_ms(3000);
+                continue;
+            }
+        }
         if (!started) {
+            notify_ps5(ui_text("OmniPad: o adaptador Bluetooth nao iniciou. Tire e plugue de novo, ou veja o painel",
+                               "OmniPad: the Bluetooth adapter did not start. Unplug and plug it again, or see the dashboard"));
             snprintf(g_bt.done, sizeof(g_bt.done), "%s", d->path);
             g_bt.done_ids = (uint32_t)d->vid << 16 | d->pid;
         } else {
