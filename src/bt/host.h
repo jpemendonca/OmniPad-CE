@@ -127,6 +127,9 @@ int  host_is_paired(const host_t *h, const unsigned char addr[6]);
 int  host_forget(host_t *h, const unsigned char addr[6]);
 /* Forgets every paired pad (a clean session). Returns how many. */
 int  host_forget_all(host_t *h);
+/* OmniPad: drops the link of the pad in `slot`, keeping its key, so it can call back.
+ * Returns 0 if there is no link in that slot. */
+int  host_disconnect(host_t *h, int slot);
 
 /* Dialog mode (web /api/tune and /api/hci). Changes a setting while running:
  * returns 1, or 0 for an unknown name or a value out of range. */

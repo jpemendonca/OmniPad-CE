@@ -8,6 +8,7 @@
 #include "tcp_stream.h"
 #include "shellui_inject.h"
 #include "log.h"
+#include "rest.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -178,8 +179,17 @@ int main(int argc, char **argv)
          * mark it, so the log shows what happened right after waking up */
         if (now - last_tick > 3000) {
             log_line("main: loop was stopped for %ld ms (rest mode?), resuming", now - last_tick);
+            rest_signal("main loop was stopped");
         }
         last_tick = now;
+
+        /* After rest mode every controller starts over, as the console's own pads do: a
+         * Bluetooth pad is dropped and calls back on PS, a USB pad comes back on its next input */
+        if (rest_take_resume()) {
+            log_line("main: rest mode over, releasing every controller");
+            for (int i = 0; i < MAX_SLOTS; i++) vpad_remove(i);
+            bt_adapter_drop_pads();
+        }
 
         vpad_poll(now);
         usb_hotplug_poll(now);

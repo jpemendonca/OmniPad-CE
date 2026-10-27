@@ -2,6 +2,7 @@
 #include "ps5_vpad.h"
 #include "pad_types.h"
 #include "log.h"
+#include "rest.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -65,6 +66,7 @@ void tcp_stream_poll(long now)
         /* Rest mode closes the payload's sockets: open it again */
         if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR && errno != ECONNABORTED) {
             log_line("tcp_stream: listening socket lost (%s), reopening", strerror(errno));
+            rest_signal("network sockets closed");
             close(g_stream_fd);
             g_stream_fd = -1;
             g_reopen_at = now + 2000;

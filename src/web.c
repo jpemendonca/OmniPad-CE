@@ -5,6 +5,8 @@
 #include "shellui_inject.h"
 #include "version.h"
 #include "log.h"
+#include "rest.h"
+#include "bt_adapter.h"
 #include "util.h"
 #include "web_index.h"  /* generated from web/index.html by tools/embed_web.py */
 
@@ -103,6 +105,10 @@ static int open_listener(int quiet)
 static void reopen_listener(const char *why)
 {
     log_line("web: listening socket lost (%s: %s), reopening", why, strerror(errno));
+    /* The console closes the sockets as it goes to rest: drop the Bluetooth pads now, as it
+     * does with its own. The radio link is all this touches; the virtual pads wait for the wake. */
+    rest_signal("network sockets closed");
+    bt_adapter_drop_pads();
     close(g_server_fd);
     g_server_fd = -1;
     while (g_server_running) {

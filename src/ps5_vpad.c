@@ -1,6 +1,7 @@
 #include "ps5_vpad.h"
 #include "shellui_inject.h"
 #include "log.h"
+#include "rest.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -440,7 +441,7 @@ int vpad_init(void)
 
 int vpad_add(int slot, pad_conn_type_t type, const char *name)
 {
-    if (!g_ready || slot < 0 || slot >= MAX_SLOTS) return 0;
+    if (!g_ready || slot < 0 || slot >= MAX_SLOTS || rest_quiet()) return 0;
 
     pthread_mutex_lock(&g_vpad_mutex);
     if (g_slots[slot].status != VP_FREE && g_slots[slot].status != VP_FAILED) {
@@ -649,7 +650,7 @@ static void finish_identification(long now)
 
 void vpad_poll(long now)
 {
-    if (!g_ready) return;
+    if (!g_ready || rest_quiet()) return;
 
     pthread_mutex_lock(&g_vpad_mutex);
     if (g_pending >= 0) {
@@ -778,6 +779,7 @@ void vpad_poll(long now)
 void vpad_remove(int slot)
 {
     if (slot < 0 || slot >= MAX_SLOTS) return;
+    if (rest_quiet()) return;   /* released when the quiet period ends */
 
     pthread_mutex_lock(&g_vpad_mutex);
     internal_slot_t *s = &g_slots[slot];
@@ -830,7 +832,7 @@ int vpad_slot_is_free(int slot)
 
 void vpad_update(int slot, const pad_state_t *st)
 {
-    if (!st || slot < 0 || slot >= MAX_SLOTS) return;
+    if (!st || slot < 0 || slot >= MAX_SLOTS || rest_quiet()) return;
 
     static uint32_t s_prev_btn[MAX_SLOTS] = {0};
     uint32_t prev = s_prev_btn[slot];

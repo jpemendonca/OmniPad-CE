@@ -4,6 +4,7 @@
 #include "bt_adapter.h"
 #include "ps5_vpad.h"
 #include "log.h"
+#include "rest.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -422,9 +423,10 @@ static void *usb_reader_worker(void *arg)
                 st.vid = dev->vid;
                 st.pid = dev->pid;
                 snprintf(st.controller_name, sizeof(st.controller_name), "%s", dev->name);
-                /* If 2.4G dongle was in standby / slot freed, re-arm the virtual pad */
-                if (dev->conn_type == CONN_USB_DONGLE_24G && vpad_slot_is_free(dev->slot)) {
-                    log_line("usb_hotplug: slot %d 2.4G controller active — re-arming virtual pad", dev->slot);
+                /* Slot freed (2.4G standby, rest mode, or the dashboard) while the pad stayed
+                 * plugged in: its next input brings the virtual pad back */
+                if (vpad_slot_is_free(dev->slot) && !rest_quiet()) {
+                    log_line("usb_hotplug: slot %d controller active — re-arming virtual pad", dev->slot);
                     vpad_add(dev->slot, dev->conn_type, dev->name);
                 }
                 vpad_update(dev->slot, &st);
@@ -676,6 +678,7 @@ int usb_hotplug_init(void)
 
 void usb_hotplug_poll(long now)
 {
+    if (rest_quiet()) return;   /* no new pads while the console wakes up */
     /* Scan every 1500 ms */
     if (now - g_usb_hotplug.last_scan_time < 1500) return;
     g_usb_hotplug.last_scan_time = now;

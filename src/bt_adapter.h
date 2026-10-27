@@ -18,6 +18,9 @@ int bt_adapter_pair(int seconds);
 /* Forgets every paired pad (they must be paired again). Returns 0 if no adapter is running. */
 int bt_adapter_forget_all(void);
 
+/* Drops every connected pad; they keep their pairing and come back when PS is pressed */
+void bt_adapter_drop_pads(void);
+
 /* Adapter and pad state for the dashboard, as a JSON object. Returns its length. */
 int bt_adapter_status_json(char *out, int n);
 

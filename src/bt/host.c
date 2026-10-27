@@ -2607,6 +2607,13 @@ int host_forget(host_t *h, const unsigned char addr[6])
 
 /* Forgets every paired pad: each session starts clean. Connected pads are
  * left alone (none are expected right after opening). */
+int host_disconnect(host_t *h, int slot)
+{
+    if (!h || slot < 0 || slot >= HOST_MAX_PADS || !h->links[slot].used) return 0;
+    link_disconnect(h, &h->links[slot], "released by OmniPad");
+    return 1;
+}
+
 int host_forget_all(host_t *h)
 {
     int n = h->ndb;

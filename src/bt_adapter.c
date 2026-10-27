@@ -5,6 +5,7 @@
 #include "usb_hotplug.h"
 #include "pad_types.h"
 #include "log.h"
+#include "rest.h"
 #include "util.h"
 
 #include <stdio.h>
@@ -102,6 +103,7 @@ static struct {
     int             pair_req;      /* seconds, -1 none */
     int             forget_req;
     int             resets;        /* USB resets tried since the adapter last came up */
+    int             drop_req;      /* drop every connected pad (rest mode) */
 
     /* What the dashboard shows, written by the worker */
     const char     *state;
@@ -828,7 +830,14 @@ static void on_connect(void *ud, int hs, const pad_info *info)
     pthread_mutex_lock(&g_bt.lock);
     p->vslot = vslot;
     pthread_mutex_unlock(&g_bt.lock);
-    if (vslot < 0) log_line("bt: %s %s connected but every slot is taken", p->name, a);
+    if (vslot < 0 && rest_quiet()) {
+        /* The console is waking up: no new virtual pad now; the pad calls back on PS later */
+        log_line("bt: %s %s connected while the console wakes up, dropping it", p->name, a);
+        pthread_mutex_lock(&g_bt.lock);
+        g_bt.drop_req = 1;
+        pthread_mutex_unlock(&g_bt.lock);
+    }
+    else if (vslot < 0) log_line("bt: %s %s connected but every slot is taken", p->name, a);
     else log_line("bt: %s %s (%04x:%04x) on slot %d", p->name, a, info->vid, info->pid, vslot);
 }
 
@@ -891,14 +900,21 @@ static void run_host(bt_dev_t *d)
     int auto_mode = -1, auto_window = 0;
     long next_auto = 0;
     while (!g_bt.stop && !host_transport_lost(h)) {
-        int pair = -1, forget = 0;
+        int pair = -1, forget = 0, drop = 0;
         pthread_mutex_lock(&g_bt.lock);
         pair = g_bt.pair_req;
         forget = g_bt.forget_req;
+        drop = g_bt.drop_req;
         g_bt.pair_req = -1;
         g_bt.forget_req = 0;
+        g_bt.drop_req = 0;
         pthread_mutex_unlock(&g_bt.lock);
         if (forget) log_line("bt: forgot %d paired pad(s)", host_forget_all(h));
+        if (drop) {
+            int n = 0;
+            for (int i = 0; i < HOST_MAX_PADS; i++) n += host_disconnect(h, i);
+            if (n) log_line("bt: dropped %d pad(s) for rest mode", n);
+        }
         if (pair >= 0) {
             host_pair(h, pair);
             auto_window = 0;      /* the page's own search is not cut short below */
@@ -917,7 +933,8 @@ static void run_host(bt_dev_t *d)
             uint16_t vid, pid;
             if (!usb_hotplug_slot_ids(i, &vid, &pid) && vpad_slot_is_free(i)) slot_free = 1;
         }
-        int mode = !slot_free ? AUTO_OFF : !connected ? AUTO_FULL : d->fake_csr ? AUTO_OFF : AUTO_PEEK;
+        int mode = !slot_free || rest_quiet() ? AUTO_OFF
+                 : !connected ? AUTO_FULL : d->fake_csr ? AUTO_OFF : AUTO_PEEK;
         if (mode != auto_mode) {
             auto_mode = mode;
             host_tune_set(h, "inq_len", mode == AUTO_PEEK ? AUTO_PEEK_INQ : AUTO_FULL_INQ);
@@ -1069,6 +1086,13 @@ int bt_adapter_pair(int seconds)
     if (ok) g_bt.pair_req = seconds < 0 ? 0 : seconds;
     pthread_mutex_unlock(&g_bt.lock);
     return ok;
+}
+
+void bt_adapter_drop_pads(void)
+{
+    pthread_mutex_lock(&g_bt.lock);
+    g_bt.drop_req = 1;
+    pthread_mutex_unlock(&g_bt.lock);
 }
 
 int bt_adapter_forget_all(void)
