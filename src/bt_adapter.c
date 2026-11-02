@@ -505,8 +505,9 @@ static int hci_send(bt_dev_t *d, uint16_t opcode, const uint8_t *params, int len
     USETW(req.ucr_request.wIndex, 0);
     USETW(req.ucr_request.wLength, 3 + len);
     req.ucr_data = buf;
+    long t0 = now_ms();
     if (ioctl(d->fd, USB_DO_REQUEST, &req) != 0) {
-        log_line("bt: command 0x%04x not sent (%s)", opcode, strerror(errno));
+        log_line("bt: command 0x%04x not sent after %ld ms (%s)", opcode, now_ms() - t0, strerror(errno));
         d->gone = 1;
         return -1;
     }

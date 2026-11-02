@@ -30,7 +30,10 @@ const char *addr_str(const unsigned char *a)
 /* mask_conn is off by default: leaving Connection Request out is not proven
  * to hand the call to the system, and could keep a DualSense from reconnecting
  * (external audit, 9 Oct). It stays as a dialog-mode experiment. */
-tune_t g_tune = { 1, PS_PAIR_INTERVAL, PS_PAIR_WINDOW, 0, 8, 0, HOST_EV_READS, 16, HOST_ACL_READS, 1 };
+/* OmniPad: ps_light is off. Lightening the page scan only matters on a radio shared with the
+ * system, and its check was the command a CSR clone hung on, 5 s, as an LE pad began to report
+ * (PS5, 2 Nov). */
+tune_t g_tune = { 0, PS_PAIR_INTERVAL, PS_PAIR_WINDOW, 0, 8, 0, HOST_EV_READS, 16, HOST_ACL_READS, 1 };
 
 static void log_hex(const char *what, unsigned op, const unsigned char *p, int len)
 {
