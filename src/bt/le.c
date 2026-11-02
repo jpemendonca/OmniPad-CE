@@ -282,6 +282,12 @@ static void le_connect(host_t *h, uint8_t type, const uint8_t *addr, db_rec *bon
     } else {
         l->pairing = 1;
     }
+    /* OmniPad: a Classic search left an LE connection unanswered for a minute on a CSR clone
+     * (PS5, 2 Nov). The search stops while the pad is being connected, as for a Classic call. */
+    if (h->inquiring) {
+        send_cmd(h, OP_INQUIRY_CANCEL, NULL, 0);
+        h->inquiring = 0;
+    }
     le_create(h, l);
     log_line("le pad %s: connecting%s", addr_str(addr), bond ? "" : " to pair");
 }
@@ -1296,6 +1302,9 @@ void le_step(host_t *h, link_t *l, long now)
         if (now - l->t_create > T_LE_CONNECT) {
             send_cmd(h, OP_LE_CREATE_CONN_CANCEL, NULL, 0);
             log_line("le pad %s: did not connect", addr_str(l->addr));
+            /* OmniPad: a rest between tries, so a pad that never answers cannot hold the search off */
+            memcpy(h->le_rest_addr, l->addr, 6);
+            h->le_rest_until = now + T_LE_REST;
             link_free(h, l);
         }
         return;

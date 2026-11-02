@@ -2323,8 +2323,8 @@ void host_poll(host_t *h, int timeout_ms)
     for (i = 0; i < HOST_MAX_PADS; i++) {
         if (!h->links[i].used) continue;
         link_step(h, &h->links[i], now);
-        if (h->links[i].used && h->links[i].pairing && !h->links[i].ready &&
-            !h->links[i].le) linking = 1;
+        /* OmniPad: LE pads too, whether pairing or reconnecting (see le_connect) */
+        if (h->links[i].used && !h->links[i].ready && (h->links[i].pairing || h->links[i].le)) linking = 1;
     }
     le_poll(h, now);
 
