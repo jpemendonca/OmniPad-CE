@@ -16,3 +16,5 @@ The upstream stack shares the PS5's internal radio with the system. Here it runs
 - `host.c`: a failed authentication on reconnect only forgets the key when the pad refused it (status 0x05 or 0x06). A collision or a timeout keeps the key.
 - `host.c`: `host_pair` only logs searches of 30 s or more. The short background searches from `bt_adapter.c` would fill the log.
 - `host.c` and `host_int.h`: a small SDP server serves one Device ID record. A DS4 calling back opens SDP on the host first and hangs up when that is refused. On the shared radio, the system answered instead. `tests/test_bt_sdp.c` covers it.
+- `host.c` and `host.h`: `host_linked_count`, and a log line for reports the profile does not read.
+- `le.c` and `host_int.h`: log lines for what an LE pad offers, its first notifications, refused requests and its own requests to us.

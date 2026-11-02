@@ -1010,6 +1010,8 @@ static void on_att_response(host_t *h, link_t *l, const uint8_t *d, int n)
 
     if (!err && d[0] != e->req[0] + 1) return;      /* not the answer we wait for */
     e->req_len = 0;                                 /* answered */
+    if (err) log_line("le pad %s: request %#04x on handle %#06x refused (error %#04x), step %d",  /* OmniPad */
+                      addr_str(l->addr), d[1], le16(d + 2), d[4], e->gatt);
 
     switch (e->gatt) {
     case G_MTU:
@@ -1146,6 +1148,7 @@ static void on_att_request(host_t *h, link_t *l, const uint8_t *d, int n)
 {
     uint8_t r[5];
 
+    log_line("le pad %s: it asks us: ATT %#04x (len %d)", addr_str(l->addr), d[0], n);  /* OmniPad */
     if (d[0] == 0x02 && n >= 3) {               /* Exchange MTU */
         r[0] = 0x03;
         put16(r + 1, OUR_MTU);
@@ -1177,6 +1180,14 @@ static void on_att(host_t *h, link_t *l, const uint8_t *d, int n)
         }
         if (n < 3) return;
         hd = (uint16_t)le16(d + 1);
+        if (e->notes_logged < 12) {     /* OmniPad: the first ones, to tell a silent pad from an unread one */
+            char hex[3 * 20 + 1];
+            int k;
+            for (k = 0; k < n - 3 && k < 20; k++) snprintf(hex + 3 * k, 4, "%02x ", d[3 + k]);
+            hex[3 * k] = 0;
+            e->notes_logged++;
+            log_line("le pad %s: notification on %#06x: %s(len %d)", addr_str(l->addr), hd, hex, n - 3);
+        }
         for (i = 0; i < e->nch; i++) {
             const gatt_char *c = &e->ch[i];
             uint8_t rep[256];
@@ -1310,6 +1321,15 @@ void le_step(host_t *h, link_t *l, long now)
         att_send(h, l, e->req, e->req_len);
     }
 
-    if (e->gatt == G_DONE && !l->ready && (e->smp == SMP_DONE || e->bonded)) link_ready(h, l);
+    if (e->gatt == G_DONE && !l->ready && (e->smp == SMP_DONE || e->bonded)) {
+        /* OmniPad: what the pad offers, to tell why one stays silent */
+        for (int i = 0; i < e->nch; i++) {
+            const gatt_char *c = &e->ch[i];
+            log_line("le pad %s: char %#06x uuid %#06x props %#04x report id %u type %u cccd %#06x%s",
+                     addr_str(l->addr), c->value, c->uuid, c->props, c->rid, c->rtype, c->cccd,
+                     is_input_report(c) ? " (input)" : "");
+        }
+        link_ready(h, l);
+    }
     if (l->ready) init_tick(h, l, now);
 }

@@ -188,6 +188,7 @@ typedef struct {
     int refused;                    /* times it was refused as busy (0x0c) */
     long retry_at;                  /* when to ask again after a cancel, 0 if not */
     long t_smp, t_enc;
+    int notes_logged;               /* OmniPad: notifications written to the log so far */
 
     int gatt;                       /* G_* */
     uint16_t mtu;

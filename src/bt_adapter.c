@@ -36,6 +36,7 @@ enum { AUTO_OFF, AUTO_FULL, AUTO_PEEK };
 #define AUTO_PEEK_INQ  3
 #define AUTO_PEEK_MS   20000      /* ... every 20 s */
 #define BT_USB_RESETS  2          /* tries to revive a locked-up adapter before asking for a replug */
+#define BT_TELL_PRESS_MS 1500     /* a ready pad silent for this long is waiting for a button press */
 
 #define EVQ_LEN   32
 #define ACLQ_LEN  32
@@ -87,6 +88,8 @@ typedef struct {
     int      vslot;          /* -1: none */
     pad_info info;
     char     name[64];
+    long     ready_at;       /* when its link became ready with no input yet; 0: not waiting */
+    int      told_press;     /* the user was told to press a button */
 } bt_pad_t;
 
 static struct {
@@ -927,8 +930,9 @@ static void run_host(bt_dev_t *d)
             last_publish = now;
             publish(h);
         }
-        int connected = 0, slot_free = 0;
-        for (int i = 0; i < HOST_MAX_PADS; i++) connected += g_bt.pads[i].vslot >= 0;
+        /* A pad with its link up counts, even before its first input gives it a slot: a pad that
+         * only reports on change would otherwise have to share the radio with a full search */
+        int connected = host_linked_count(h), slot_free = 0;
         for (int i = 0; i < MAX_SLOTS; i++) {
             uint16_t vid, pid;
             if (!usb_hotplug_slot_ids(i, &vid, &pid) && vpad_slot_is_free(i)) slot_free = 1;
@@ -946,6 +950,22 @@ static void run_host(bt_dev_t *d)
             host_pair(h, mode == AUTO_PEEK ? AUTO_PEEK_S : AUTO_FULL_S);
             auto_window = 1;
             next_auto = now + (mode == AUTO_PEEK ? AUTO_PEEK_MS : 0);
+        }
+
+        /* A pad that only reports on change gets no slot until a button is pressed: say so */
+        for (int i = 0; i < HOST_MAX_PADS; i++) {
+            bt_pad_t *p = &g_bt.pads[i];
+            if (!host_connected(h, i) || p->vslot >= 0) {
+                p->ready_at = 0;
+                p->told_press = host_connected(h, i);
+            } else if (!p->ready_at) {
+                p->ready_at = now;
+            } else if (!p->told_press && now - p->ready_at > BT_TELL_PRESS_MS) {
+                p->told_press = 1;
+                log_line("bt: pad in host slot %d is paired and has sent no input yet", i);
+                notify_ps5(ui_text("OmniPad: controle pareado. Aperte um botao nele",
+                                   "OmniPad: controller paired. Press a button on it"));
+            }
         }
 
         /* While nothing is connected, a line now and then shows the adapter is still being heard */

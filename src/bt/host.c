@@ -1120,6 +1120,15 @@ void link_input(host_t *h, link_t *l, const unsigned char *rep, int len)
         return;
     }
     if (r == PARSE_FULL) l->full = 1;
+    if (r == PARSE_NONE && !l->announced && l->ready) {
+        /* OmniPad: until the first report it reads, say what it left out */
+        static int budget = 12;
+        if (budget > 0) {
+            budget--;
+            log_line("pad %s: report %#04x (%d bytes) not read by the %s profile",
+                     addr_str(l->addr), rep[0], len, l->prof->name);
+        }
+    }
     if (r != PARSE_NONE && l->ready && !l->announced) announce(h, l, rep[0], len);
     if (r != PARSE_NONE && l->ready && h->ev.on_state)
         h->ev.on_state(h->ev.ud, slot_of(h, l), &l->st);
@@ -2490,6 +2499,14 @@ int host_connected(const host_t *h, int slot)
 }
 
 int host_paired_count(const host_t *h) { return h->ndb; }
+
+int host_linked_count(const host_t *h)
+{
+    int i, n = 0;
+
+    for (i = 0; i < HOST_MAX_PADS; i++) n += h->links[i].used && h->links[i].connected;
+    return n;
+}
 
 int host_transport_lost(const host_t *h) { return h->dead; }
 

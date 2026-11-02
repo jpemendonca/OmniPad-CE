@@ -71,6 +71,9 @@ int  host_set_rumble(host_t *h, int slot, uint8_t strong, uint8_t weak);
 
 int  host_connected(const host_t *h, int slot);
 int  host_paired_count(const host_t *h);
+/* OmniPad: pads with a link up, ready or still being set up, and whether or
+ * not they have sent any input yet. */
+int  host_linked_count(const host_t *h);
 
 /* The controller went away (rest mode): close and open again. */
 int  host_transport_lost(const host_t *h);
