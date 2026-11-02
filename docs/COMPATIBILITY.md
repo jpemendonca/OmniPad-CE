@@ -11,7 +11,7 @@
 OmniPad CE is developed and maintained by a solo developer.
 - **Currently on the developer's physical test bench:** **Machenike G5 Pro Max SE** (tested with both its 2.4GHz USB Dongle and direct USB-C cable).
 - **Verified by community testers on FW 13.60:** DualShock 4 (USB cable, `054c:05c4`), 8BitDo Ultimate 2C Wireless (2.4GHz dongle and USB-C cable, `2dc8:3106`).
-- **Not yet physically tested on bench:** Xbox Series X\|S, Xbox One, Xbox 360, DualShock 3, Switch Pro.
+- **Not yet physically tested on bench:** Xbox One, Xbox 360, DualShock 3, Switch Pro.
 - **How support was built:** Decoders and handshakes were engineered from official USB HID/XInput/GIP documentation, open-source references, and verified via automated test suites (`tests/test_parsers.c`).
 - **Community Call for Help:** Because the developer is actively working to acquire real Xbox and PS4 controllers for physical verification, these profiles are currently classified as **EXPERIMENTAL**. If you test with physical hardware, your feedback, bug reports, and logs are deeply valued!
 
@@ -25,7 +25,8 @@ All peripherals in this table connect directly to any USB-A or USB-C port on the
 |---|---|:---:|---|
 | **Machenike G5 Pro / G5 Pro Max SE** | 2.4GHz USB Dongle or USB-C Cable | 🟢 **Verified on PS5 Hardware** | Fully tested & verified in real 3-player gameplay on FW 13.60. Instant plug & play. |
 | **ShanWan 2.4G Gamepad** | 2.4GHz USB Dongle (`1a34:f517`) | 🟢 **Verified on PS5 Hardware** | Dongle shared with Machenike; dispatches via native XInput report parser. |
-| **Microsoft Xbox Series X\|S & Xbox One** | USB-C / Micro-USB Cable | 🟡 **Experimental (Spec-Implemented)** | Decodes GIP input reports (`0x20`) and Guide button (`0x07`). Requires data cable. *(Awaiting community validation)*. |
+| **Microsoft Xbox Series X\|S** | USB-C Cable (`045e:0b12`) | 🟢 **Verified on PS5 Hardware (community)** | Decodes GIP input reports (`0x20`). Also works over Bluetooth, see section 3. |
+| **Microsoft Xbox One** | Micro-USB Cable | 🟡 **Experimental (Spec-Implemented)** | Same GIP decoder as the Series pad. |
 | **Microsoft Xbox 360 Controller** | Wired USB Cable (`045e:028e`) | 🟡 **Experimental (Spec-Implemented)** | Standard XInput report parser and periodic LED keepalive implemented. |
 | **Sony DualShock 4** | Micro-USB Cable (`054c:05c4`/`09cc`) | 🟢 **Verified on PS5 Hardware (community)** | Verified with a CUH-ZCT1 (`054c:05c4`): 64-byte HID reports at 250Hz, buttons and sticks mapped correctly. `09cc` (CUH-ZCT2) not yet tested. Also works over Bluetooth, see section 3. |
 | **Sony DualShock 3 (PS3)** | Mini-USB Cable (`054c:0268`) | 🟡 **Experimental (Spec-Implemented)** | Magic wake packet (`0x03f4`) implemented. *(No Bluetooth)*. |
@@ -44,7 +45,7 @@ Because Xbox controllers are among the most popular third-party controllers in t
 ### ❌ What Does NOT Work:
 1. **Direct Wireless Bluetooth to the PS5:**
    - Modern Xbox One (Model 1708) and Xbox Series X\|S (Model 1914) controllers transmit over **Bluetooth Low Energy (BLE)** using Microsoft's implementation of the **Security Manager Protocol (SMP)** with AES-128 cryptographic pairing.
-   - OmniPad never uses the console's internal radio. Over Bluetooth, an Xbox pad can only reach OmniPad through a separate USB Bluetooth adapter (section 3). The Bluetooth LE profile is there but has not been tested on a console.
+   - OmniPad never uses the console's internal radio. Over Bluetooth, an Xbox pad reaches OmniPad through a separate USB Bluetooth adapter (section 3). This is verified with a Series pad.
 2. **Official "Xbox Wireless Adapter for Windows" (Microsoft USB Dongle):**
    - The official Microsoft wireless dongle uses a proprietary 2.4GHz Wi-Fi Direct radio protocol requiring complex kernel drivers (such as `xone` / `mt7612u` on Linux).
    - This dongle is **NOT supported** by OmniPad or FreeBSD/ProsperoOS.
@@ -71,7 +72,7 @@ The PS5 has one Bluetooth radio, and the DualSense needs it. Sharing it with the
 |---|---|---|
 | TP-Link UB500 (`2357:0604`) | Realtek RTL8761BU | 🟢 **Verified on PS5 Hardware**: OmniPad uploads the linux-firmware patch on its own (~0.3 s) |
 | Other RTL8761B / RTL8761BU adapters | Realtek RTL8761B | 🟡 Same chip and firmware: expected to work |
-| Generic "CSR 4.0" dongles (`0a12:0001`, manufacturer not CSR) | CSR8510 clone | 🟢 **Verified on PS5 Hardware**: DS4 and an 8BitDo dongle together. One locked up 25 s after a pad connected, on a background search; with a pad connected these get none, and a locked-up adapter is reset over USB (`USB_DEVICEENUMERATE`) |
+| Generic "CSR 4.0" dongles, Baseus included (`0a12:0001`, manufacturer not CSR) | CSR8510 clone | 🟠 **Verified, with limits**: one pad works, and a DS4 and a USB 8BitDo dongle work together. They get no background search or LE scan with a pad connected. An HCI command sent while a pad is reporting can hang the chip for 5 s and lock it up: the Pair button with a pad playing can do that. A locked-up adapter gets a USB reset (`USB_DEVICEENUMERATE`), and if it does not come back the user is asked to replug it. |
 | Other adapters that need no firmware (genuine CSR8510, some Broadcom) | various | 🟡 Expected to work, not tested |
 | Other Realtek chips (RTL8821C, RTL8822B, ...) | Realtek | 🔴 Not yet: each needs its own firmware |
 
@@ -82,7 +83,8 @@ Any USB device with a Bluetooth HCI interface (class `E0/01/01`) is used, except
 | Controller | Status |
 |---|---|
 | **Sony DualShock 4** (CUH-ZCT1, Bluetooth id `054c:09cc`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting by pressing PS |
-| Switch Pro, 8BitDo, Xbox (BLE), generic Bluetooth HID | 🟡 Profiles come from AnyPad, not tested through the adapter |
+| **Xbox Series X\|S** (Bluetooth LE, `045e:0b13`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting when switched on. Its battery is not read yet |
+| Switch Pro, 8BitDo, Joy-Con, generic Bluetooth HID | 🟡 Profiles come from AnyPad, not tested through the adapter |
 
 ### Using it
 

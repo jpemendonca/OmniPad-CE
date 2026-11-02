@@ -92,7 +92,7 @@ Reference for checking working controllers on the PS5, measured from `/api/state
 
 | Controller | Link | Adapter | Reports/s | Injections/s | Measured |
 |---|---|---|---|---|---|
-| DualShock 4 | Bluetooth | CSR8510 clone (Baseus) | 95 | 240 | 2026-11-02 |
+| DualShock 4 | Bluetooth | CSR8510 clone (Baseus) | 97 | 240 | 2026-11-02 |
 
 Add a row when a controller gets its first measurement.
 
@@ -118,6 +118,12 @@ GitHub releases on `jpemendonca/OmniPad-CE`. Assets: `OmniPad-CE.elf` and the Re
 - **2026-10-27: Media tab tile** with the same mechanism as ps5-web-file-manager: an app with no executable, plus a `deeplinkUri`.
 - **2026-10-27: notifications follow the system language**, Portuguese or English.
 - **2026-10-27: CSR8510 clones get no background search while linked, and locked-up adapters get a USB reset.** A clone locked up 25 s after a DS4 connected.
+- **2026-11-02: Xbox Series over Bluetooth LE.** Four things held it back, and they helped every Bluetooth pad:
+  - HCI commands now wait for the controller's credits. CSR clones dropped commands sent early, an LE Create Connection among them.
+  - The host reads every readable HID value before subscribing. Without that the pad stayed silent for 61 s.
+  - The Classic inquiry and the LE scan take turns, and neither runs while an LE pad is being set up. A clone with both on never finished an inquiry.
+  - The LE scan for a stored pad that is off no longer takes the whole radio. It had left a connected DS4 at 28 reports/s.
+- **2026-11-02: known limit of CSR8510 clones.** An HCI command sent while a pad is reporting can hang the control endpoint for 5 s and lock the chip up, while ACL data still flows (seen with `0x0c1b` and `0x200c`). So there are no periodic commands while linked, and no search unless the user asks. The Pair button with a pad playing can still hit it.
 - **2026-10-27: renamed to OmniPad CE**, the community continuation. Upstream has been inactive since early October 2026.
 - **2026-10-27: quiet period around rest mode** (`src/rest.c`). With a pad connected, OmniPad called into SceShellUI and SceShellCore and created a virtual pad at the instant the console woke up, and the console stayed on a grey screen or showed a system software error. Now, for 12 s after any rest signal (the main loop stopped for more than 3 s, or the system closed the sockets), OmniPad injects nothing, adds and removes no virtual pad, calls nothing in the system and runs no Bluetooth search. Bluetooth pads are dropped when the console goes to rest. Every slot is released when the quiet period ends, and USB pads come back on their next input.
 - **2026-10-27: the dashboard reopens its listening socket** when rest mode closes it. Before, the server thread spun on a dead socket after waking up.

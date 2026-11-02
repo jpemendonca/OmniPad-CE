@@ -17,10 +17,10 @@ Use o loader de payloads que você já usa, como o PLK Payload Manager.
 ## 3. Conecte o controle
 
 - **Com fio ou dongle 2.4G:** plugue numa porta USB do PS5. Aparece o aviso "OmniPad: <controle> conectado".
-- **Bluetooth (DualShock 4):**
+- **Bluetooth (DualShock 4 ou Xbox Series):**
   1. Plugue um adaptador Bluetooth USB no PS5. Foram testados o TP-Link UB500 e um genérico "CSR 4.0" comum. Aparece o aviso "adaptador Bluetooth pronto".
-  2. Coloque o controle em pareamento: segure **Share + PS** até a luz piscar rápido.
-  3. Em alguns segundos ele conecta. Da próxima vez, é só apertar **PS**.
+  2. Coloque o controle em pareamento. No DS4, segure **Share + PS** até a luz piscar rápido. No Xbox, segure o botão de parear, em cima do controle, até o logo piscar rápido.
+  3. Em alguns segundos ele conecta. Da próxima vez, é só ligar o controle: **PS** no DS4, o botão **Xbox** no Xbox.
 
 O DualSense oficial continua sendo o jogador 1, sem fio, como sempre. O OmniPad não mexe no rádio Bluetooth do PS5.
 
@@ -44,7 +44,7 @@ No painel você testa os botões do controle, vê se a conexão está boa, parei
 | O ícone da aba Mídia abre uma página de erro | O OmniPad não está rodando. Inicie o payload e abra o ícone de novo. |
 | Controle com fio não responde | Alguns cabos só carregam, sem passar dados. Teste outro cabo. |
 | Adaptador Bluetooth não aparece no painel | Tire e plugue de novo. Adaptadores Realtek que não sejam RTL8761B ainda não funcionam. |
-| Segundo controle não conecta num adaptador genérico | Com um controle já conectado, os genéricos "CSR 4.0" não procuram sozinhos. Toque em **Parear controle** no painel e coloque o controle em pareamento. |
+| Segundo controle não conecta num adaptador genérico | Com um controle já conectado, os genéricos "CSR 4.0" não procuram sozinhos. Toque em **Parear controle** no painel e coloque o controle em pareamento. Isso pode travar esse chip e derrubar os controles: se o aviso pedir, tire e plugue o adaptador. Pra usar dois controles Bluetooth, prefira um adaptador com chip RTL8761B, como o TP-Link UB500. |
 | O DS4 não conecta por Bluetooth | Coloque em pareamento (**Share + PS**, luz piscando rápido) com o adaptador já plugado. |
 | O DS4 pareado não volta só com PS | Coloque em pareamento de novo. Ele conecta e fica salvo outra vez. |
 | Depois do repouso, o controle pede o perfil de novo | É o esperado. No repouso o OmniPad solta os controles, como o PS5 faz com o DualSense. Uns 10 segundos depois de acordar, os controles USB voltam pedindo o perfil. Os controles Bluetooth voltam quando você aperta PS. |

@@ -28,8 +28,10 @@ Use third-party controllers on a jailbroken PS5 (FW 7.00 – 13.60). They plug i
 | Sony DualShock 4 (CUH-ZCT1) | USB cable | ✅ Tested on a PS5, FW 13.60 |
 | 8BitDo Ultimate 2C | 2.4 GHz dongle or USB-C cable | ✅ Tested on a PS5, FW 13.60 |
 | Machenike G5 Pro / G5 Pro Max SE | 2.4 GHz dongle or USB-C cable | ✅ Tested upstream |
-| Xbox One / Series, Xbox 360, DualShock 3, Switch Pro, generic USB pads | USB cable | 🟡 Written from the spec, not yet tested on a console |
-| Other Bluetooth pads (Switch Pro, 8BitDo, Xbox BLE, generic HID) | Bluetooth, through a USB adapter | 🟡 Profiles exist, not yet tested on a console |
+| Xbox Series X\|S | USB cable | ✅ Tested on a PS5, FW 13.60 |
+| Xbox Series X\|S | Bluetooth, through a USB adapter | ✅ Tested on a PS5, FW 13.60 |
+| Xbox One, Xbox 360, DualShock 3, Switch Pro, generic USB pads | USB cable | 🟡 Written from the spec, not yet tested on a console |
+| Other Bluetooth pads (Switch Pro, 8BitDo, Joy-Con, generic HID) | Bluetooth, through a USB adapter | 🟡 Profiles exist, not yet tested on a console |
 
 The official DualSense stays player 1 on the console's own radio. OmniPad never touches that radio.
 
@@ -58,11 +60,11 @@ The PS5 has only one Bluetooth radio, and the DualSense needs it. Sharing it wit
 |---|---|:---:|
 | TP-Link UB500 (`2357:0604`) | Realtek RTL8761BU | ✅ Tested. OmniPad loads its firmware by itself. |
 | Other RTL8761B / RTL8761BU adapters | Realtek RTL8761B | Should work: same chip and firmware |
-| Generic "CSR 4.0" dongles (`0a12:0001`, CSR8510 clones) | CSR8510 clone | ✅ Tested. With a pad connected they skip the background search, which locked one up, and a locked-up adapter is reset over USB by itself. |
+| Generic "CSR 4.0" dongles, Baseus included (`0a12:0001`, CSR8510 clones) | CSR8510 clone | ⚠️ Tested, with limits. One pad works. Searching for a second pad while one is playing can lock the chip up: both drop, and OmniPad resets it or asks you to replug it. |
 | Other adapters that need no firmware (genuine CSR8510, some Broadcom) | various | Should work, not yet tested |
 | Other Realtek chips (RTL8821C, RTL8822B, …) | Realtek | Not yet: they need their own firmware |
 
-The adapter can stay plugged in all the time. While no Bluetooth controller is connected, OmniPad keeps searching for pads in pairing mode. Once one is connected, it only takes a quick look every 20 seconds (never on CSR8510 clones; use **Pair controller** in the dashboard for a second pad there).
+For more than one Bluetooth pad, prefer an RTL8761B adapter. The adapter can stay plugged in all the time. While no Bluetooth controller is connected, OmniPad keeps searching for pads in pairing mode. Once one is connected, it only takes a quick look every 20 seconds (never on CSR8510 clones; use **Pair controller** in the dashboard for a second pad there).
 
 ---
 
