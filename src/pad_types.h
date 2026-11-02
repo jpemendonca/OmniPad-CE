@@ -106,6 +106,7 @@ typedef struct {
     /* Battery & Status */
     uint8_t         battery_level;   /* 0 - 100% */
     uint8_t         battery_charging;
+    uint8_t         battery_known;   /* the pad reports its battery; otherwise the level means nothing */
     uint8_t         connected;
     pad_conn_type_t conn_type;
     char            controller_name[64];

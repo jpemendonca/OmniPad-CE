@@ -50,7 +50,7 @@ def ds4_slot(t):
     a = t * 1.3
     return {
         "status": 3, "name": "Sony DualShock 4 (USB)", "conn": 3, "vid": 0x054C, "pid": 0x05C4,
-        "user_id": 0x10000001, "battery": 100, "charging": 1,
+        "user_id": 0x10000001, "battery": 62, "charging": 0, "battery_known": 1,
         "injected": int(t * 250), "inputs": int(t * 250), "input_age_ms": 4,
         "connected_ms": int(t * 1000), "idle_release_ms": 0, "buttons": 1 << BITS[phase],
         "lx": int(128 + 120 * math.cos(a)), "ly": int(128 + 120 * math.sin(a)),
@@ -75,7 +75,7 @@ class Dongle:
         age = int((t - self.last_input) * 1000)
         return {
             "status": 3, "name": "ShanWan 2.4G Gamepad", "conn": 4, "vid": 0x1A34, "pid": 0xF517,
-            "user_id": 0x10000002, "battery": 100, "charging": 0,
+            "user_id": 0x10000002, "battery": 100, "charging": 0, "battery_known": 0,
             "injected": int(t * 250), "inputs": self.inputs, "input_age_ms": age,
             "connected_ms": int(t * 1000), "idle_release_ms": 60000,
             "buttons": (1 << 14) if active and int(t * 2) % 2 else 0,

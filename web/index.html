@@ -133,6 +133,13 @@
     .slot[aria-selected=true] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, var(--shadow); }
     .slot .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
     .slot .pl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); }
+    .slot .top-r { display: inline-flex; align-items: center; gap: 8px; }
+    .bat { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .bat .cell { position: relative; width: 22px; height: 11px; border: 1.5px solid currentColor; border-radius: 3px; padding: 1px; }
+    .bat .cell::after { content: ""; position: absolute; right: -4px; top: 2.5px; width: 2px; height: 3px; background: currentColor; border-radius: 0 1px 1px 0; }
+    .bat .cell i { display: block; height: 100%; background: currentColor; border-radius: 1px; }
+    .bat.low { color: var(--bad); }
+    .bat.chg { color: var(--ok); }
     .slot .nm { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .slot .sub { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .slot.free .nm { color: var(--faint); font-weight: 600; }
@@ -239,6 +246,7 @@
     html.tv .pill { font-size: 15px; padding: 6px 12px; }
     html.tv .panel h2 { font-size: 15px; }
     html.tv .slot .nm { font-size: 18px; }
+    html.tv .bat { font-size: 16px; }
     html.tv .slot .sub, html.tv .note, html.tv .start ol { font-size: 16px; }
     html.tv .stat .k { font-size: 13px; }
     html.tv .stat .v { font-size: 24px; }
@@ -382,6 +390,7 @@
           <div class="stat"><div class="k" id="kInj"></div><div class="v" id="vInj">—</div></div>
           <div class="stat"><div class="k" id="kUp"></div><div class="v" id="vUp">—</div></div>
           <div class="stat"><div class="k" id="kConn"></div><div class="v" id="vConn">—</div></div>
+          <div class="stat"><div class="k" id="kBat"></div><div class="v" id="vBat">—</div></div>
           <div class="stat"><div class="k">VID:PID</div><div class="v" id="vId">—</div></div>
           <div class="stat wide"><div class="k" id="kState"></div><div class="v" id="vState">—</div></div>
         </div>
@@ -443,7 +452,7 @@
         hintWait: 'Aperte qualquer botão pra começar.',
         ls: 'Analógico esq.', rs: 'Analógico dir.', none: 'Nenhum botão apertado',
         kRate: 'Relatórios/s', kAge: 'Último relatório', kInj: 'Injeções/s', kUp: 'Conectado há',
-        kConn: 'Conexão', kState: 'Estado no PS5',
+        kConn: 'Conexão', kState: 'Estado no PS5', kBat: 'Bateria', batUnknown: 'não informa', batCharging: 'carregando',
         ago: 'atrás', never: 'nunca',
         idle: (s, lim) => s < lim
           ? `Sem dados há ${s}s. Pela regra de inatividade (${lim} s), o slot é liberado em ${lim - s}s e a tela de perfil volta no próximo botão.`
@@ -460,7 +469,7 @@
         btNoAdapter: 'Plugue um adaptador Bluetooth USB no PS5. O DualSense continua no rádio do próprio PS5.',
         btIdle: 'Pra conectar, coloque o controle em modo de pareamento (DS4: segure Share + PS). O OmniPad procura sozinho. Controles já pareados voltam ao apertar PS.',
         btPairing: () => 'Procurando controles em modo de pareamento…',
-        btPair: 'Parear controle', btCancel: 'Parar busca', btForget: 'Esquecer pareados',
+        btPair: 'Parear controle', btCancel: 'Parar busca', btWait: 'Enviando…', btForget: 'Esquecer pareados',
         confirmForget: 'Esquecer todos os controles pareados? Eles vão precisar ser pareados de novo.',
         upd: (v) => `Nova versão do OmniPad CE disponível: ${v}.`, updLink: 'Ver e baixar',
         stOn: 'OmniPad rodando', stOff: 'Sem resposta do OmniPad',
@@ -488,7 +497,7 @@
         hintWait: 'Press any button to start.',
         ls: 'Left stick', rs: 'Right stick', none: 'No button pressed',
         kRate: 'Reports/s', kAge: 'Last report', kInj: 'Injections/s', kUp: 'Connected for',
-        kConn: 'Connection', kState: 'State on PS5',
+        kConn: 'Connection', kState: 'State on PS5', kBat: 'Battery', batUnknown: 'not reported', batCharging: 'charging',
         ago: 'ago', never: 'never',
         idle: (s, lim) => s < lim
           ? `No data for ${s}s. Under the idle rule (${lim} s), the slot is released in ${lim - s}s and the profile screen returns on the next press.`
@@ -505,7 +514,7 @@
         btNoAdapter: 'Plug a USB Bluetooth adapter into the PS5. The DualSense stays on the console’s own radio.',
         btIdle: 'To connect, put the controller in pairing mode (DS4: hold Share + PS). OmniPad searches on its own. Paired controllers come back when you press PS.',
         btPairing: () => 'Looking for controllers in pairing mode…',
-        btPair: 'Pair controller', btCancel: 'Stop search', btForget: 'Forget paired',
+        btPair: 'Pair controller', btCancel: 'Stop search', btWait: 'Sending…', btForget: 'Forget paired',
         confirmForget: 'Forget every paired controller? They will need to be paired again.',
         upd: (v) => `A new OmniPad CE version is available: ${v}.`, updLink: 'See and download',
         stOn: 'OmniPad running', stOff: 'No response from OmniPad',
@@ -582,7 +591,7 @@
       if (last) { renderBt(last.bt); renderStatus(last); renderUpdate(); }
       $('lblLS').textContent = T.ls; $('lblRS').textContent = T.rs;
       $('kRate').textContent = T.kRate; $('kAge').textContent = T.kAge; $('kInj').textContent = T.kInj;
-      $('kUp').textContent = T.kUp; $('kConn').textContent = T.kConn; $('kState').textContent = T.kState;
+      $('kUp').textContent = T.kUp; $('kConn').textContent = T.kConn; $('kState').textContent = T.kState; $('kBat').textContent = T.kBat;
       $('btnPS').textContent = T.ps; $('btnDrop').textContent = T.drop;
       $('btnDropAll').textContent = T.dropAll; $('btnStop').textContent = T.stop;
       $('logFilter').placeholder = T.filter; $('btnClear').textContent = T.clear;
@@ -599,7 +608,7 @@
       for (let i = 0; i < 3; i++) {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'slot'; b.setAttribute('role', 'tab'); b.id = `slot${i}`;
-        b.innerHTML = '<div class="top"><span class="pl"></span><span class="led"></span></div><div class="nm"></div><div class="sub"></div>';
+        b.innerHTML = '<div class="top"><span class="pl"></span><span class="top-r"><span class="bat"></span><span class="led"></span></span></div><div class="nm"></div><div class="sub"></div>';
         b.addEventListener('click', () => { selected = i; save('omnipad.slot', String(i)); if (last) render(last); });
         box.appendChild(b);
       }
@@ -634,6 +643,8 @@
       $(id).setAttribute('transform', `translate(${cx + off(x)} ${cy + off(y)})`);
     }
 
+    let pairBusyUntil = 0;   // after a press the button waits for the state to catch up
+
     function renderBt(bt) {
       if (!bt) return;
       const ready = bt.state === 'ready', pairing = ready && bt.pairing_left > 0;
@@ -643,9 +654,24 @@
       $('vBtPaired').textContent = ready ? String(bt.paired) : '—';
       $('vBtPads').textContent = bt.pads.length ? bt.pads.map(p => `${p.name} · slot ${p.slot}`).join(', ') : '—';
       $('btNote').textContent = bt.state === 'no adapter' ? T.btNoAdapter : pairing ? T.btPairing(bt.pairing_left) : T.btIdle;
-      $('btnBtPair').textContent = pairing ? T.btCancel : T.btPair;
-      $('btnBtPair').disabled = !ready;
-      $('btnBtForget').disabled = !ready || bt.paired === 0;
+      /* Rewriting a button 30 times a second can swallow a press on the console's browser */
+      const busy = performance.now() < pairBusyUntil;
+      setText($('btnBtPair'), busy ? T.btWait : pairing ? T.btCancel : T.btPair);
+      if ($('btnBtPair').disabled !== (!ready || busy)) $('btnBtPair').disabled = !ready || busy;
+      if ($('btnBtForget').disabled !== (!ready || bt.paired === 0)) $('btnBtForget').disabled = !ready || bt.paired === 0;
+    }
+
+    /* Only touches the page when the value changes */
+    function setText(el, text) { if (el.textContent !== text) el.textContent = text; }
+
+    function renderBattery(el, s) {
+      const known = s && s.battery_known;
+      const key = known ? `${s.battery}|${s.charging}` : '';
+      if (el.dataset.key === key) return;
+      el.dataset.key = key;
+      if (!known) { el.innerHTML = ''; el.className = 'bat'; return; }
+      el.className = 'bat' + (s.charging ? ' chg' : s.battery <= 20 ? ' low' : '');
+      el.innerHTML = `<span class="cell"><i style="width:${Math.min(100, s.battery)}%"></i></span>${s.charging ? '⚡' : ''}${s.battery}%`;
     }
 
     function renderStatus(d) {
@@ -674,6 +700,7 @@
         b.querySelector('.led').className = 'led ' + slotLed(s);
         b.querySelector('.nm').textContent = free ? T.free : (s.name || 'Controller');
         b.querySelector('.sub').textContent = free ? T.waiting : `${connName(s.conn)} · ${T.st[s.status] || ''}`;
+        renderBattery(b.querySelector('.bat'), free ? null : s);
       });
 
       const s = d.slots[selected] || d.slots[0];
@@ -721,6 +748,7 @@
       $('vAge').innerHTML = free ? '—' : (gotInput ? `${fmtDur(s.input_age_ms)} <small>${T.ago}</small>` : T.never);
       $('vUp').textContent = free ? '—' : fmtDur(s.connected_ms);
       $('vConn').textContent = free ? '—' : connName(s.conn);
+      setText($('vBat'), free ? '—' : !s.battery_known ? T.batUnknown : `${s.battery}%${s.charging ? ` (${T.batCharging})` : ''}`);
       $('vId').textContent = free || (!s.vid && !s.pid) ? '—' : `${hex4(s.vid)}:${hex4(s.pid)}`;
       $('vState').textContent = T.st[s.status] || '—';
       $('vState').className = 'v ' + ({ 3: 'ok', 1: 'warn', 2: 'warn', 4: 'bad' }[s.status] || '');
@@ -901,7 +929,7 @@
       const d = last || { slots: [] };
       const lines = [`OmniPad ${d.version || '?'} build ${d.build || '?'}, up ${fmtDur(d.uptime_ms)}`];
       d.slots.forEach((s, i) => lines.push(`P${i + 2}: ` + (s.status === ST_FREE ? 'free'
-        : `${s.name} | ${connName(s.conn)} | ${T.st[s.status] || s.status} | ${hex4(s.vid)}:${hex4(s.pid)} | last report ${fmtDur(s.input_age_ms)}`)));
+        : `${s.name} | ${connName(s.conn)} | ${T.st[s.status] || s.status} | ${hex4(s.vid)}:${hex4(s.pid)} | last report ${fmtDur(s.input_age_ms)} | battery ${s.battery_known ? s.battery + '%' : 'not reported'}`)));
       if (d.bt) lines.push(`Bluetooth: ${d.bt.state} | ${d.bt.adapter || '-'} | ${d.bt.address || '-'} | paired ${d.bt.paired} | connected ${d.bt.pads.length}`);
       lines.push(`Browser: ${navigator.userAgent}`, '', '--- log (last 150 lines) ---', log.split('\n').slice(-150).join('\n'));
       const text = lines.join('\n');
@@ -934,7 +962,9 @@
       $('btnStop').addEventListener('click', () => { if (confirm(T.confirmStop)) post('/api/exit'); });
       $('btnBtPair').addEventListener('click', () => {
         const pairing = last && last.bt && last.bt.pairing_left > 0;
+        pairBusyUntil = performance.now() + 1200;   // a second press must not close what this one opened
         post(`/api/pair?seconds=${pairing ? 0 : 120}`);
+        if (last) renderBt(last.bt);
       });
       $('btnBtForget').addEventListener('click', () => { if (confirm(T.confirmForget)) post('/api/bt_forget'); });
       $('btnDiag').addEventListener('click', copyDiag);

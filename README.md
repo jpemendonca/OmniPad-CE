@@ -73,7 +73,7 @@ On the PS5 itself, open the **OmniPad** icon in the **Media** tab. It is install
 ![OmniPad dashboard on a PC browser and a phone](docs/images/dashboard-mockup.png)
 
 - **Controller test:** a DualSense drawing lights up the buttons, sticks and triggers you press.
-- **Connection health:** reports per second, time since the last report and the slot state on the console.
+- **Connection health:** reports per second, time since the last report, battery and the slot state on the console. Pads that do not report their battery say so, instead of showing a made-up level.
 - **Bluetooth:** the adapter, its address, the paired and connected pads, plus buttons to pair or to forget the paired pads.
 - **Live log:** with filters for USB, Bluetooth, slots and errors.
 - **Actions:** simulate the PS button, free a slot, or stop OmniPad.

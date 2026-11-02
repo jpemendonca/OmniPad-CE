@@ -854,6 +854,7 @@ static void to_slot_state(pad_state_t *out, const pad_state *in, const pad_info 
     if (in->has_battery) {
         out->battery_level = in->battery_pct;
         out->battery_charging = in->charging;
+        out->battery_known = 1;
     }
     out->connected = 1;
     out->conn_type = CONN_BLUETOOTH_CLASSIC;

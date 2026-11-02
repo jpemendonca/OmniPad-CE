@@ -196,12 +196,12 @@ static void handle_client(int cfd)
             json_escape(name, sizeof(name), info.name);
             jlen += snprintf(json + jlen, sizeof(json) - (size_t)jlen,
                 "%s{\"status\":%d,\"name\":\"%s\",\"conn\":%d,\"vid\":%u,\"pid\":%u,\"user_id\":%d,"
-                "\"battery\":%d,\"charging\":%d,\"injected\":%u,\"inputs\":%u,\"input_age_ms\":%ld,"
+                "\"battery\":%d,\"charging\":%d,\"battery_known\":%d,\"injected\":%u,\"inputs\":%u,\"input_age_ms\":%ld,"
                 "\"connected_ms\":%ld,\"idle_release_ms\":%ld,"
                 "\"buttons\":%u,\"lx\":%d,\"ly\":%d,\"rx\":%d,\"ry\":%d,\"l2\":%d,\"r2\":%d}",
                 i > 0 ? "," : "",
                 info.status, name, info.conn_type, vid, pid, info.user_id,
-                info.battery_level, info.battery_charging,
+                info.battery_level, info.battery_charging, info.battery_known,
                 (unsigned)info.packets_injected, (unsigned)info.inputs_received,
                 info.last_input_time ? now - info.last_input_time : -1L,
                 info.connected_time ? now - info.connected_time : -1L,

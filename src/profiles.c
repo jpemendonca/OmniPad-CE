@@ -57,6 +57,7 @@ int profiles_parse_report(uint16_t vid, uint16_t pid, const uint8_t *data, size_
         uint8_t bat = data[32] & 0x0F;
         st->battery_level = (bat <= 10) ? bat * 10 : 100;
         st->battery_charging = (data[32] & 0x10) ? 1 : 0;
+        st->battery_known = 1;
         return 1;
     }
 
@@ -106,6 +107,7 @@ int profiles_parse_report(uint16_t vid, uint16_t pid, const uint8_t *data, size_
         uint8_t bat = data[54] & 0x0F;
         st->battery_level = (bat <= 10) ? bat * 10 : 100;
         st->battery_charging = (data[54] & 0x10) ? 1 : 0;
+        st->battery_known = 1;
         return 1;
     }
 

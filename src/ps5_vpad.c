@@ -53,6 +53,7 @@ typedef struct {
     char            name[64];
     uint8_t         battery_level;
     uint8_t         battery_charging;
+    uint8_t         battery_known;
     uint32_t        packets_injected;
     long            connected_time;
     long            last_update_time;
@@ -870,6 +871,7 @@ void vpad_update(int slot, const pad_state_t *st)
 
     g_slots[slot].battery_level = st->battery_level;
     g_slots[slot].battery_charging = st->battery_charging;
+    g_slots[slot].battery_known = st->battery_known;
     g_slots[slot].last_update_time = now_ms();
 
     /* Latch state; vpad_poll handles continuous 250Hz injection */
@@ -911,6 +913,7 @@ void vpad_get_slot_info(int slot, vpad_slot_info_t *out)
     snprintf(out->name, sizeof(out->name), "%s", g_slots[slot].name);
     out->battery_level = g_slots[slot].battery_level;
     out->battery_charging = g_slots[slot].battery_charging;
+    out->battery_known = g_slots[slot].battery_known;
     out->packets_injected = g_slots[slot].packets_injected;
     out->connected_time = g_slots[slot].connected_time;
     out->last_update_time = g_slots[slot].last_update_time;

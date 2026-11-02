@@ -22,6 +22,7 @@ typedef struct {
     char            name[64];
     uint8_t         battery_level;
     uint8_t         battery_charging;
+    uint8_t         battery_known;
     uint32_t        packets_injected;
     long            connected_time;
     long            last_update_time;
