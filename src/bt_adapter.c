@@ -40,6 +40,8 @@ enum { AUTO_OFF, AUTO_FULL, AUTO_PEEK };
 #define BT_RESET_BACK_MS 10000    /* how long a reset adapter has to reappear before the user is told */
 
 #define EVQ_LEN   32
+#define CMDQ_LEN  32
+#define CMD_REPLY_WAIT_MS 500     /* a controller that never gives the turn back gets the next command anyway */
 #define ACLQ_LEN  32
 #define ACL_RX    2048
 
@@ -47,6 +49,12 @@ typedef struct {
     uint8_t data[HCI_PKT_MAX];
     int     len;
 } bt_pkt_t;
+
+typedef struct {
+    uint16_t opcode;
+    uint8_t  len;
+    uint8_t  params[255];
+} bt_cmd_t;
 
 typedef struct {
     bt_pkt_t pkt[ACLQ_LEN];
@@ -82,6 +90,10 @@ typedef struct {
     long     last_event_at, last_acl_at;   /* for the log when the adapter is lost */
     int      fake_csr;       /* a CSR8510 clone: see bring_up */
     int      gone;           /* the adapter stopped answering (unplugged, rest mode) */
+    int      cmd_credits;    /* commands the controller can take now (Num_HCI_Command_Packets) */
+    long     cmd_sent_at;
+    bt_cmd_t cmdq[CMDQ_LEN]; /* commands waiting for their turn */
+    int      cmdq_head, cmdq_count;
 } bt_dev_t;
 
 /* One pad of the host and the virtual DualSense slot it was given */
@@ -283,6 +295,7 @@ static int bt_open(bt_dev_t *d)
     }
     if (d->ep_mps[EP_EVT] == 0 || d->ep_mps[EP_EVT] > sizeof(d->rx_evt)) d->ep_mps[EP_EVT] = sizeof(d->rx_evt);
     d->evq.cap = EVQ_LEN;
+    d->cmd_credits = 1;
     d->aclq.cap = ACLQ_LEN;
     return 1;
 }
@@ -302,6 +315,7 @@ static void bt_close(bt_dev_t *d)
     memset(d->pending, 0, sizeof(d->pending));
     d->evt_acc_len = d->acl_acc_len = 0;
     d->evq.count = d->aclq.count = 0;
+    d->cmdq_count = 0;
 }
 
 static int arm_read(bt_dev_t *d, int k)
@@ -349,6 +363,9 @@ static void take_events(bt_dev_t *d)
     while (d->evt_acc_len >= 2 && d->evt_acc_len >= 2 + d->evt_acc[1]) {
         int total = 2 + d->evt_acc[1];
         log_link_event(d->evt_acc, total);
+        /* Every Command Complete and Command Status says how many commands it can take next */
+        if (d->evt_acc[0] == 0x0E && total >= 3) d->cmd_credits = d->evt_acc[2];
+        else if (d->evt_acc[0] == 0x0F && total >= 4) d->cmd_credits = d->evt_acc[3];
         queue_push(&d->evq, d->evt_acc, total);
         d->events_in++;
         d->last_event_at = now_ms();
@@ -364,6 +381,25 @@ static void log_acl(const char *dir, const uint8_t *pkt, int len)
     for (k = 0; k < len && k < 20; k++) snprintf(hex + 3 * k, 4, "%02x ", pkt[k]);
     hex[3 * k] = 0;
     log_line("bt: ACL %s %s(len %d)", dir, hex, len);
+}
+
+static int hci_send(bt_dev_t *d, uint16_t opcode, const uint8_t *params, int len);
+
+/* Sends waiting commands while the controller has room. CSR8510 clones answer a command that
+ * arrives early with status 0x07 and drop it, an LE Create Connection among them (PS5, 2 Nov). */
+static void flush_cmds(bt_dev_t *d)
+{
+    if (d->cmdq_count && d->cmd_credits <= 0 && now_ms() - d->cmd_sent_at > CMD_REPLY_WAIT_MS) {
+        d->cmd_credits = 1;
+    }
+    while (d->cmdq_count && d->cmd_credits > 0 && !d->gone) {
+        const bt_cmd_t *c = &d->cmdq[d->cmdq_head];
+        d->cmd_credits--;
+        d->cmd_sent_at = now_ms();
+        hci_send(d, c->opcode, c->params, c->len);
+        d->cmdq_head = (d->cmdq_head + 1) % CMDQ_LEN;
+        d->cmdq_count--;
+    }
 }
 
 static void take_acl(bt_dev_t *d)
@@ -394,6 +430,7 @@ static int service(bt_dev_t *d, int timeout_ms)
 {
     if (d->gone) return -1;
     if (!arm_read(d, EP_EVT) || !arm_read(d, EP_ACL_IN)) return -1;
+    flush_cmds(d);
 
     long deadline = now_ms() + timeout_ms;
     int got = 0;
@@ -424,6 +461,7 @@ static int service(bt_dev_t *d, int timeout_ms)
                 memcpy(d->evt_acc + d->evt_acc_len, d->rx_evt, (size_t)n);
                 d->evt_acc_len += n;
                 take_events(d);
+                flush_cmds(d);
             } else {
                 if (n > (int)sizeof(d->acl_acc) - d->acl_acc_len) d->acl_acc_len = 0;
                 memcpy(d->acl_acc + d->acl_acc_len, d->rx_acl, (size_t)n);
@@ -508,7 +546,19 @@ static int acl_send(bt_dev_t *d, const uint8_t *pkt, int len)
 
 static int op_cmd(void *ctx, unsigned opcode, const void *params, int plen)
 {
-    return hci_send(ctx, (uint16_t)opcode, params, plen) == 0;
+    bt_dev_t *d = ctx;
+    if (d->gone || plen < 0 || plen > 255) return 0;
+    if (d->cmdq_count == CMDQ_LEN) {
+        log_line("bt: command queue full, command 0x%04x dropped", opcode);
+        return 0;
+    }
+    bt_cmd_t *c = &d->cmdq[(d->cmdq_head + d->cmdq_count) % CMDQ_LEN];
+    c->opcode = (uint16_t)opcode;
+    c->len = (uint8_t)plen;
+    if (plen) memcpy(c->params, params, (size_t)plen);
+    d->cmdq_count++;
+    flush_cmds(d);
+    return !d->gone;
 }
 
 static int op_acl_send(void *ctx, const unsigned char *pkt, int len)

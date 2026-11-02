@@ -43,7 +43,7 @@ Shared state goes through `ps5_vpad.c` (`g_vpad_mutex`) and small mutex-guarded 
   3. If the chip is a Realtek RTL8761B still on its ROM (subversion `0x8761`), load the linux-firmware patch (`bt_rtl.c`, vendor command `0xFC20`, 252-byte fragments).
   4. Reset again.
   5. Set the class of device and the name "OmniPad", turn on extended inquiry results, then `host_open`.
-- Transport: the event endpoint (interrupt) and ACL (bulk) each keep one read queued. Events and ACL packets are rebuilt from their headers.
+- Transport: the event endpoint (interrupt) and ACL (bulk) each keep one read queued. Events and ACL packets are rebuilt from their headers. Host commands go through a queue that respects the controller's command credits (Num_HCI_Command_Packets).
 - Background search, with no pad connected: it searches all the time. With one connected, it looks for 3.84 s every 20 s. With every slot taken, it does not search.
 - Chip quirks: a CSR8510 clone (`0a12:0001` with a manufacturer other than `0x000A`) gets no background search while a pad is connected.
 - Recovery: if the adapter locks up and is still on its node with the same ids, it gets a USB reset (`USB_DEVICEENUMERATE`), up to 2 times, before the user is asked to replug it.
