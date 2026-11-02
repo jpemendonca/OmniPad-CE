@@ -62,7 +62,7 @@ enum {
 
 /* GATT discovery. */
 enum {
-    G_IDLE, G_MTU, G_PNP, G_SVC, G_CHARS, G_DESCS, G_REFS, G_MAP, G_CCCD, G_DONE, G_FAILED,
+    G_IDLE, G_MTU, G_PNP, G_SVC, G_CHARS, G_DESCS, G_REFS, G_MAP, G_READS, G_CCCD, G_DONE, G_FAILED,
 };
 
 #define UUID_HID_SERVICE    0x1812
@@ -839,6 +839,7 @@ static int next_char(le_link *e, int from, int (*want)(const gatt_char *))
 static int wants_descs(const gatt_char *c) { return c->uuid == UUID_REPORT && c->value < c->end; }
 static int wants_ref(const gatt_char *c) { return c->uuid == UUID_REPORT && c->ref; }
 static int wants_cccd(const gatt_char *c) { return is_input_report(c) && c->cccd; }
+static int wants_read(const gatt_char *c) { return c->props & 0x02; }
 
 static void read_by_type(host_t *h, link_t *l, uint16_t start, uint16_t end, uint16_t uuid)
 {
@@ -911,7 +912,7 @@ static void gatt_go(host_t *h, link_t *l, int state)
         if (i < 0) {
             e->idx = 0;
             if (l->prof) {
-                gatt_go(h, l, G_CCCD);
+                gatt_go(h, l, G_READS);
             } else {
                 e->map_len = 0;
                 gatt_go(h, l, G_MAP);
@@ -935,6 +936,19 @@ static void gatt_go(host_t *h, link_t *l, int state)
             put16(q + 3, (uint16_t)e->map_len);
             att_send(h, l, q, 5);
         }
+        break;
+    case G_READS:
+        /* OmniPad: an Xbox Series pad subscribed without its values being read stayed silent for
+         * 61 s, then started by itself (PS5, 2 Nov). Every readable value is read first, as other
+         * hosts do; the answers are not needed. */
+        i = next_char(e, e->idx, wants_read);
+        if (i < 0) {
+            e->idx = 0;
+            gatt_go(h, l, G_CCCD);
+            break;
+        }
+        e->idx = i;
+        read_handle(h, l, e->ch[i].value);
         break;
     case G_CCCD:
         i = next_char(e, e->idx, wants_cccd);
@@ -1130,7 +1144,12 @@ static void on_att_response(host_t *h, link_t *l, const uint8_t *d, int n)
         }
         l->prof = &generic_profile;
         e->idx = 0;
-        gatt_go(h, l, G_CCCD);
+        gatt_go(h, l, G_READS);
+        break;
+
+    case G_READS:
+        e->idx++;
+        gatt_go(h, l, G_READS);
         break;
 
     case G_CCCD:
