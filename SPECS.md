@@ -88,6 +88,14 @@ The policy is to test the main path only.
 - New tests are added only for logic on the main path, or for a bug that broke it.
 - Hardware behaviour is validated by the maintainer on a PS5. Commit messages and release notes say which parts were validated where.
 
+Reference for checking working controllers on the PS5, measured from `/api/state` while moving the sticks:
+
+| Controller | Link | Adapter | Reports/s | Injections/s | Measured |
+|---|---|---|---|---|---|
+| DualShock 4 | Bluetooth | CSR8510 clone (Baseus) | 95 | 240 | 2026-11-02 |
+
+Add a row when a controller gets its first measurement.
+
 ## Secrets and config
 
 There are none. No `.env`, keys or accounts. The only external input is the Realtek firmware, which `tools/get-bt-firmware.sh` downloads into `firmware/` (gitignored). The build embeds it when it is present.
