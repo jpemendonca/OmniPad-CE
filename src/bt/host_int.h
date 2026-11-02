@@ -115,6 +115,7 @@
 /* ACL flow control on the shared controller: a few Number Of Completed
  * Packets reports go to the system's driver, so a packet without a report
  * after INFLIGHT_MS is taken as sent. */
+#define T_LE_TURN       3000    /* OmniPad: LE scan between two inquiries */
 #define INFLIGHT_MAX      64
 #define INFLIGHT_MS       60
 
@@ -308,6 +309,8 @@ struct host {
     int le_irk_ok;
     int le_scanning, le_scan_want;
     int le_scan_light;              /* OmniPad: the light scan parameters are set */
+    int was_inquiring;              /* OmniPad: the inquiry was running at the last poll */
+    long le_turn_until;             /* OmniPad: no new inquiry before this, the LE scan's turn */
     int le_quiet_linked;            /* OmniPad: no LE scan at all while a pad is connected */
     long t_scan;
     link_t *dhkey_owner;            /* the link a DHKey is being made for */

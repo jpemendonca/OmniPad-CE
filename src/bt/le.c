@@ -448,6 +448,9 @@ void le_poll(host_t *h, long now)
     for (i = 0; i < HOST_MAX_PADS; i++)
         if (h->links[i].used && !h->links[i].le && !h->links[i].ready) want = 0;
 
+    /* OmniPad: never during a Classic search, they take turns (see host_poll) */
+    if (h->inquiring) want = 0;
+
     /* OmniPad: a stored LE pad that is off kept the radio scanning all the time, and a connected
      * DS4 fell to 28 reports/s with gaps over 1 s (PS5, 2 Nov). With a pad connected and no search
      * open the scan is light, 20 ms every 640 ms, or off on a controller that cannot take it. */

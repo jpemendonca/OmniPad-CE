@@ -2396,7 +2396,14 @@ void host_poll(host_t *h, int timeout_ms)
         log_line("pairing: the pause for the system is over");
         host_pair(h, s);
     }
-    if (now < h->pair_until && !h->inquiring && !linking && !h->repage_at) start_inquiry(h);
+    /* OmniPad: the Classic search and the LE scan take turns (see le_poll). With both on, a CSR
+     * clone never finished an inquiry and heard pads only as one restarted (PS5, 2 Nov). */
+    if (h->was_inquiring && !h->inquiring) h->le_turn_until = now + T_LE_TURN;
+    h->was_inquiring = h->inquiring;
+    if (now < h->pair_until && !h->inquiring && !linking && !h->repage_at && now >= h->le_turn_until) {
+        start_inquiry(h);
+        h->was_inquiring = h->inquiring;
+    }
     if (now >= h->pair_until && h->inquiring) {
         send_cmd(h, OP_INQUIRY_CANCEL, NULL, 0);
         h->inquiring = 0;

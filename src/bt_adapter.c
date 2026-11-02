@@ -31,7 +31,7 @@
 #define BT_DB_PATH          "/data/anypad/omnipad_bt.db"  /* not PR 18's pads.db: those keys are for the internal radio */
 enum { AUTO_OFF, AUTO_FULL, AUTO_PEEK };
 #define AUTO_FULL_S    600        /* renewed while no pad of ours is connected */
-#define AUTO_FULL_INQ  8          /* inquiry rounds of 10.24 s */
+#define AUTO_FULL_INQ  4          /* inquiry rounds of 5.12 s, taking turns with the LE scan */
 #define AUTO_PEEK_S    4          /* with a pad connected: a 3.84 s round ... */
 #define AUTO_PEEK_INQ  3
 #define AUTO_PEEK_MS   20000      /* ... every 20 s */
