@@ -21,3 +21,4 @@ The upstream stack shares the PS5's internal radio with the system. Here it runs
 - `le.c`: every readable HID characteristic is read before subscribing (`G_READS`). An Xbox Series pad subscribed without that stayed silent for 61 s.
 - `le.c` and `host.c`: the Classic search stops while an LE pad is being connected or set up, and a pad that did not connect rests 5 s before the next try. A CSR clone left an LE connection unanswered for a minute with the search running.
 - `host.c`: `ps_light` is off, so the host sends no periodic page scan commands. A CSR clone hung on that command as an LE pad began to report.
+- `le.c`, `host.c` and `host_int.h`: the LE scan takes half the radio, not all of it, drops to 20 ms every 640 ms with a pad connected (off with `host_set_le_quiet_when_linked`), and is no longer repeated every 5 s. A stored LE pad that was off took the radio from a connected DS4.

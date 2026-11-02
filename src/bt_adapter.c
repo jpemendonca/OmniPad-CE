@@ -743,7 +743,7 @@ static int bring_up(bt_dev_t *d)
      * up 25 s after a DS4 connected, its next command being a background search (PS5, 27 Oct). */
     d->fake_csr = d->vid == 0x0a12 && d->pid == 0x0001 && v.manufacturer != 0x000A;
     if (d->fake_csr)
-        log_line("bt: CSR8510 clone (manufacturer 0x%04x): no background search while a pad is connected",
+        log_line("bt: CSR8510 clone (manufacturer 0x%04x): no background search or LE scan while a pad is connected",
                  v.manufacturer);
     if (v.manufacturer == 0x005D) realtek_firmware(d, &v);
     hci_cmd(d, 0x0C03, NULL, 0, r, sizeof(r), 3000);
@@ -941,6 +941,7 @@ static void run_host(bt_dev_t *d)
         log_line("bt: the Bluetooth host did not start on this adapter");
         return;
     }
+    host_set_le_quiet_when_linked(h, d->fake_csr);
     set_state("ready", NULL);
     g_bt.resets = 0;
     log_line("bt: ready, %d paired pad(s). Paired pads connect when switched on.", host_paired_count(h));

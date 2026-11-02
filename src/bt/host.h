@@ -74,6 +74,9 @@ int  host_paired_count(const host_t *h);
 /* OmniPad: pads with a link up, ready or still being set up, and whether or
  * not they have sent any input yet. */
 int  host_linked_count(const host_t *h);
+/* OmniPad: no LE scan while a pad is connected and no search is open, for a
+ * controller that cannot take it. */
+void host_set_le_quiet_when_linked(host_t *h, int quiet);
 
 /* The controller went away (rest mode): close and open again. */
 int  host_transport_lost(const host_t *h);

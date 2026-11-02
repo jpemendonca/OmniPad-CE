@@ -307,6 +307,8 @@ struct host {
     long le_rest_until;
     int le_irk_ok;
     int le_scanning, le_scan_want;
+    int le_scan_light;              /* OmniPad: the light scan parameters are set */
+    int le_quiet_linked;            /* OmniPad: no LE scan at all while a pad is connected */
     long t_scan;
     link_t *dhkey_owner;            /* the link a DHKey is being made for */
 

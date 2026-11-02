@@ -85,7 +85,6 @@ enum {
 #define T_KEYS           3000   /* the pad's keys after encryption */
 #define T_ATT_RESEND     1500
 #define ATT_TRIES           4
-#define T_SCAN_REFRESH   5000
 #define T_SETUP         30000
 
 /* ---- helpers --------------------------------------------------------------- */
@@ -162,14 +161,20 @@ static db_rec *known_pad(host_t *h, uint8_t type, const uint8_t *a)
 
 /* ---- setup -------------------------------------------------------------------- */
 
+void host_set_le_quiet_when_linked(host_t *h, int quiet)
+{
+    h->le_quiet_linked = quiet;
+}
+
 void le_setup(host_t *h)
 {
     /* LE events: connection complete, advertising report, connection
      * update, remote features, LTK request, ..., P-256 key, DHKey,
      * enhanced connection complete. */
     static const uint8_t mask[8] = { 0xFF, 0x03, 0, 0, 0, 0, 0, 0 };
-    /* Active scanning (names come in scan responses), 60 ms every 60 ms. */
-    static const uint8_t scan[7] = { 0x01, 0x60, 0x00, 0x60, 0x00, 0x00, 0x00 };
+    /* Active scanning (names come in scan responses), 30 ms every 60 ms: OmniPad, half the
+     * time is left for calls and the Classic search (see le_poll for the lighter scan). */
+    static const uint8_t scan[7] = { 0x01, 0x60, 0x00, 0x30, 0x00, 0x00, 0x00 };
 
     if (!hci_sync(h, OP_LE_SET_EVENT_MASK, mask, 8)) {
         log_line("le: the controller does not do LE");
@@ -443,8 +448,30 @@ void le_poll(host_t *h, long now)
     for (i = 0; i < HOST_MAX_PADS; i++)
         if (h->links[i].used && !h->links[i].le && !h->links[i].ready) want = 0;
 
-    /* Sent again now and then: its reply may have gone astray. */
-    if (want != h->le_scanning || (want && now - h->t_scan > T_SCAN_REFRESH)) {
+    /* OmniPad: a stored LE pad that is off kept the radio scanning all the time, and a connected
+     * DS4 fell to 28 reports/s with gaps over 1 s (PS5, 2 Nov). With a pad connected and no search
+     * open the scan is light, 20 ms every 640 ms, or off on a controller that cannot take it. */
+    {
+        int linked = 0;
+        for (i = 0; i < HOST_MAX_PADS; i++) linked |= h->links[i].used && h->links[i].connected;
+        int light = linked && now >= h->pair_until;
+        if (light && h->le_quiet_linked) want = 0;
+        if (want && light != h->le_scan_light) {
+            static const uint8_t normal[7] = { 0x01, 0x60, 0x00, 0x30, 0x00, 0x00, 0x00 };
+            static const uint8_t slow[7] = { 0x01, 0x00, 0x04, 0x20, 0x00, 0x00, 0x00 };
+            if (h->le_scanning) {
+                p[0] = p[1] = 0;
+                send_cmd(h, OP_LE_SET_SCAN_ENABLE, p, 2);
+                h->le_scanning = 0;
+            }
+            send_cmd(h, OP_LE_SET_SCAN_PARAMS, light ? slow : normal, 7);
+            h->le_scan_light = light;
+        }
+    }
+
+    /* OmniPad: only on a change. On a shared radio a reply could go astray, so upstream repeats
+     * this every 5 s; here it would only be one more command while a pad is reporting. */
+    if (want != h->le_scanning) {
         p[0] = (uint8_t)want;
         p[1] = 0;
         send_cmd(h, OP_LE_SET_SCAN_ENABLE, p, 2);
