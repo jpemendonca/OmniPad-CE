@@ -9,6 +9,7 @@
 static pthread_mutex_t g_rest_lock = PTHREAD_MUTEX_INITIALIZER;
 static long g_quiet_until;
 static int g_resume_pending;
+static long g_gaps_held_until;
 
 void rest_signal(const char *why)
 {
@@ -21,6 +22,21 @@ void rest_signal(const char *why)
     if (was_quiet) log_line("rest: %s, quiet period extended", why);
     else log_line("rest: %s: leaving the system alone for %d s, then releasing every controller",
                   why, REST_QUIET_MS / 1000);
+}
+
+void rest_hold_gaps(long ms)
+{
+    pthread_mutex_lock(&g_rest_lock);
+    g_gaps_held_until = now_ms() + ms;
+    pthread_mutex_unlock(&g_rest_lock);
+}
+
+int rest_gaps_held(void)
+{
+    pthread_mutex_lock(&g_rest_lock);
+    int held = now_ms() < g_gaps_held_until;
+    pthread_mutex_unlock(&g_rest_lock);
+    return held;
 }
 
 int rest_quiet(void)

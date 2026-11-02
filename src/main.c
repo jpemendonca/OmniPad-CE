@@ -178,8 +178,12 @@ int main(int argc, char **argv)
         /* A loop that ticks every 4 ms going silent for seconds means the console was suspended:
          * mark it, so the log shows what happened right after waking up */
         if (now - last_tick > 3000) {
-            log_line("main: loop was stopped for %ld ms (rest mode?), resuming", now - last_tick);
-            rest_signal("main loop was stopped");
+            if (rest_gaps_held()) {
+                log_line("main: loop was stopped for %ld ms by an adapter USB reset", now - last_tick);
+            } else {
+                log_line("main: loop was stopped for %ld ms (rest mode?), resuming", now - last_tick);
+                rest_signal("main loop was stopped");
+            }
         }
         last_tick = now;
 

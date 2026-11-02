@@ -37,6 +37,7 @@ enum { AUTO_OFF, AUTO_FULL, AUTO_PEEK };
 #define AUTO_PEEK_MS   20000      /* ... every 20 s */
 #define BT_USB_RESETS  2          /* tries to revive a locked-up adapter before asking for a replug */
 #define BT_TELL_PRESS_MS 1500     /* a ready pad silent for this long is waiting for a button press */
+#define BT_RESET_BACK_MS 10000    /* how long a reset adapter has to reappear before the user is told */
 
 #define EVQ_LEN   32
 #define ACLQ_LEN  32
@@ -1003,7 +1004,9 @@ static int usb_reset(const char *path)
     int fd = open(path, O_RDWR | O_NONBLOCK);
     if (fd < 0) return 0;
     int zero = 0;
+    rest_hold_gaps(120000);
     int ok = ioctl(fd, USB_DEVICEENUMERATE, &zero) == 0;
+    rest_hold_gaps(3000);
     if (ok) log_line("bt: adapter reset over USB (%s)", path);
     else log_line("bt: USB reset of %s failed (%s)", path, strerror(errno));
     close(fd);
@@ -1013,15 +1016,24 @@ static int usb_reset(const char *path)
 static void *bt_worker(void *arg)
 {
     (void)arg;
+    long reset_back_by = 0;
     while (!g_bt.stop) {
         check_done_unplugged();
         bt_dev_t *d = &g_dev;
         memset(d, 0, sizeof(*d));
         d->fd = -1;
         if (!find_adapter(d)) {
+            /* A reset can leave a locked-up adapter off the bus: only unplugging it helps */
+            if (reset_back_by && now_ms() > reset_back_by) {
+                reset_back_by = 0;
+                log_line("bt: the adapter did not come back after its USB reset");
+                notify_ps5(ui_text("OmniPad: o adaptador Bluetooth travou. Tire e plugue de novo",
+                                   "OmniPad: the Bluetooth adapter locked up. Unplug it and plug it again"));
+            }
             sleep_ms(BT_SCAN_INTERVAL_MS);
             continue;
         }
+        reset_back_by = 0;
 
         set_state("starting", d->path);
         log_line("bt: using adapter %04x:%04x on %s (events 0x%02x, ACL 0x%02x/0x%02x)",
@@ -1054,6 +1066,7 @@ static void *bt_worker(void *arg)
         if (failed && !g_bt.stop && g_bt.resets < BT_USB_RESETS && same_adapter(d)) {
             g_bt.resets++;
             if (usb_reset(d->path)) {
+                reset_back_by = now_ms() + BT_RESET_BACK_MS;
                 sleep_ms(3000);
                 continue;
             }

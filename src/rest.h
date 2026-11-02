@@ -16,4 +16,11 @@ int rest_quiet(void);
 /* 1 once, when a quiet period has ended: time to release every controller */
 int rest_take_resume(void);
 
+/* For the next `ms`, a stopped main loop is not a sign of rest mode: an adapter's USB reset
+ * can stop it for 25 s. */
+void rest_hold_gaps(long ms);
+
+/* 1 while a stopped main loop has another explanation */
+int rest_gaps_held(void);
+
 #endif /* REST_H */
