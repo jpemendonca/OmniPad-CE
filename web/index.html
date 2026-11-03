@@ -106,6 +106,10 @@
     button:disabled { opacity: 0.4; cursor: default; transform: none; }
     button.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); background: var(--bad-soft); }
     button.ghost { background: transparent; }
+    .remap-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+    .remap-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 6px 6px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; font-weight: 600; }
+    .remap-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+    .remap-form select { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line-strong); border-radius: 10px; padding: 6px 10px; min-height: 38px; }
     input[type=search] { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 12px; min-height: 38px; width: 100%; }
 
     /* Header */
@@ -402,6 +406,26 @@
       </section>
     </div>
 
+    <section class="panel" aria-labelledby="hRemap">
+      <h2><span id="hRemap"></span><span class="pill" id="remapPill">—</span></h2>
+      <div class="note" id="remapNote"></div>
+      <div id="remapBody">
+        <div class="remap-list" id="remapList"></div>
+        <div class="remap-form">
+          <span id="lblRemapWhen"></span>
+          <select id="remapFrom1"></select>
+          <span>+</span>
+          <select id="remapFrom2"></select>
+          <span id="lblRemapBecomes"></span>
+          <select id="remapTo"></select>
+          <button type="button" id="btnRemapAdd"></button>
+        </div>
+        <div class="actions">
+          <button type="button" class="ghost" id="btnRemapTouch"></button>
+        </div>
+      </div>
+    </section>
+
     <section class="panel" aria-labelledby="hBt">
       <h2><span id="hBt"></span><span class="pill" id="btPill">—</span></h2>
       <div class="stats">
@@ -448,6 +472,11 @@
         st: ['Livre', 'Na fila', 'Aguardando perfil', 'Pronto', 'Falhou'],
         conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (cabo)', 'Dongle 2.4G', 'Rede'],
         test: 'Teste do controle', health: 'Saúde da conexão',
+        remap: 'Trocar botões', remapNote: 'Vale para este modelo de controle e fica salvo. Ao apertar, confira no teste acima.',
+        remapFree: 'Conecte um controle para trocar os botões dele.', remapWhen: 'Quando apertar', remapBecomes: 'vira',
+        remapAdd: 'Adicionar', remapDel: 'Remover', remapNone: '(só um)', remapTouch: 'Touchpad em L3 + R3',
+        remapBad: 'Essa troca não dá: confira se o botão já não tem outra regra.', remapLost: 'Sem resposta do PS5, a troca não foi salva.',
+        dpad: 'Direcional',
         hintFree: 'Conecte um controle por USB ou dongle pra testar aqui.',
         hintWait: 'Aperte qualquer botão pra começar.',
         ls: 'Analógico esq.', rs: 'Analógico dir.', none: 'Nenhum botão apertado',
@@ -493,6 +522,11 @@
         st: ['Free', 'Queued', 'Waiting for profile', 'Ready', 'Failed'],
         conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (cable)', '2.4G dongle', 'Network'],
         test: 'Controller test', health: 'Connection health',
+        remap: 'Change buttons', remapNote: 'This applies to this controller model and stays saved. Press it and check the test above.',
+        remapFree: 'Connect a controller to change its buttons.', remapWhen: 'When pressing', remapBecomes: 'becomes',
+        remapAdd: 'Add', remapDel: 'Remove', remapNone: '(just one)', remapTouch: 'Touchpad on L3 + R3',
+        remapBad: 'That change does not work: check whether the button already has another rule.', remapLost: 'No answer from the PS5, the change was not saved.',
+        dpad: 'D-pad',
         hintFree: 'Plug in a controller over USB or a dongle to test it here.',
         hintWait: 'Press any button to start.',
         ls: 'Left stick', rs: 'Right stick', none: 'No button pressed',
@@ -553,6 +587,7 @@
     let T = I18N[lang];
     let theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
     let selected = Number(load('omnipad.slot', '0')) || 0;
+    let remapRules = {}, remapShown = '', remapMsg = '';
     let last = null;          // last /api/state
     let failures = 0;
     const hist = [[], [], []]; // per slot: [{t, inputs, injected}]
@@ -585,6 +620,10 @@
       $('hTest').textContent = T.test; $('hHealth').textContent = T.health; $('hLog').textContent = T.log;
       $('hBt').textContent = T.bt; $('kBtAdapter').textContent = T.btAdapter; $('kBtAddr').textContent = T.btAddr;
       $('kBtPaired').textContent = T.btPaired; $('kBtPads').textContent = T.btPads; $('btnBtForget').textContent = T.btForget;
+      $('hRemap').textContent = T.remap; $('lblRemapWhen').textContent = T.remapWhen; $('lblRemapBecomes').textContent = T.remapBecomes;
+      $('btnRemapAdd').textContent = T.remapAdd; $('btnRemapTouch').textContent = T.remapTouch;
+      fillRemapSelects();
+      remapShown = '';
       $('btnDiag').textContent = T.diag; $('hDiag').textContent = T.hDiag; $('hStart').textContent = T.start;
       $('startSteps').innerHTML = '';
       T.steps.forEach(t => { const li = document.createElement('li'); li.textContent = t; $('startSteps').appendChild(li); });
@@ -637,6 +676,81 @@
     }
 
     /* ---------- render ---------- */
+    const REMAP_NAMES = {
+      cross: '✕', circle: '○', square: '□', triangle: '△', l1: 'L1', r1: 'R1', l2: 'L2', r2: 'R2', l3: 'L3', r3: 'R3',
+      options: 'Options', create: 'Create', touchpad: 'Touchpad', ps: 'PS',
+    };
+    const REMAP_DPAD = { up: '↑', down: '↓', left: '←', right: '→' };
+    function remapLabel(b) { return REMAP_NAMES[b] || `${T.dpad} ${REMAP_DPAD[b] || b}`; }
+    function remapKey(s) { return `${s.vid}:${s.pid}`; }
+    function remapSplit(text) { return text ? text.split(',') : []; }
+
+    function fillRemapSelects() {
+      const all = [...Object.keys(REMAP_NAMES), ...Object.keys(REMAP_DPAD)];
+      const fill = (el, keys, first) => {
+        const keep = el.value;
+        el.innerHTML = '';
+        if (first) el.add(new Option(first, ''));
+        keys.forEach(k => el.add(new Option(remapLabel(k), k)));
+        if (keep) el.value = keep;
+      };
+      fill($('remapFrom1'), all.filter(k => k !== 'ps'));   // PS is how a user reaches the profile screen
+      fill($('remapFrom2'), all.filter(k => k !== 'ps'), T.remapNone);
+      fill($('remapTo'), all);
+    }
+
+    function renderRemap(s) {
+      const known = s && s.status !== ST_FREE && (s.vid || s.pid);
+      const shown = known ? `${lang}|${remapKey(s)}|${remapRules[remapKey(s)] || ''}|${remapMsg}` : `${lang}|none`;
+      $('remapPill').textContent = `${T.player} ${selected + 2}`;
+      if (shown === remapShown) return;      // render() runs 30 times a second: keep the selects alone
+      remapShown = shown;
+      $('remapBody').style.display = known ? '' : 'none';
+      $('remapNote').textContent = !known ? T.remapFree : remapMsg || T.remapNote;
+      $('remapNote').classList.toggle('warn', !!(known && remapMsg));
+      if (!known) return;
+      const box = $('remapList');
+      box.innerHTML = '';
+      remapSplit(remapRules[remapKey(s)]).forEach(rule => {
+        const [from, to] = rule.split('=');
+        const row = document.createElement('div');
+        row.className = 'remap-row';
+        const text = document.createElement('span');
+        text.textContent = `${from.split('+').map(remapLabel).join(' + ')} → ${remapLabel(to)}`;
+        const del = document.createElement('button');
+        del.type = 'button'; del.className = 'ghost'; del.textContent = T.remapDel;
+        del.addEventListener('click', () => saveRemap(s, remapSplit(remapRules[remapKey(s)]).filter(r => r !== rule)));
+        row.append(text, del);
+        box.appendChild(row);
+      });
+    }
+
+    async function loadRemap() {
+      try {
+        const d = await (await fetch('/api/remap', { cache: 'no-store' })).json();
+        remapRules = {};
+        (d.pads || []).forEach(p => { remapRules[`${p.vid}:${p.pid}`] = p.rules; });
+        if (last) renderRemap(last.slots[selected]);
+      } catch (e) { /* the state poll already reports the link */ }
+    }
+
+    async function saveRemap(s, rules) {
+      remapMsg = '';
+      try {
+        const r = await fetch(`/api/remap?vid=${s.vid}&pid=${s.pid}&rules=${encodeURIComponent(rules.join(','))}`, { method: 'POST' });
+        if (!r.ok) remapMsg = T.remapBad;
+      } catch (e) { remapMsg = T.remapLost; }
+      await loadRemap();
+      if (last) renderRemap(last.slots[selected]);
+    }
+
+    function addRemap(from, to) {
+      const s = last && last.slots[selected];
+      if (!s) return;
+      const rules = remapSplit(remapRules[remapKey(s)]);
+      saveRemap(s, [...rules, `${from}=${to}`]);
+    }
+
     function setKey(id, on) { const el = $(id); if (el) el.classList.toggle('on', on); }
     function moveStick(id, [cx, cy], x, y) {
       const off = (v) => ((v - 128) / 128) * STICK_TRAVEL;
@@ -704,6 +818,7 @@
       });
 
       const s = d.slots[selected] || d.slots[0];
+      renderRemap(s);
       const free = s.status === ST_FREE;
       const gotInput = s.input_age_ms >= 0;
       const live = !free && gotInput;  // until the first report the pad is drawn at rest
@@ -930,6 +1045,7 @@
       const lines = [`OmniPad ${d.version || '?'} build ${d.build || '?'}, up ${fmtDur(d.uptime_ms)}`];
       d.slots.forEach((s, i) => lines.push(`P${i + 2}: ` + (s.status === ST_FREE ? 'free'
         : `${s.name} | ${connName(s.conn)} | ${T.st[s.status] || s.status} | ${hex4(s.vid)}:${hex4(s.pid)} | last report ${fmtDur(s.input_age_ms)} | battery ${s.battery_known ? s.battery + '%' : 'not reported'}`)));
+      Object.keys(remapRules).forEach(k => lines.push(`Remap ${k}: ${remapRules[k]}`));
       if (d.bt) lines.push(`Bluetooth: ${d.bt.state} | ${d.bt.adapter || '-'} | ${d.bt.address || '-'} | paired ${d.bt.paired} | connected ${d.bt.pads.length}`);
       lines.push(`Browser: ${navigator.userAgent}`, '', '--- log (last 150 lines) ---', log.split('\n').slice(-150).join('\n'));
       const text = lines.join('\n');
@@ -968,6 +1084,11 @@
       });
       $('btnBtForget').addEventListener('click', () => { if (confirm(T.confirmForget)) post('/api/bt_forget'); });
       $('btnDiag').addEventListener('click', copyDiag);
+      $('btnRemapAdd').addEventListener('click', () => {
+        const a = $('remapFrom1').value, b = $('remapFrom2').value;
+        addRemap(b && b !== a ? `${a}+${b}` : a, $('remapTo').value);
+      });
+      $('btnRemapTouch').addEventListener('click', () => addRemap('l3+r3', 'touchpad'));
       $('logFilter').addEventListener('input', renderLog);
       $('btnPause').addEventListener('click', () => { logPaused = !logPaused; $('btnPause').textContent = logPaused ? T.resume : T.pause; if (!logPaused) renderLog(); });
       $('btnClear').addEventListener('click', () => { logLines = []; renderLog(); });
@@ -980,6 +1101,7 @@
     setLink('');
     pollState();
     pollLog();
+    loadRemap();
   })();
   </script>
 </body>

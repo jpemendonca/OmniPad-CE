@@ -123,7 +123,7 @@ When non-DualSense controllers are emulated as virtual DualSense devices, the fo
 | **Analog Joysticks** | ✅ Fully Supported | Normalized to 0–255 with absolute center at 128 (zero drift). |
 | **Analog Triggers (L2 / R2)** | ✅ Fully Supported | Full 0–255 analog depth with digital threshold click. |
 | **PS / Home Button** | ✅ Fully Supported | Opens the native profile selector and control center. |
-| **Touchpad Click** | ✅ Fully Supported | Mapped to open maps and in-game menu functions. |
+| **Touchpad Click** | ✅ Fully Supported | Mapped to open maps and in-game menu functions. A pad with no touchpad button can get it from the dashboard, under Change buttons. |
 | **Multi-touch Touchpad Surface** | ❌ Not Supported | Non-Sony controllers lack a capacitive touch surface. |
 | **Adaptive Triggers (Motor Force)** | ❌ Not Supported | Non-DualSense controllers do not have internal resistance motors. |
 | **Advanced DualSense Haptics** | ❌ Not Supported | Standard rumble is passed through where hardware permits. |

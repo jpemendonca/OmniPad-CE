@@ -59,6 +59,7 @@ No network service or account is needed. The firmware is embedded at build time.
 | `/data/anypad/omnipad.pid`, `/data/anypad/stop` | Single-instance control |
 | `/data/anypad/omnipad_bt.db` | Bluetooth link keys. It is not PR 18's `pads.db`, whose keys belong to the internal radio. |
 | `/data/anypad/maps/` | Per-pad Bluetooth profile settings |
+| `/data/anypad/remap.txt` | Button rules per controller model, one `vvvv:pppp a+b=c,d=e` per line |
 | `/user/app/OMNP00001/sce_sys/` | Media tab tile: `param.json` (category 65536, `deeplinkUri` `http://127.0.0.1:8095/?tv=1`) and `icon0.png` |
 
 ## Contracts
@@ -73,6 +74,8 @@ HTTP on port 8095 (`web.c`):
 | `GET /api/log[?since=N]` | Up to 32 KB of the log. `X-Log-Offset` says where the next read starts. |
 | `POST /api/pair?seconds=N` | Bluetooth search for N s. `0` stops it. |
 | `POST /api/bt_forget` | Forget every paired Bluetooth pad |
+| `GET /api/remap` | Button rules of every model: `{"pads":[{"vid","pid","rules"}]}` |
+| `POST /api/remap?vid=N&pid=N&rules=l3%2Br3%3Dtouchpad` | Replace a model's rules, `rules=` empty clears them. `400` if not understood. |
 | `POST /api/press_ps?slot=N` | Simulate PS on a slot |
 | `POST /api/disconnect?slot=N` | Free a slot; `-1` frees all |
 | `POST /api/exit` | Stop the payload |

@@ -46,6 +46,8 @@ host-test:
 	./$(BUILD)/test_bt_profiles
 	clang -O1 -Isrc -Isrc/bt tests/test_bt_sim.c src/bt_sched.c src/bt/host.c src/bt/le.c src/bt/smp_crypto.c src/bt/bt_profiles.c src/bt/generic.c src/bt/crc32.c -o $(BUILD)/test_bt_sim
 	./$(BUILD)/test_bt_sim
+	clang -O1 -Isrc tests/test_remap.c src/remap.c src/util.c src/log.c -lpthread -o $(BUILD)/test_remap
+	./$(BUILD)/test_remap
 
 check-tests:
 	python3 tools/check_tests_catch_bugs.py

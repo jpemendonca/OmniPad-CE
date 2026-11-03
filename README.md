@@ -68,6 +68,10 @@ For more than one Bluetooth pad, prefer an RTL8761B adapter. The adapter can sta
 
 ---
 
+## Changing buttons
+
+On the dashboard, under **Change buttons**, pick a button or two held together and what they become. A pad with no touchpad button can have it on L3 + R3 with one click. Rules apply to that controller model and stay saved. A controller with no rules runs as if this did not exist. PS can be a result but never a source, so nobody loses the way to the profile screen.
+
 ## Dashboard
 
 On the PS5 itself, open the **OmniPad** icon in the **Media** tab. It is installed the first time OmniPad runs, and it works while OmniPad is running. From a phone or PC on the same network, open `http://<PS5_IP>:8095/`. The start notification shows the IP.

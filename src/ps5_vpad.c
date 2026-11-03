@@ -1,4 +1,5 @@
 #include "ps5_vpad.h"
+#include "remap.h"
 #include "shellui_inject.h"
 #include "log.h"
 #include "rest.h"
@@ -834,6 +835,13 @@ int vpad_slot_is_free(int slot)
 void vpad_update(int slot, const pad_state_t *st)
 {
     if (!st || slot < 0 || slot >= MAX_SLOTS || rest_quiet()) return;
+
+    pad_state_t mapped;
+    if (remap_active()) {
+        mapped = *st;
+        remap_apply(&mapped);
+        st = &mapped;
+    }
 
     static uint32_t s_prev_btn[MAX_SLOTS] = {0};
     uint32_t prev = s_prev_btn[slot];

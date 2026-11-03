@@ -94,6 +94,7 @@ What the gate does not cover: it never runs on a PS5. It does not prove that a c
 | `src/main.c` | Start-up, the 250 Hz main loop, shutdown, the start notification |
 | `src/ps5_vpad.c` | Virtual DualSense slots (`vpad_*`), profile binding, connect/disconnect notifications |
 | `src/usb_hotplug.c` | USB scan, one reader thread per pad, idle rules |
+| `src/remap.c` | Button rules per controller model, applied at the start of `vpad_update` |
 | `src/pad_drivers.c` | **One driver per controller model** (VID:PID, connection type, idle rule, flags, parser) |
 | `src/usb_controllers.c`, `src/profiles.c` | USB report parsers used by the drivers |
 | `src/bt_adapter.c` | OmniPad's own USB Bluetooth adapter: detection, firmware, HCI transport, glue to slots, background search, chip quirks |

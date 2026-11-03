@@ -23,6 +23,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 PROXY = None
+REMAP = {}
 
 ROOT = Path(__file__).resolve().parent.parent
 PAGE = ROOT / "web" / "index.html"
@@ -122,6 +123,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, json.dumps(state), "application/json")
         elif url.path == "/api/status":
             self._send(200, json.dumps({"version": "1.0.4-mock", "build": 0, "slots": []}), "application/json")
+        elif url.path == "/api/remap":
+            pads = [{"vid": k[0], "pid": k[1], "rules": v} for k, v in REMAP.items()]
+            self._send(200, json.dumps({"pads": pads}), "application/json")
         elif url.path == "/api/log":
             with log_lock:
                 data = log_text.encode()
@@ -137,6 +141,19 @@ class Handler(BaseHTTPRequestHandler):
             self._proxy("POST")
             return
         log(f"web: mock received POST {self.path}")
+        url = urlparse(self.path)
+        if url.path == "/api/remap":
+            q = parse_qs(url.query, keep_blank_values=True)
+            key = (int(q["vid"][0]), int(q["pid"][0]))
+            rules = q["rules"][0]
+            sources = [r.split("=")[0] for r in rules.split(",") if r]
+            if len(set(sources)) != len(sources) or any("ps" in s.split("+") for s in sources):
+                self._send(400, '{"status":"bad_rules"}', "application/json")
+                return
+            if rules:
+                REMAP[key] = rules
+            else:
+                REMAP.pop(key, None)
         self._send(200, '{"status":"ok"}', "application/json")
 
     def log_message(self, *args):

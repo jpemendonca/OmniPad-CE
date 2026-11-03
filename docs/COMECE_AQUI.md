@@ -35,6 +35,10 @@ Aperte **PS** no controle novo. O PS5 mostra a tela de escolher o perfil: escolh
 
 No painel você testa os botões do controle, vê se a conexão está boa, pareia ou esquece controles Bluetooth e acompanha o log.
 
+## Trocar botões
+
+Seu controle não tem botão de touchpad, ou você quer trocar algum botão? No painel, em **Trocar botões**, escolha o botão (ou dois apertados juntos) e no que ele vira. O botão **Touchpad em L3 + R3** já deixa pronto o caso mais comum. Vale para aquele modelo de controle e fica salvo. Quem não mexe aí não muda nada.
+
 ## Não funcionou?
 
 | O que acontece | O que fazer |

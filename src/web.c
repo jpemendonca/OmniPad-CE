@@ -1,4 +1,5 @@
 #include "web.h"
+#include "remap.h"
 #include "ps5_vpad.h"
 #include "usb_hotplug.h"
 #include "bt_adapter.h"
@@ -141,6 +142,22 @@ int web_init(int port)
     return 1;
 }
 
+/* One value of a query string, with its %XX decoded. Stops at the end of the value or of out. */
+static void query_decode(const char *in, char *out, size_t n)
+{
+    size_t len = 0;
+    while (*in && *in != ' ' && *in != '&' && *in != '\r' && *in != '\n' && len + 1 < n) {
+        unsigned hex;
+        if (*in == '%' && sscanf(in + 1, "%2x", &hex) == 1) {
+            out[len++] = (char)hex;
+            in += 3;
+        } else {
+            out[len++] = *in++;
+        }
+    }
+    out[len] = 0;
+}
+
 static void handle_client(int cfd)
 {
     /* Bound how long one slow client can hold the server thread */
@@ -258,6 +275,29 @@ static void handle_client(int cfd)
         res_len = snprintf(res, sizeof(res),
             "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n%s",
             strlen(ok), ok);
+        write(cfd, res, (size_t)res_len);
+    }
+    else if (strncmp(req, "GET /api/remap", 14) == 0) {
+        char json[6144];
+        int jlen = remap_json(json, sizeof(json));
+        if (jlen >= (int)sizeof(json)) jlen = (int)sizeof(json) - 1;
+        res_len = snprintf(res, sizeof(res),
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nCache-Control: no-store\r\nContent-Length: %d\r\nConnection: close\r\n\r\n",
+            jlen);
+        write(cfd, res, (size_t)res_len);
+        write(cfd, json, (size_t)jlen);
+    }
+    else if (strncmp(req, "POST /api/remap", 15) == 0) {
+        char *v = strstr(req, "vid="), *p = strstr(req, "pid="), *r = strstr(req, "rules=");
+        long vid = v ? strtol(v + 4, NULL, 10) : 0, pid = p ? strtol(p + 4, NULL, 10) : 0;
+        char rules[384];
+        query_decode(r ? r + 6 : "", rules, sizeof(rules));
+        int ok = r && vid > 0 && vid <= 0xFFFF && pid >= 0 && pid <= 0xFFFF &&
+                 remap_set((uint16_t)vid, (uint16_t)pid, rules);
+        const char *body = ok ? "{\"status\":\"ok\"}" : "{\"status\":\"bad_rules\"}";
+        res_len = snprintf(res, sizeof(res),
+            "HTTP/1.1 %s\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n%s",
+            ok ? "200 OK" : "400 Bad Request", strlen(body), body);
         write(cfd, res, (size_t)res_len);
     }
     else if (strncmp(req, "POST /api/bt_forget", 19) == 0) {

@@ -3,6 +3,7 @@
 #include "ps5_vpad.h"
 #include "usb_hotplug.h"
 #include "bt_adapter.h"
+#include "remap.h"
 #include "launcher.h"
 #include "web.h"
 #include "tcp_stream.h"
@@ -136,6 +137,8 @@ int main(int argc, char **argv)
     }
 
     /* 2. Initialize Virtual DualSense subsystem */
+    remap_init(STATE_DIR "/remap.txt");
+
     if (!vpad_init()) {
         log_line("main: Fatal: vpad_init failed");
         return 1;
