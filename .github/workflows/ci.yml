@@ -1,0 +1,48 @@
+# The quality gate from AGENTS.md, on every push and pull request.
+# It never runs on a PS5: green here is required, but it is not proof the product works.
+name: gate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo sh tools/setup-wsl-toolchain.sh
+
+      - name: Host tests
+        run: make test
+
+      - name: Payload build, no warnings allowed
+        env:
+          PS5_PAYLOAD_SDK: /opt/ps5-payload-sdk
+        run: |
+          make 2>&1 | tee build.log
+          test "${PIPESTATUS[0]}" -eq 0
+          if grep -n "warning:" build.log; then
+            echo "::error::the payload build has warnings"
+            exit 1
+          fi
+
+      - name: Dashboard scripts parse
+        run: |
+          python3 - <<'EOF'
+          import re
+          page = open('web/index.html', encoding='utf-8').read()
+          blocks = re.findall(r'<script[^>]*>(.*?)</script>', page, re.S)
+          for i, block in enumerate(blocks):
+              open(f'build/page_{i}.js', 'w', encoding='utf-8').write(block)
+          print(len(blocks), 'script blocks')
+          EOF
+          for f in build/page_*.js; do node --check "$f"; done
