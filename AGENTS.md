@@ -70,6 +70,7 @@ What the gate does not cover: it never runs on a PS5. It does not prove that a c
 - The dashboard and API are at `http://<PS5_IP>:8095`. The IP has changed before (from `.23` to `.14`). If it doesn't answer, ask the maintainer for the current one.
 - `GET /api/log` returns the last 32 KB of the log. The log file is kept across restarts. To read all of it, page with `GET /api/log?since=<offset>`, following the `X-Log-Offset` header.
 - `GET /api/state` returns the slots, the controller input and the Bluetooth state.
+- `python tools/check_pads.py <PS5_IP>` measures each connected controller for 20 s and compares it with the reference in `SPECS.md`. The maintainer moves the sticks while it runs.
 - A PS5 that answers ping while port 8095 times out usually means the IP changed, not that OmniPad crashed. Check the IP before diagnosing.
 
 ## Hard rules

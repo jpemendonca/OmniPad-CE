@@ -97,7 +97,7 @@ Reference for checking working controllers on the PS5, measured from `/api/state
 |---|---|---|---|---|---|
 | DualShock 4 | Bluetooth | CSR8510 clone (Baseus) | 97 | 240 | 2026-11-02 |
 
-Add a row when a controller gets its first measurement.
+Add a row when a controller gets its first measurement. `tools/check_pads.py` reads this table, so keep its columns.
 
 ## Secrets and config
 
