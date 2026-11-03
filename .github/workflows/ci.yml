@@ -24,6 +24,9 @@ jobs:
       - name: Host tests
         run: make test
 
+      - name: The simulator still catches the bugs seen on the PS5
+        run: make check-tests
+
       - name: Payload build, no warnings allowed
         env:
           PS5_PAYLOAD_SDK: /opt/ps5-payload-sdk

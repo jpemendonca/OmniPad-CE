@@ -47,7 +47,9 @@ make test
 export PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk && make
 ```
 
-Both must pass, and the payload build must have **no warnings**. If you changed `web/index.html`, also check that the extracted `<script>` blocks parse with `node --check`, and look at the page in the browser pane with `tools/mock_dashboard.py`.
+Both must pass, and the payload build must have **no warnings**. If you changed `tests/test_bt_sim.c` or a rule it holds, also run `make check-tests`. If you changed `web/index.html`, also check that the extracted `<script>` blocks parse with `node --check`, and look at the page in the browser pane with `tools/mock_dashboard.py`.
+
+GitHub Actions runs all of this on every push (`.github/workflows/ci.yml`).
 
 What the gate does not cover: it never runs on a PS5. It does not prove that a controller connects, that the virtual pad shows up, or that an adapter works. A green gate is required, but it is not proof that the product works.
 
@@ -95,6 +97,7 @@ What the gate does not cover: it never runs on a PS5. It does not prove that a c
 | `src/usb_controllers.c`, `src/profiles.c` | USB report parsers used by the drivers |
 | `src/bt_adapter.c` | OmniPad's own USB Bluetooth adapter: detection, firmware, HCI transport, glue to slots, background search, chip quirks |
 | `src/bt_rtl.c` | Realtek firmware patch selection |
+| `src/bt_sched.c` | HCI command queue and background search rule, apart from USB so host tests can run them |
 | `src/bt/` | Vendored Bluetooth host from AnyPad (see its README) |
 | `src/launcher.c` | The Media tab tile (`/user/app/OMNP00001`) |
 | `src/web.c`, `web/index.html` | Dashboard server, HTTP API, and the single-file page (embedded at build time) |

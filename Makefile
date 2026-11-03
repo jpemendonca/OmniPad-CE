@@ -7,7 +7,7 @@ PS5_PORT ?= 9021
 
 BUILD := build
 
-.PHONY: all ps5 send clean test host-test
+.PHONY: all ps5 send clean test host-test check-tests
 
 all: ps5
 
@@ -44,6 +44,11 @@ host-test:
 	./$(BUILD)/test_bt_sdp
 	clang -O1 -Isrc -Isrc/bt tests/test_bt_profiles.c src/bt/bt_profiles.c src/bt/generic.c src/bt/crc32.c src/util.c src/log.c -o $(BUILD)/test_bt_profiles
 	./$(BUILD)/test_bt_profiles
+	clang -O1 -Isrc -Isrc/bt tests/test_bt_sim.c src/bt_sched.c src/bt/host.c src/bt/le.c src/bt/smp_crypto.c src/bt/bt_profiles.c src/bt/generic.c src/bt/crc32.c -o $(BUILD)/test_bt_sim
+	./$(BUILD)/test_bt_sim
+
+check-tests:
+	python3 tools/check_tests_catch_bugs.py
 
 clean:
 	rm -rf $(BUILD)

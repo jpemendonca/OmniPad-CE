@@ -84,7 +84,10 @@ Notifications (`notify_ps5`, text through `ui_text`): started (with the IP), pad
 ## Tests
 
 The policy is to test the main path only.
-- Host tests (`make test`) cover the logic the main path depends on that runs without a PS5: report parsers and drivers, the virtual pad ABI, Realtek firmware selection, and the SDP server.
+- Host tests (`make test`) cover the logic the main path depends on that runs without a PS5: report parsers and drivers, the virtual pad ABI, Realtek firmware selection, the SDP server, and the Bluetooth host over a simulated adapter.
+- `tests/test_bt_sim.c` runs the real host (`src/bt/`) and the real command queue (`src/bt_sched.c`) over a fake chip on a fake clock, with a stored DS4 and Xbox. The chip has the habits seen on the PS5: it drops a command that arrives early, a clone hangs on a command sent while a pad reports, an Xbox subscribed before its values are read stays silent, and a scan or search takes reports from a pad.
+- A Bluetooth bug seen on the PS5 goes into that chip and into the list in `tools/check_tests_catch_bugs.py`, which puts each bug back into a copy of the code and fails if the simulator does not notice (`make check-tests`).
+- The simulator shows the host does not repeat what real chips were seen to punish. It says nothing about a chip nobody has tried: only the PS5 does. `tools/check_pads.py` measures reports/s on the console against the reference table.
 - New tests are added only for logic on the main path, or for a bug that broke it.
 - Hardware behaviour is validated by the maintainer on a PS5. Commit messages and release notes say which parts were validated where.
 
