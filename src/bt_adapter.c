@@ -1,5 +1,6 @@
 #include "bt_adapter.h"
 #include "bt_rtl.h"
+#include "bt_sched.h"
 #include "bt/host.h"
 #include "ps5_vpad.h"
 #include "usb_hotplug.h"
@@ -29,19 +30,11 @@
 
 #define BT_SCAN_INTERVAL_MS 2000
 #define BT_DB_PATH          "/data/anypad/omnipad_bt.db"  /* not PR 18's pads.db: those keys are for the internal radio */
-enum { AUTO_OFF, AUTO_FULL, AUTO_PEEK };
-#define AUTO_FULL_S    600        /* renewed while no pad of ours is connected */
-#define AUTO_FULL_INQ  4          /* inquiry rounds of 5.12 s, taking turns with the LE scan */
-#define AUTO_PEEK_S    4          /* with a pad connected: a 3.84 s round ... */
-#define AUTO_PEEK_INQ  3
-#define AUTO_PEEK_MS   20000      /* ... every 20 s */
 #define BT_USB_RESETS  2          /* tries to revive a locked-up adapter before asking for a replug */
 #define BT_TELL_PRESS_MS 1500     /* a ready pad silent for this long is waiting for a button press */
 #define BT_RESET_BACK_MS 10000    /* how long a reset adapter has to reappear before the user is told */
 
 #define EVQ_LEN   32
-#define CMDQ_LEN  32
-#define CMD_REPLY_WAIT_MS 500     /* a controller that never gives the turn back gets the next command anyway */
 #define ACLQ_LEN  32
 #define ACL_RX    2048
 
@@ -49,12 +42,6 @@ typedef struct {
     uint8_t data[HCI_PKT_MAX];
     int     len;
 } bt_pkt_t;
-
-typedef struct {
-    uint16_t opcode;
-    uint8_t  len;
-    uint8_t  params[255];
-} bt_cmd_t;
 
 typedef struct {
     bt_pkt_t pkt[ACLQ_LEN];
@@ -90,10 +77,7 @@ typedef struct {
     long     last_event_at, last_acl_at;   /* for the log when the adapter is lost */
     int      fake_csr;       /* a CSR8510 clone: see bring_up */
     int      gone;           /* the adapter stopped answering (unplugged, rest mode) */
-    int      cmd_credits;    /* commands the controller can take now (Num_HCI_Command_Packets) */
-    long     cmd_sent_at;
-    bt_cmd_t cmdq[CMDQ_LEN]; /* commands waiting for their turn */
-    int      cmdq_head, cmdq_count;
+    bt_cmdq_t cmdq;          /* commands waiting for their turn */
 } bt_dev_t;
 
 /* One pad of the host and the virtual DualSense slot it was given */
@@ -295,7 +279,7 @@ static int bt_open(bt_dev_t *d)
     }
     if (d->ep_mps[EP_EVT] == 0 || d->ep_mps[EP_EVT] > sizeof(d->rx_evt)) d->ep_mps[EP_EVT] = sizeof(d->rx_evt);
     d->evq.cap = EVQ_LEN;
-    d->cmd_credits = 1;
+    bt_cmdq_reset(&d->cmdq);
     d->aclq.cap = ACLQ_LEN;
     return 1;
 }
@@ -315,7 +299,7 @@ static void bt_close(bt_dev_t *d)
     memset(d->pending, 0, sizeof(d->pending));
     d->evt_acc_len = d->acl_acc_len = 0;
     d->evq.count = d->aclq.count = 0;
-    d->cmdq_count = 0;
+    bt_cmdq_reset(&d->cmdq);
 }
 
 static int arm_read(bt_dev_t *d, int k)
@@ -363,9 +347,7 @@ static void take_events(bt_dev_t *d)
     while (d->evt_acc_len >= 2 && d->evt_acc_len >= 2 + d->evt_acc[1]) {
         int total = 2 + d->evt_acc[1];
         log_link_event(d->evt_acc, total);
-        /* Every Command Complete and Command Status says how many commands it can take next */
-        if (d->evt_acc[0] == 0x0E && total >= 3) d->cmd_credits = d->evt_acc[2];
-        else if (d->evt_acc[0] == 0x0F && total >= 4) d->cmd_credits = d->evt_acc[3];
+        bt_cmdq_on_event(&d->cmdq, d->evt_acc, total);
         queue_push(&d->evq, d->evt_acc, total);
         d->events_in++;
         d->last_event_at = now_ms();
@@ -385,21 +367,16 @@ static void log_acl(const char *dir, const uint8_t *pkt, int len)
 
 static int hci_send(bt_dev_t *d, uint16_t opcode, const uint8_t *params, int len);
 
-/* Sends waiting commands while the controller has room. CSR8510 clones answer a command that
- * arrives early with status 0x07 and drop it, an LE Create Connection among them (PS5, 2 Nov). */
+static int send_queued(void *ctx, uint16_t opcode, const uint8_t *params, int len)
+{
+    bt_dev_t *d = ctx;
+    hci_send(d, opcode, params, len);
+    return !d->gone;
+}
+
 static void flush_cmds(bt_dev_t *d)
 {
-    if (d->cmdq_count && d->cmd_credits <= 0 && now_ms() - d->cmd_sent_at > CMD_REPLY_WAIT_MS) {
-        d->cmd_credits = 1;
-    }
-    while (d->cmdq_count && d->cmd_credits > 0 && !d->gone) {
-        const bt_cmd_t *c = &d->cmdq[d->cmdq_head];
-        d->cmd_credits--;
-        d->cmd_sent_at = now_ms();
-        hci_send(d, c->opcode, c->params, c->len);
-        d->cmdq_head = (d->cmdq_head + 1) % CMDQ_LEN;
-        d->cmdq_count--;
-    }
+    if (!d->gone) bt_cmdq_flush(&d->cmdq, send_queued, d);
 }
 
 static void take_acl(bt_dev_t *d)
@@ -549,15 +526,10 @@ static int op_cmd(void *ctx, unsigned opcode, const void *params, int plen)
 {
     bt_dev_t *d = ctx;
     if (d->gone || plen < 0 || plen > 255) return 0;
-    if (d->cmdq_count == CMDQ_LEN) {
+    if (!bt_cmdq_push(&d->cmdq, opcode, params, plen)) {
         log_line("bt: command queue full, command 0x%04x dropped", opcode);
         return 0;
     }
-    bt_cmd_t *c = &d->cmdq[(d->cmdq_head + d->cmdq_count) % CMDQ_LEN];
-    c->opcode = (uint16_t)opcode;
-    c->len = (uint8_t)plen;
-    if (plen) memcpy(c->params, params, (size_t)plen);
-    d->cmdq_count++;
     flush_cmds(d);
     return !d->gone;
 }
@@ -952,7 +924,7 @@ static void run_host(bt_dev_t *d)
 
     long last_publish = 0, last_alive = now_ms();
     /* Searching on its own, so a pad only has to be put in pairing mode: all the time while no pad
-     * of ours is connected, and a short look every AUTO_PEEK_MS once one is (a search takes radio
+     * of ours is connected, and a short look every BT_AUTO_PEEK_MS once one is (a search takes radio
      * time from the pads). None when every slot is taken. */
     int auto_mode = -1, auto_window = 0;
     long next_auto = 0;
@@ -991,19 +963,18 @@ static void run_host(bt_dev_t *d)
             uint16_t vid, pid;
             if (!usb_hotplug_slot_ids(i, &vid, &pid) && vpad_slot_is_free(i)) slot_free = 1;
         }
-        int mode = !slot_free || rest_quiet() ? AUTO_OFF
-                 : !connected ? AUTO_FULL : d->fake_csr ? AUTO_OFF : AUTO_PEEK;
+        int mode = bt_auto_mode(slot_free, rest_quiet(), connected, d->fake_csr);
         if (mode != auto_mode) {
             auto_mode = mode;
-            host_tune_set(h, "inq_len", mode == AUTO_PEEK ? AUTO_PEEK_INQ : AUTO_FULL_INQ);
+            host_tune_set(h, "inq_len", mode == BT_AUTO_PEEK ? BT_AUTO_PEEK_INQ : BT_AUTO_FULL_INQ);
             if (auto_window && host_pairing_left(h) > 0) host_pair(h, 0);
             auto_window = 0;
-            next_auto = now + (mode == AUTO_PEEK ? AUTO_PEEK_MS : 0);
+            next_auto = now + (mode == BT_AUTO_PEEK ? BT_AUTO_PEEK_MS : 0);
         }
-        if (mode != AUTO_OFF && host_pairing_left(h) == 0 && now >= next_auto) {
-            host_pair(h, mode == AUTO_PEEK ? AUTO_PEEK_S : AUTO_FULL_S);
+        if (mode != BT_AUTO_OFF && host_pairing_left(h) == 0 && now >= next_auto) {
+            host_pair(h, mode == BT_AUTO_PEEK ? BT_AUTO_PEEK_S : BT_AUTO_FULL_S);
             auto_window = 1;
-            next_auto = now + (mode == AUTO_PEEK ? AUTO_PEEK_MS : 0);
+            next_auto = now + (mode == BT_AUTO_PEEK ? BT_AUTO_PEEK_MS : 0);
         }
 
         /* A pad that only reports on change gets no slot until a button is pressed: say so */
