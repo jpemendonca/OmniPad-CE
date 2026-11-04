@@ -314,16 +314,10 @@ static void handle_client(int cfd)
         if (slot < 0) {
             for (int i = 0; i < MAX_SLOTS; i++) {
                 if (vpad_is_live(i)) {
-                    vpad_slot_info_t info;
-                    vpad_get_slot_info(i, &info);
-                    shellui_press_ps_button(info.handle);
                     vpad_press_ps_button(i);
                 }
             }
         } else if (slot >= 0 && slot < MAX_SLOTS) {
-            vpad_slot_info_t info;
-            vpad_get_slot_info(slot, &info);
-            shellui_press_ps_button(info.handle);
             vpad_press_ps_button(slot);
         }
         const char *ok = "{\"status\":\"ps_pressed\"}";
@@ -447,22 +441,6 @@ static void handle_client(int cfd)
         }
 
         /* If PS button is requested, also synthesize inside SceShellUI */
-        if (btn_mask & PAD_BTN_PS) {
-            if (slot < 0) {
-                for (int i = 0; i < MAX_SLOTS; i++) {
-                    if (vpad_is_live(i)) {
-                        vpad_slot_info_t info;
-                        vpad_get_slot_info(i, &info);
-                        shellui_press_ps_button(info.handle);
-                    }
-                }
-            } else if (slot >= 0 && slot < MAX_SLOTS && vpad_is_live(slot)) {
-                vpad_slot_info_t info;
-                vpad_get_slot_info(slot, &info);
-                shellui_press_ps_button(info.handle);
-            }
-        }
-
         if (slot < 0) {
             for (int i = 0; i < MAX_SLOTS; i++) {
                 if (vpad_is_live(i)) {

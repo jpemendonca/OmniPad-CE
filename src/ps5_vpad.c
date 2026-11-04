@@ -1,5 +1,6 @@
 #include "ps5_vpad.h"
 #include "remap.h"
+#include "ps_gate.h"
 #include "ui_text.h"
 #include "shellui_inject.h"
 #include "log.h"
@@ -861,11 +862,15 @@ void vpad_update(int slot, const pad_state_t *st)
 
     if (ps_pressed) {
         if (status == VP_READY && handle > 0) {
-            log_line("vpad: physical PS button pressed on slot %d (handle %d, user 0x%08x)",
-                     slot + 1, handle, (unsigned)uid);
-            pthread_mutex_unlock(&g_vpad_mutex);
-            shellui_press_ps_button(handle);
-            pthread_mutex_lock(&g_vpad_mutex);
+            static ps_gate_t s_ps_gate[MAX_SLOTS];
+            if (ps_gate_allow(&s_ps_gate[slot], now_ms())) {
+                log_line("vpad: physical PS button pressed on slot %d (handle %d, user 0x%08x)",
+                         slot + 1, handle, (unsigned)uid);
+                pthread_mutex_unlock(&g_vpad_mutex);
+                int delivered = shellui_press_ps_button(handle) == 0;
+                pthread_mutex_lock(&g_vpad_mutex);
+                if (!delivered) ps_gate_failed(&s_ps_gate[slot], now_ms());
+            }
         } else if (status == VP_QUEUED || status == VP_PENDING) {
             log_line("vpad: slot %d PS pressed while identifying — queuing pending press", slot + 1);
             g_slots[slot].ps_pending_on_ready = 1;
@@ -898,14 +903,8 @@ void vpad_update(int slot, const pad_state_t *st)
 void vpad_press_ps_button(int slot)
 {
     if (slot < 0 || slot >= MAX_SLOTS) return;
-    pthread_mutex_lock(&g_vpad_mutex);
-    int32_t handle = g_slots[slot].handle;
-    pthread_mutex_unlock(&g_vpad_mutex);
 
-    /* 1. Remote press inside SceShellUI */
-    shellui_press_ps_button(handle);
-
-    /* 2. Also inject via local vpad for 100ms */
+    /* vpad_update sends the press to SceShellUI, and also holds it on the virtual pad for 100 ms */
     pad_state_t st;
     pad_state_neutral(&st);
     st.buttons = PAD_BTN_PS;

@@ -50,6 +50,8 @@ host-test:
 	./$(BUILD)/test_remap
 	clang -O1 -Isrc tests/test_ui_text.c src/ui_text.c -o $(BUILD)/test_ui_text
 	./$(BUILD)/test_ui_text
+	clang -O1 -Isrc tests/test_ps_gate.c -o $(BUILD)/test_ps_gate
+	./$(BUILD)/test_ps_gate
 	python3 tools/check_i18n.py
 
 check-tests:
