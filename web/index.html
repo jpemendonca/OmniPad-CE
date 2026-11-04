@@ -106,10 +106,16 @@
     button:disabled { opacity: 0.4; cursor: default; transform: none; }
     button.danger { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 40%, transparent); background: var(--bad-soft); }
     button.ghost { background: transparent; }
-    .remap-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
-    .remap-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 6px 6px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; font-weight: 600; }
-    .remap-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
-    .remap-form select { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line-strong); border-radius: 10px; padding: 6px 10px; min-height: 38px; }
+    .map-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .map-msg { font-size: 13px; color: var(--muted); }
+    .map-msg.warn { color: var(--warn); }
+    .map-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+    .map-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 6px 6px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; font-weight: 600; }
+    .pad .hit { fill: transparent; pointer-events: none; }
+    .pad-wrap.mapping .pad [data-map] { cursor: pointer; }
+    .pad-wrap.mapping .pad .hit { pointer-events: all; }
+    .pad-wrap .pad .mapped, .pad-wrap .pad .mapped .key, .pad-wrap .pad .mapped .cap, .pad-wrap .pad .mapped .trig-bg { stroke: var(--accent); stroke-width: 2.5; }
+    .pad-wrap .pad .map-wait, .pad-wrap .pad .map-wait .key, .pad-wrap .pad .map-wait .cap, .pad-wrap .pad .map-wait .trig-bg { stroke: var(--warn); stroke-width: 3; }
     input[type=search] { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 12px; min-height: 38px; width: 100%; }
 
     /* Header */
@@ -322,16 +328,20 @@
     <div class="main">
       <section class="panel" aria-labelledby="hTest">
         <h2><span id="hTest"></span><span class="pill" id="slotPill"></span></h2>
+        <div class="map-bar" id="mapBar">
+          <button type="button" id="btnMap"></button>
+          <span class="map-msg" id="mapMsg" aria-live="polite"></span>
+        </div>
         <div class="pad-wrap idle" id="padWrap">
           <!-- DualSense-style controller in one colour per theme, wide touchpad with light bar -->
           <svg class="pad" viewBox="0 0 520 340" aria-hidden="true">
             <!-- L2 / R2 -->
-            <g transform="rotate(-7 152 34)">
+            <g data-map="l2" transform="rotate(-7 152 34)">
               <rect class="trig-bg" x="116" y="20" width="72" height="24" rx="10"/>
               <rect class="trig-fill" id="t-l2" x="116" y="20" width="0" height="24" rx="10"/>
               <text class="lbl" x="152" y="36">L2</text>
             </g>
-            <g transform="rotate(7 368 34)">
+            <g data-map="r2" transform="rotate(7 368 34)">
               <rect class="trig-bg" x="332" y="20" width="72" height="24" rx="10"/>
               <rect class="trig-fill" id="t-r2" x="332" y="20" width="0" height="24" rx="10"/>
               <text class="lbl" x="368" y="36">R2</text>
@@ -363,6 +373,9 @@
             <g class="stick" id="s-l" transform="translate(200 192)"><circle class="cap" r="18"/><circle class="cap-ring" r="11"/></g>
             <circle class="well" cx="320" cy="192" r="27"/>
             <g class="stick" id="s-r" transform="translate(320 192)"><circle class="cap" r="18"/><circle class="cap-ring" r="11"/></g>
+            <!-- wider click areas for the two thin buttons -->
+            <rect class="hit" data-map="create" x="148" y="64" width="34" height="42"/>
+            <rect class="hit" data-map="options" x="338" y="64" width="34" height="42"/>
             <!-- PS and mute -->
             <circle class="ckey" id="k-ps" cx="260" cy="186" r="9"/>
             <path class="ps-glyph" d="M257.5,191 V181 h3.5 a2.5,2.5 0 0 1 0,5 h-3.5"/>
@@ -384,6 +397,7 @@
           <div class="trig"><span>R2</span><div class="bar"><i id="b-r2"></i></div><b id="v-r2">0</b></div>
         </div>
         <div class="chips" id="chips" aria-live="polite"></div>
+        <div class="map-list" id="mapList"></div>
       </section>
 
       <section class="panel" aria-labelledby="hHealth">
@@ -405,26 +419,6 @@
         </div>
       </section>
     </div>
-
-    <section class="panel" aria-labelledby="hRemap">
-      <h2><span id="hRemap"></span><span class="pill" id="remapPill">—</span></h2>
-      <div class="note" id="remapNote"></div>
-      <div id="remapBody">
-        <div class="remap-list" id="remapList"></div>
-        <div class="remap-form">
-          <span id="lblRemapWhen"></span>
-          <select id="remapFrom1"></select>
-          <span>+</span>
-          <select id="remapFrom2"></select>
-          <span id="lblRemapBecomes"></span>
-          <select id="remapTo"></select>
-          <button type="button" id="btnRemapAdd"></button>
-        </div>
-        <div class="actions">
-          <button type="button" class="ghost" id="btnRemapTouch"></button>
-        </div>
-      </div>
-    </section>
 
     <section class="panel" aria-labelledby="hBt">
       <h2><span id="hBt"></span><span class="pill" id="btPill">—</span></h2>
@@ -472,11 +466,11 @@
         st: ['Livre', 'Na fila', 'Aguardando perfil', 'Pronto', 'Falhou'],
         conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (cabo)', 'Dongle 2.4G', 'Rede'],
         test: 'Teste do controle', health: 'Saúde da conexão',
-        remap: 'Trocar botões', remapNote: 'Vale para este modelo de controle e fica salvo. Ao apertar, confira no teste acima.',
-        remapFree: 'Conecte um controle para trocar os botões dele.', remapWhen: 'Quando apertar', remapBecomes: 'vira',
-        remapAdd: 'Adicionar', remapDel: 'Remover', remapNone: '(só um)', remapTouch: 'Touchpad em L3 + R3',
-        remapBad: 'Essa troca não dá: confira se o botão já não tem outra regra.', remapLost: 'Sem resposta do PS5, a troca não foi salva.',
-        dpad: 'Direcional',
+        map: 'Mapear botões', mapDone: 'Concluir', mapHint: 'Clique no botão do desenho que quer configurar.',
+        mapPress: (b, n) => `Aperte no controle o que vai virar ${b}… ${n} s`, mapSaved: (a, b) => `Salvo: ${a} agora vira ${b}.`,
+        mapBack: b => `${b} voltou ao padrão.`, mapTimeout: 'Tempo esgotado, nada mudou. Clique no botão de novo.', mapPs: 'O PS não pode virar outro botão. Aperte outro.',
+        mapMany: 'Aperte no máximo 3 botões juntos.', mapBad: 'Essa troca não foi salva: são no máximo 8 trocas por controle.', mapLost: 'Sem resposta do PS5, a troca não foi salva.',
+        mapDefault: 'Voltar ao padrão', mapReset: 'Restaurar tudo ao padrão', mapScope: 'Vale para este modelo de controle e fica salvo.', dpad: 'Direcional',
         hintFree: 'Conecte um controle por USB ou dongle pra testar aqui.',
         hintWait: 'Aperte qualquer botão pra começar.',
         ls: 'Analógico esq.', rs: 'Analógico dir.', none: 'Nenhum botão apertado',
@@ -522,11 +516,11 @@
         st: ['Free', 'Queued', 'Waiting for profile', 'Ready', 'Failed'],
         conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (cable)', '2.4G dongle', 'Network'],
         test: 'Controller test', health: 'Connection health',
-        remap: 'Change buttons', remapNote: 'This applies to this controller model and stays saved. Press it and check the test above.',
-        remapFree: 'Connect a controller to change its buttons.', remapWhen: 'When pressing', remapBecomes: 'becomes',
-        remapAdd: 'Add', remapDel: 'Remove', remapNone: '(just one)', remapTouch: 'Touchpad on L3 + R3',
-        remapBad: 'That change does not work: check whether the button already has another rule.', remapLost: 'No answer from the PS5, the change was not saved.',
-        dpad: 'D-pad',
+        map: 'Map buttons', mapDone: 'Done', mapHint: 'Click the button in the drawing that you want to set.',
+        mapPress: (b, n) => `Press on the controller what becomes ${b}… ${n} s`, mapSaved: (a, b) => `Saved: ${a} now becomes ${b}.`,
+        mapBack: b => `${b} is back to default.`, mapTimeout: 'Time is up, nothing changed. Click the button again.', mapPs: 'PS cannot become another button. Press a different one.',
+        mapMany: 'Press at most 3 buttons together.', mapBad: 'That was not saved: each controller can have at most 8 changes.', mapLost: 'No answer from the PS5, the change was not saved.',
+        mapDefault: 'Back to default', mapReset: 'Restore everything to default', mapScope: 'This applies to this controller model and stays saved.', dpad: 'D-pad',
         hintFree: 'Plug in a controller over USB or a dongle to test it here.',
         hintWait: 'Press any button to start.',
         ls: 'Left stick', rs: 'Right stick', none: 'No button pressed',
@@ -587,7 +581,8 @@
     let T = I18N[lang];
     let theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
     let selected = Number(load('omnipad.slot', '0')) || 0;
-    let remapRules = {}, remapShown = '', remapMsg = '';
+    let remapRules = {}, remapShown = '';
+    let mapOn = false, mapWait = '', mapEnd = 0, mapSeen = 0, mapIgnore = 0, mapKey = '', mapTimer = 0, mapText = '', mapWarn = false;
     let last = null;          // last /api/state
     let failures = 0;
     const hist = [[], [], []]; // per slot: [{t, inputs, injected}]
@@ -620,9 +615,7 @@
       $('hTest').textContent = T.test; $('hHealth').textContent = T.health; $('hLog').textContent = T.log;
       $('hBt').textContent = T.bt; $('kBtAdapter').textContent = T.btAdapter; $('kBtAddr').textContent = T.btAddr;
       $('kBtPaired').textContent = T.btPaired; $('kBtPads').textContent = T.btPads; $('btnBtForget').textContent = T.btForget;
-      $('hRemap').textContent = T.remap; $('lblRemapWhen').textContent = T.remapWhen; $('lblRemapBecomes').textContent = T.remapBecomes;
-      $('btnRemapAdd').textContent = T.remapAdd; $('btnRemapTouch').textContent = T.remapTouch;
-      fillRemapSelects();
+      mapText = '';
       remapShown = '';
       $('btnDiag').textContent = T.diag; $('hDiag').textContent = T.hDiag; $('hStart').textContent = T.start;
       $('startSteps').innerHTML = '';
@@ -681,48 +674,142 @@
       options: 'Options', create: 'Create', touchpad: 'Touchpad', ps: 'PS',
     };
     const REMAP_DPAD = { up: '↑', down: '↓', left: '←', right: '→' };
+    const REMAP_BITS = {
+      cross: 14, circle: 13, square: 15, triangle: 12, l1: 10, r1: 11, l2: 8, r2: 9, l3: 1, r3: 2,
+      options: 3, create: 0, touchpad: 20, ps: 16, up: 4, down: 6, left: 7, right: 5,
+    };
+    const MAP_SECONDS = 5, MAP_MAX_COMBO = 3, PS_BIT = 1 << REMAP_BITS.ps;
     function remapLabel(b) { return REMAP_NAMES[b] || `${T.dpad} ${REMAP_DPAD[b] || b}`; }
     function remapKey(s) { return `${s.vid}:${s.pid}`; }
     function remapSplit(text) { return text ? text.split(',') : []; }
-
-    function fillRemapSelects() {
-      const all = [...Object.keys(REMAP_NAMES), ...Object.keys(REMAP_DPAD)];
-      const fill = (el, keys, first) => {
-        const keep = el.value;
-        el.innerHTML = '';
-        if (first) el.add(new Option(first, ''));
-        keys.forEach(k => el.add(new Option(remapLabel(k), k)));
-        if (keep) el.value = keep;
-      };
-      fill($('remapFrom1'), all.filter(k => k !== 'ps'));   // PS is how a user reaches the profile screen
-      fill($('remapFrom2'), all.filter(k => k !== 'ps'), T.remapNone);
-      fill($('remapTo'), all);
+    function comboLabel(from) { return from.split('+').map(remapLabel).join(' + '); }
+    function sameCombo(a, b) { return a.split('+').sort().join() === b.split('+').sort().join(); }
+    function mapEls(name) {
+      const ids = { touchpad: 'k-touch', triangle: 'f-tri', circle: 'f-cir', cross: 'f-crs', square: 'f-sqr', l3: 's-l', r3: 's-r',
+        l1: 'k-l1', r1: 'k-r1', up: 'k-up', down: 'k-down', left: 'k-left', right: 'k-right', ps: 'k-ps', create: 'k-create', options: 'k-options' };
+      const el = ids[name] ? $(ids[name]) : document.querySelector(`svg.pad g[data-map="${name}"]`);
+      return el;
     }
+    function buildMapTargets() {
+      Object.keys(REMAP_BITS).forEach(name => { const el = mapEls(name); if (el) el.dataset.map = name; });
+    }
+
+    function mapSay(text, warn) { mapText = text; mapWarn = !!warn; remapShown = ''; }
 
     function renderRemap(s) {
       const known = s && s.status !== ST_FREE && (s.vid || s.pid);
-      const shown = known ? `${lang}|${remapKey(s)}|${remapRules[remapKey(s)] || ''}|${remapMsg}` : `${lang}|none`;
-      $('remapPill').textContent = `${T.player} ${selected + 2}`;
-      if (shown === remapShown) return;      // render() runs 30 times a second: keep the selects alone
+      if (mapOn && (!known || remapKey(s) !== mapKey)) stopMapping();
+      const rules = known ? remapSplit(remapRules[remapKey(s)]) : [];
+      if (mapWait) mapTick(s);
+      const shown = [lang, known ? remapKey(s) : '', rules.join(), mapOn, mapWait, mapText, mapWarn].join('|');
+      if (shown === remapShown) return;      // render() runs 30 times a second: touch the page only on a change
       remapShown = shown;
-      $('remapBody').style.display = known ? '' : 'none';
-      $('remapNote').textContent = !known ? T.remapFree : remapMsg || T.remapNote;
-      $('remapNote').classList.toggle('warn', !!(known && remapMsg));
-      if (!known) return;
-      const box = $('remapList');
+      $('mapBar').style.display = known ? '' : 'none';
+      $('btnMap').textContent = mapOn ? T.mapDone : rules.length ? `${T.map} (${rules.length})` : T.map;
+      $('mapMsg').textContent = mapText || (mapOn ? T.mapHint : '');
+      $('mapMsg').classList.toggle('warn', mapWarn);
+      $('padWrap').classList.toggle('mapping', mapOn);
+      const targets = rules.map(r => r.split('=')[1]);
+      Object.keys(REMAP_BITS).forEach(name => {
+        const el = mapEls(name);
+        if (!el) return;
+        el.classList.toggle('mapped', mapOn && targets.includes(name));
+        el.classList.toggle('map-wait', name === mapWait);
+      });
+      const box = $('mapList');
       box.innerHTML = '';
-      remapSplit(remapRules[remapKey(s)]).forEach(rule => {
+      if (!mapOn || !rules.length) return;
+      rules.forEach(rule => {
         const [from, to] = rule.split('=');
         const row = document.createElement('div');
-        row.className = 'remap-row';
+        row.className = 'map-row';
         const text = document.createElement('span');
-        text.textContent = `${from.split('+').map(remapLabel).join(' + ')} → ${remapLabel(to)}`;
+        text.textContent = `${remapLabel(to)} ← ${comboLabel(from)}`;
         const del = document.createElement('button');
-        del.type = 'button'; del.className = 'ghost'; del.textContent = T.remapDel;
-        del.addEventListener('click', () => saveRemap(s, remapSplit(remapRules[remapKey(s)]).filter(r => r !== rule)));
+        del.type = 'button'; del.className = 'ghost'; del.textContent = T.mapDefault;
+        del.addEventListener('click', () => saveRemap(s, rules.filter(r => r !== rule), T.mapBack(remapLabel(to))));
         row.append(text, del);
         box.appendChild(row);
       });
+      const end = document.createElement('div');
+      end.className = 'map-row';
+      const note = document.createElement('span');
+      note.textContent = T.mapScope;
+      note.style.fontWeight = '400';
+      const reset = document.createElement('button');
+      reset.type = 'button'; reset.className = 'ghost'; reset.textContent = T.mapReset;
+      reset.addEventListener('click', () => saveRemap(s, [], ''));
+      end.append(note, reset);
+      box.appendChild(end);
+    }
+
+    function toggleMapping() {
+      if (mapOn) { stopMapping(); } else if (last) {
+        mapOn = true;
+        mapKey = remapKey(last.slots[selected]);
+        mapSay('');
+      }
+      if (last) renderRemap(last.slots[selected]);
+    }
+
+    function stopMapping() { mapCancel(); mapOn = false; mapSay(''); }
+    function mapCancel() { clearInterval(mapTimer); mapWait = ''; }
+
+    function mapAsk(name) {
+      const s = last && last.slots[selected];
+      if (!s) return;
+      mapCancel();
+      mapWait = name;
+      mapEnd = performance.now() + MAP_SECONDS * 1000;
+      mapSeen = 0;
+      mapIgnore = s.raw_buttons;             // what is already held does not count until released
+      mapCountdown();
+      mapTimer = setInterval(mapCountdown, 200);
+      renderRemap(s);
+    }
+
+    function mapCountdown() {
+      const left = Math.ceil((mapEnd - performance.now()) / 1000);
+      const s = last && last.slots[selected];
+      if (left > 0) {
+        if (!mapText || !mapWarn) mapSay(T.mapPress(remapLabel(mapWait), left));
+      } else if (mapSeen && s) {
+        mapCommit(s);
+      } else {
+        mapCancel();
+        mapSay(T.mapTimeout, true);
+      }
+      if (s) renderRemap(s);
+    }
+
+    /* A combo is everything held until the last button comes back up. */
+    function mapTick(s) {
+      const raw = s.raw_buttons;
+      mapIgnore &= raw;
+      const held = raw & ~mapIgnore;
+      const pressed = (raw | s.raw_seen) & ~mapIgnore;   // raw_seen holds a tap shorter than the time between reads
+      if (pressed & PS_BIT) {
+        mapIgnore |= PS_BIT;                 // until it is released: the press also reached the console
+        mapSeen = 0;
+        mapSay(T.mapPs, true);
+        return;
+      }
+      if (pressed && mapWarn) mapSay('');
+      mapSeen |= pressed;
+      if (mapSeen && !held) mapCommit(s);
+    }
+
+    function mapCommit(s) {
+      const target = mapWait;
+      const names = Object.keys(REMAP_BITS).filter(n => mapSeen & (1 << REMAP_BITS[n]));
+      mapCancel();
+      if (!names.length) return;
+      if (names.length > MAP_MAX_COMBO) { mapSay(T.mapMany, true); return; }
+      const from = names.join('+');
+      const rules = remapSplit(remapRules[remapKey(s)])
+        .filter(r => r.split('=')[1] !== target && !sameCombo(r.split('=')[0], from));
+      if (from === target) { saveRemap(s, rules, T.mapBack(remapLabel(target))); return; }
+      saveRemap(s, [...rules, `${from}=${target}`], T.mapSaved(comboLabel(from), remapLabel(target)));
     }
 
     async function loadRemap() {
@@ -734,21 +821,13 @@
       } catch (e) { /* the state poll already reports the link */ }
     }
 
-    async function saveRemap(s, rules) {
-      remapMsg = '';
+    async function saveRemap(s, rules, done) {
+      mapSay(done);
       try {
         const r = await fetch(`/api/remap?vid=${s.vid}&pid=${s.pid}&rules=${encodeURIComponent(rules.join(','))}`, { method: 'POST' });
-        if (!r.ok) remapMsg = T.remapBad;
-      } catch (e) { remapMsg = T.remapLost; }
+        if (!r.ok) mapSay(T.mapBad, true);
+      } catch (e) { mapSay(T.mapLost, true); }
       await loadRemap();
-      if (last) renderRemap(last.slots[selected]);
-    }
-
-    function addRemap(from, to) {
-      const s = last && last.slots[selected];
-      if (!s) return;
-      const rules = remapSplit(remapRules[remapKey(s)]);
-      saveRemap(s, [...rules, `${from}=${to}`]);
     }
 
     function setKey(id, on) { const el = $(id); if (el) el.classList.toggle('on', on); }
@@ -1084,17 +1163,18 @@
       });
       $('btnBtForget').addEventListener('click', () => { if (confirm(T.confirmForget)) post('/api/bt_forget'); });
       $('btnDiag').addEventListener('click', copyDiag);
-      $('btnRemapAdd').addEventListener('click', () => {
-        const a = $('remapFrom1').value, b = $('remapFrom2').value;
-        addRemap(b && b !== a ? `${a}+${b}` : a, $('remapTo').value);
+      $('btnMap').addEventListener('click', toggleMapping);
+      document.querySelector('svg.pad').addEventListener('click', e => {
+        const el = e.target.closest('[data-map]');
+        if (el && mapOn) mapAsk(el.dataset.map);
       });
-      $('btnRemapTouch').addEventListener('click', () => addRemap('l3+r3', 'touchpad'));
       $('logFilter').addEventListener('input', renderLog);
       $('btnPause').addEventListener('click', () => { logPaused = !logPaused; $('btnPause').textContent = logPaused ? T.resume : T.pause; if (!logPaused) renderLog(); });
       $('btnClear').addEventListener('click', () => { logLines = []; renderLog(); });
     }
 
     buildSlots();
+    buildMapTargets();
     wire();
     applyTheme();
     applyLang();

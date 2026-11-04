@@ -69,7 +69,7 @@ HTTP on port 8095 (`web.c`):
 | Route | Does |
 |---|---|
 | `GET /` | Dashboard. `?tv=1` switches to the TV layout. |
-| `GET /api/state` | Version, uptime, per slot (status, name, conn, battery, charging, battery_known, vid/pid, buttons, sticks, triggers, counters, idle release), and `bt` (state, adapter, address, pairing_left, paired, pads) |
+| `GET /api/state` | Version, uptime, per slot (status, name, conn, battery, charging, battery_known, vid/pid, buttons, raw_buttons (before the rules of `remap.c`), raw_seen (pressed since the last read, cleared by reading), sticks, triggers, counters, idle release), and `bt` (state, adapter, address, pairing_left, paired, pads) |
 | `GET /api/status` | Older per-slot summary |
 | `GET /api/log[?since=N]` | Up to 32 KB of the log. `X-Log-Offset` says where the next read starts. |
 | `POST /api/pair?seconds=N` | Bluetooth search for N s. `0` stops it. |

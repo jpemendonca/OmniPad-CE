@@ -26,6 +26,7 @@ typedef struct {
     uint32_t        packets_injected;
     long            connected_time;
     long            last_update_time;
+    uint32_t        last_raw_buttons; /* its buttons before the rules of remap.c */
     pad_state_t     last_input;       /* last controller report, also before the slot is ready */
     long            last_input_time;  /* 0 if nothing arrived yet */
     uint32_t        inputs_received;  /* reports since the slot was added */
@@ -38,6 +39,9 @@ void vpad_remove(int slot);
 int vpad_is_live(int slot);
 int vpad_slot_is_free(int slot);
 void vpad_update(int slot, const pad_state_t *st);
+/* Buttons pressed since the last call, before the rules of remap.c: a quick tap can fall between
+ * two reads of the dashboard, which needs it to map buttons. */
+uint32_t vpad_take_raw_seen(int slot);
 void vpad_get_slot_info(int slot, vpad_slot_info_t *out);
 void vpad_press_ps_button(int slot);
 int vpad_rebind_user(int slot, int32_t user_id);

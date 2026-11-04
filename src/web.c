@@ -215,7 +215,7 @@ static void handle_client(int cfd)
                 "%s{\"status\":%d,\"name\":\"%s\",\"conn\":%d,\"vid\":%u,\"pid\":%u,\"user_id\":%d,"
                 "\"battery\":%d,\"charging\":%d,\"battery_known\":%d,\"injected\":%u,\"inputs\":%u,\"input_age_ms\":%ld,"
                 "\"connected_ms\":%ld,\"idle_release_ms\":%ld,"
-                "\"buttons\":%u,\"lx\":%d,\"ly\":%d,\"rx\":%d,\"ry\":%d,\"l2\":%d,\"r2\":%d}",
+                "\"buttons\":%u,\"raw_buttons\":%u,\"raw_seen\":%u,\"lx\":%d,\"ly\":%d,\"rx\":%d,\"ry\":%d,\"l2\":%d,\"r2\":%d}",
                 i > 0 ? "," : "",
                 info.status, name, info.conn_type, vid, pid, info.user_id,
                 info.battery_level, info.battery_charging, info.battery_known,
@@ -223,7 +223,7 @@ static void handle_client(int cfd)
                 info.last_input_time ? now - info.last_input_time : -1L,
                 info.connected_time ? now - info.connected_time : -1L,
                 usb_hotplug_idle_release_ms(i),
-                (unsigned)in->buttons, in->lx, in->ly, in->rx, in->ry, in->l2, in->r2);
+                (unsigned)in->buttons, (unsigned)info.last_raw_buttons, (unsigned)vpad_take_raw_seen(i), in->lx, in->ly, in->rx, in->ry, in->l2, in->r2);
         }
         jlen += snprintf(json + jlen, sizeof(json) - (size_t)jlen, "],\"bt\":");
         if (jlen < (int)sizeof(json)) jlen += bt_adapter_status_json(json + jlen, (int)sizeof(json) - jlen);

@@ -59,6 +59,8 @@ typedef struct {
     long            connected_time;
     long            last_update_time;
     pad_state_t     pad_state;      /* Latch state for continuous 250Hz injection */
+    uint32_t        last_raw_buttons;
+    uint32_t        raw_buttons_seen; /* pressed since vpad_take_raw_seen last read them */
     pad_state_t     last_input;     /* Last report from the controller, kept even before the slot is ready */
     long            last_input_time;
     uint32_t        inputs_received;
@@ -452,6 +454,8 @@ int vpad_add(int slot, pad_conn_type_t type, const char *name)
     }
 
     memset(&g_slots[slot], 0, sizeof(internal_slot_t));
+    g_slots[slot].last_raw_buttons = 0;
+    g_slots[slot].raw_buttons_seen = 0;
     pad_state_neutral(&g_slots[slot].last_input);  /* sticks centred until the first report */
     g_slots[slot].status = VP_QUEUED;
     g_slots[slot].handle = -1;
@@ -836,6 +840,7 @@ void vpad_update(int slot, const pad_state_t *st)
 {
     if (!st || slot < 0 || slot >= MAX_SLOTS || rest_quiet()) return;
 
+    const uint32_t raw_buttons = st->buttons;
     pad_state_t mapped;
     if (remap_active()) {
         mapped = *st;
@@ -868,6 +873,8 @@ void vpad_update(int slot, const pad_state_t *st)
 
     if (g_slots[slot].status != VP_FREE) {
         g_slots[slot].last_input = *st;
+        g_slots[slot].last_raw_buttons = raw_buttons;
+        g_slots[slot].raw_buttons_seen |= raw_buttons;
         g_slots[slot].last_input_time = now_ms();
         g_slots[slot].inputs_received++;
     }
@@ -908,6 +915,16 @@ void vpad_press_ps_button(int slot)
     log_line("vpad: Synthesized PS button pressed on slot %d", slot + 1);
 }
 
+uint32_t vpad_take_raw_seen(int slot)
+{
+    if (slot < 0 || slot >= MAX_SLOTS) return 0;
+    pthread_mutex_lock(&g_vpad_mutex);
+    uint32_t seen = g_slots[slot].raw_buttons_seen;
+    g_slots[slot].raw_buttons_seen = 0;
+    pthread_mutex_unlock(&g_vpad_mutex);
+    return seen;
+}
+
 void vpad_get_slot_info(int slot, vpad_slot_info_t *out)
 {
     if (slot < 0 || slot >= MAX_SLOTS || !out) return;
@@ -926,6 +943,7 @@ void vpad_get_slot_info(int slot, vpad_slot_info_t *out)
     out->connected_time = g_slots[slot].connected_time;
     out->last_update_time = g_slots[slot].last_update_time;
     out->last_input = g_slots[slot].last_input;
+    out->last_raw_buttons = g_slots[slot].last_raw_buttons;
     out->last_input_time = g_slots[slot].last_input_time;
     out->inputs_received = g_slots[slot].inputs_received;
     pthread_mutex_unlock(&g_vpad_mutex);

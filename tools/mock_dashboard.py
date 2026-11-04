@@ -53,7 +53,7 @@ def ds4_slot(t):
         "status": 3, "name": "Sony DualShock 4 (USB)", "conn": 3, "vid": 0x054C, "pid": 0x05C4,
         "user_id": 0x10000001, "battery": 62, "charging": 0, "battery_known": 1,
         "injected": int(t * 250), "inputs": int(t * 250), "input_age_ms": 4,
-        "connected_ms": int(t * 1000), "idle_release_ms": 0, "buttons": 1 << BITS[phase],
+        "connected_ms": int(t * 1000), "idle_release_ms": 0, "buttons": (1 << BITS[phase]) if t % 0.6 < 0.4 else 0,
         "lx": int(128 + 120 * math.cos(a)), "ly": int(128 + 120 * math.sin(a)),
         "rx": int(128 + 90 * math.sin(a * 0.7)), "ry": 128,
         "l2": int(127 + 127 * math.sin(t * 2)), "r2": int(127 + 127 * math.cos(t * 2)),
@@ -120,6 +120,8 @@ class Handler(BaseHTTPRequestHandler):
         elif url.path == "/api/state":
             state = {"version": "1.0.4-mock", "build": 0, "uptime_ms": now_ms(), "now_ms": now_ms(),
                      "slots": [ds4_slot(t), dongle.slot(t), FREE]}
+            for slot in state["slots"]:
+                slot["raw_buttons"] = slot["raw_seen"] = slot["buttons"]
             self._send(200, json.dumps(state), "application/json")
         elif url.path == "/api/status":
             self._send(200, json.dumps({"version": "1.0.4-mock", "build": 0, "slots": []}), "application/json")
