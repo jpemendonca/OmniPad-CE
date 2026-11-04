@@ -31,6 +31,9 @@
 #define BT_SCAN_INTERVAL_MS 2000
 #define BT_DB_PATH          "/data/anypad/omnipad_bt.db"  /* not PR 18's pads.db: those keys are for the internal radio */
 #define BT_USB_RESETS  2          /* tries to revive a locked-up adapter before asking for a replug */
+#define BT_SILENT_MS 3000
+#define BT_SILENT_REPEAT_MS 30000
+#define BT_SILENT_REPORTS 20
 #define BT_TELL_PRESS_MS 1500     /* a ready pad silent for this long is waiting for a button press */
 #define BT_RESET_BACK_MS 10000    /* how long a reset adapter has to reappear before the user is told */
 
@@ -87,6 +90,9 @@ typedef struct {
     char     name[64];
     long     ready_at;       /* when its link became ready with no input yet; 0: not waiting */
     int      told_press;     /* the user was told to press a button */
+    long     last_input_at;  /* its last report that reached the slot */
+    long     silent_since;   /* when it was reported silent; 0: reporting */
+    long     silent_logged;  /* when the transport counters were last logged for it */
 } bt_pad_t;
 
 static struct {
@@ -591,6 +597,31 @@ static const hci_ops k_usb_ops = {
     .chip_vendor = op_chip_vendor,
 };
 
+/* A DS4 stayed linked and stopped reporting 18 s after a reconnection, with no event and no error
+ * (PS5, 3 Nov). This tells apart a pad whose packets stop at the adapter from packets the host
+ * drops. Pads that report on change go quiet too, so the number of reports is limited. */
+static void log_silent_pads(bt_dev_t *d, host_t *h, long now)
+{
+    static int budget = BT_SILENT_REPORTS;
+    for (int i = 0; i < HOST_MAX_PADS; i++) {
+        bt_pad_t *p = &g_bt.pads[i];
+        if (p->vslot < 0 || !host_connected(h, i) || !p->last_input_at) continue;
+        if (now - p->last_input_at < BT_SILENT_MS) continue;
+        if (!p->silent_since) {
+            if (budget <= 0) continue;
+            budget--;
+            p->silent_since = now;
+            log_line("bt: %s in slot %d silent for %ld ms; ACL read pending %d, logging the next packets",
+                     p->name, p->vslot, now - p->last_input_at, d->pending[EP_ACL_IN]);
+            s_acl_log_left = 32;
+        } else if (now - p->silent_logged < BT_SILENT_REPEAT_MS) {
+            continue;
+        }
+        p->silent_logged = now;
+        op_diag(d);
+    }
+}
+
 /* ---- bring-up, before the host takes over ---- */
 
 /* Sends a command and waits for its Command Complete (return parameters, status first) or
@@ -846,6 +877,9 @@ static void on_connect(void *ud, int hs, const pad_info *info)
     p->info = *info;
     snprintf(p->name, sizeof(p->name), "%s (Bluetooth)", info->profile ? info->profile : "Bluetooth pad");
     p->vslot = -1;
+    p->last_input_at = now_ms();
+    p->silent_since = 0;
+    p->silent_logged = 0;
     pthread_mutex_unlock(&g_bt.lock);
 
     /* The first slot neither a USB pad nor another pad holds; vpad_add takes it atomically */
@@ -873,6 +907,12 @@ static void on_state(void *ud, int hs, const pad_state *st)
 {
     (void)ud;
     if (hs < 0 || hs >= HOST_MAX_PADS || g_bt.pads[hs].vslot < 0) return;
+    long now = now_ms();
+    if (g_bt.pads[hs].silent_since) {
+        log_line("bt: %s reports again after %ld ms of silence", g_bt.pads[hs].name, now - g_bt.pads[hs].last_input_at);
+        g_bt.pads[hs].silent_since = 0;
+    }
+    g_bt.pads[hs].last_input_at = now;
     pad_state_t s;
     to_slot_state(&s, st, &g_bt.pads[hs].info);
     vpad_update(g_bt.pads[hs].vslot, &s);
@@ -992,6 +1032,8 @@ static void run_host(bt_dev_t *d)
                                    "OmniPad: controller paired. Press a button on it"));
             }
         }
+
+        log_silent_pads(d, h, now);
 
         /* While nothing is connected, a line now and then shows the adapter is still being heard */
         int any = 0;
