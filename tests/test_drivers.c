@@ -50,6 +50,7 @@ static const expect_t k_expect[] = {
     { 0x054c, 0x0268, 0, "Sony DualShock 3 (USB)",         CTRL_SONY_DS3,    CONN_USB_WIRED,      0,     0, 0 },
     { 0x057e, 0x2009, 0, "Nintendo Switch Pro (USB)",      CTRL_NINTENDO_SWITCH_PRO, CONN_USB_WIRED, 0, 0, 0 },
     { 0x2dc8, 0x3012, 0, "8BitDo Adapter/Pad (USB)",       CTRL_8BITDO_ADAPTER, CONN_USB_DONGLE_24G, 60000, 0, 0 },
+    { 0x2dc8, 0x310b, 0, "8BitDo Ultimate Wireless",       CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 60000, PADDRV_XINPUT_LED_OUT, 0 },
     { 0x2dc8, 0x3109, 1, "XInput Compatible Controller",   CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 60000, PADDRV_XINPUT_LED_OUT, 0 },
     { 0x0079, 0x0006, 0, "Generic USB HID Gamepad",        CTRL_GENERIC_HID, CONN_USB_WIRED,      0,     0, 0 },
     { 0xbeef, 0x0001, 1, "XInput Compatible Controller",   CTRL_XBOX_XINPUT, CONN_USB_WIRED,      0,     PADDRV_XINPUT_LED_OUT, 0 },

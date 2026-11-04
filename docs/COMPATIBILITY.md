@@ -33,6 +33,7 @@ All peripherals in this table connect directly to any USB-A or USB-C port on the
 | **Nintendo Switch Pro Controller** | USB-C Cable (`057e:2009`) | 🟡 **Experimental (Spec-Implemented)** | 3-step USB activation handshake implemented. |
 | **8BitDo USB Wireless Adapter 2 with a DualShock 4** | USB adapter (`2dc8:3107`, then `054c:05c4`) | 🟢 **Verified on PS5 Hardware** | Idle it shows as `2dc8:3107`, which OmniPad leaves alone. When the DS4 connects it turns into a USB DS4. |
 | **8BitDo Wireless USB Adapter (v1, or v2 with other controllers)** | USB 2.4G Dongle (`2dc8:*`) | 🟡 **Experimental (Spec-Implemented)** | Bridges controllers into standard USB HID/XInput. |
+| **8BitDo Ultimate Wireless** | 2.4GHz USB Dongle (`2dc8:310b`) | 🟡 **Experimental (Spec-Implemented)** | Gets the same player LED command as the Ultimate 2C. |
 | **8BitDo Ultimate 2C Wireless** | 2.4GHz USB Dongle or USB-C Cable (`2dc8:3106`) | 🟢 **Verified on PS5 Hardware (community)** | Briefly enumerates as a vendor HID device (`2dc8:3016`) and then as XInput (`2dc8:3106`). Sends no input until it gets the XInput player-LED command (`01 03 02`) on interrupt OUT endpoint `0x05`, and re-enumerates after ~10s without it. |
 | **GameSir G7 Pro 8K** | 2.4GHz USB Dongle | 🟢 **Verified on PS5 Hardware (community)** | A user on r/ps5homebrew reported it working well. Its USB ID and firmware were not reported. A G7 Pro was also reported working over Bluetooth in issue #1. |
 | **Logitech Gamepads (F310, F710)** | USB Cable / 2.4G Receiver | 🟡 **Experimental (Spec-Implemented)** | Operates in either XInput or standard HID mode. |
@@ -78,7 +79,7 @@ The PS5 has one Bluetooth radio, and the DualSense needs it. Sharing it with the
 | Other adapters that need no firmware (genuine CSR8510, some Broadcom) | various | 🟡 Expected to work, not tested |
 | Other Realtek chips (RTL8821C, RTL8822B, ...) | Realtek | 🔴 Not yet: each needs its own firmware |
 
-Any USB device with a Bluetooth HCI interface (class `E0/01/01`) is used, except MediaTek (`0e8d`), the vendor of the console's own radio.
+Any USB device with a Bluetooth HCI interface (class `E0/01/01`) is used, except MediaTek (`0e8d`) and Marvell (`1286`), the vendors of the console's own radio.
 
 ### Controllers
 

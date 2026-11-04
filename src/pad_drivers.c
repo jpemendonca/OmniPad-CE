@@ -46,7 +46,8 @@ static const pad_driver_t k_drivers[] = {
 
     /* 8BitDo receivers and pads in their HID modes */
     { 0x2dc8, 0x310a, "8BitDo Adapter/Pad (USB)",       CTRL_8BITDO_ADAPTER, DONGLE, IDLE_DONGLE_MS, 0, NULL, NULL },
-    { 0x2dc8, 0x310b, "8BitDo Adapter/Pad (USB)",       CTRL_8BITDO_ADAPTER, DONGLE, IDLE_DONGLE_MS, 0, NULL, NULL },
+    /* An Ultimate Wireless on its dongle sent nothing without the player LED, like the 2C (issue 3) */
+    { 0x2dc8, 0x310b, "8BitDo Ultimate Wireless",       CTRL_XBOX_XINPUT, DONGLE, IDLE_DONGLE_MS, PADDRV_XINPUT_LED_OUT, NULL, NULL },
     { 0x2dc8, 0x2100, "8BitDo Adapter/Pad (USB)",       CTRL_8BITDO_ADAPTER, DONGLE, IDLE_DONGLE_MS, 0, NULL, NULL },
     { 0x2dc8, 0x3012, "8BitDo Adapter/Pad (USB)",       CTRL_8BITDO_ADAPTER, DONGLE, IDLE_DONGLE_MS, 0, NULL, NULL },
 

@@ -36,7 +36,7 @@ Shared state goes through `ps5_vpad.c` (`g_vpad_mutex`) and small mutex-guarded 
 
 ### Bluetooth adapter
 
-- Any USB device with an HCI interface (`E0/01/01`) is used, unless its vendor is MediaTek (`0e8d`, the console's radio). The vendor is checked before any other request reaches the device.
+- Any USB device with an HCI interface (`E0/01/01`) is used, unless its vendor is MediaTek (`0e8d`) or Marvell (`1286`), the console's radio. The vendor is checked before any other request reaches the device.
 - Bring-up sequence:
   1. HCI reset.
   2. Read the version.
@@ -125,6 +125,7 @@ GitHub releases on `jpemendonca/OmniPad-CE`. Assets: `OmniPad-CE.elf` and the Re
 - **2026-10-27: notifications follow the system language**. Since 2026-11-03 in seven languages, English by default. The translations are ours, with no native review, so reports from users are expected to correct them.
 - **2026-11-03: 1.5.0 went out without rechecking the Xbox Series and the short search on a good chip (UB500)**: the maintainer no longer has them and decided so. They rest on the 2 Nov PS5 tests and on the simulator.
 - **2026-11-03: a DS4 once stayed linked and mute**, 18 s after reconnecting on the Baseus clone, until switched off. It did not happen again and the cause is unknown; the maintainer closed it. `bt_adapter.c` logs "silent for" with the transport counters, so a recurrence explains itself.
+- **2026-11-04: a PS press reaches SceShellUI at most once per burst** (`ps_gate.h`), and the dashboard's Simulate PS sends one press, not three. The two user reports of a console error came with presses 20 to 150 ms apart. The press that activates a new pad does not go through this limit.
 - **2026-11-03: the project is in English** from v1.5.0 on. `docs/COMECE_AQUI.md`, the Portuguese user guide, stays.
 - **2026-11-03: a USB DS4 only accepts report 0x01.** Through the 8BitDo adapter, stray presses and PS presses repeating every ~70 ms were seen, and once `SceShellUI` restarted right after them. The parser took any other first byte as a report with no ID. On 1.5.1 the symptoms stopped, but no ignored report showed in the log (`unparsed N bytes`), so this cause is not proven. The maintainer closed it. `vpad_update` still has no limit on PS injections.
 - **2026-11-03: the dashboard follows the console's language** through `lang` in `/api/state`. A language picked on the page is saved in that browser and wins.
