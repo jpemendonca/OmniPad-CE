@@ -867,7 +867,7 @@ void vpad_update(int slot, const pad_state_t *st)
                 log_line("vpad: physical PS button pressed on slot %d (handle %d, user 0x%08x)",
                          slot + 1, handle, (unsigned)uid);
                 pthread_mutex_unlock(&g_vpad_mutex);
-                int delivered = shellui_press_ps_button(handle) == 0;
+                int delivered = shellui_press_ps_button(handle) >= 0;
                 pthread_mutex_lock(&g_vpad_mutex);
                 if (!delivered) ps_gate_failed(&s_ps_gate[slot], now_ms());
             }
