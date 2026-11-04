@@ -70,7 +70,7 @@ For more than one Bluetooth pad, prefer an RTL8761B adapter. The adapter can sta
 
 ## Mapping buttons (optional)
 
-Nobody has to do this: controllers work as they are. To change a button, press **Map buttons** next to the controller drawing on the dashboard, click a button in the drawing, and press on your controller what should become it within 5 seconds. Pressing two together makes a combo, so a pad with no touchpad button can have it on L3 + R3. Changes apply to that controller model and stay saved, and **Restore everything to default** undoes them. PS can be set as a result, but the physical PS button cannot be moved, so nobody loses the way to the profile screen.
+Nobody has to do this: controllers work as they are. To change a button, press **Map buttons** next to the controller drawing on the dashboard, click a button in the drawing, and press on your controller what should become it within 10 seconds. Pressing two together makes a combo, so a pad with no touchpad button can have it on L3 + R3. Changes apply to that controller model and stay saved, and **Restore everything to default** undoes them. PS can be set as a result, but the physical PS button cannot be moved, so nobody loses the way to the profile screen.
 
 ## Dashboard
 

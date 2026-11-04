@@ -37,7 +37,7 @@ No painel você testa os botões do controle, vê se a conexão está boa, parei
 
 ## Mapear botões (opcional)
 
-Ninguém precisa fazer isso: o controle já funciona como está. Se o seu não tem botão de touchpad, ou você quer trocar algum botão, aperte **Mapear botões** ao lado do desenho do controle no painel. Clique no botão do desenho e, em até 5 segundos, aperte no controle o que vai virar ele. Apertar dois juntos cria um atalho, como L3 + R3 para o touchpad. Vale para aquele modelo de controle e fica salvo. **Restaurar tudo ao padrão** desfaz tudo.
+Ninguém precisa fazer isso: o controle já funciona como está. Se o seu não tem botão de touchpad, ou você quer trocar algum botão, aperte **Mapear botões** ao lado do desenho do controle no painel. Clique no botão do desenho e, em até 10 segundos, aperte no controle o que vai virar ele. Apertar dois juntos cria um atalho, como L3 + R3 para o touchpad. Vale para aquele modelo de controle e fica salvo. **Restaurar tudo ao padrão** desfaz tudo.
 
 ## Não funcionou?
 

@@ -112,10 +112,17 @@
     .map-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
     .map-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 6px 6px 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; font-weight: 600; }
     .pad .hit { fill: transparent; pointer-events: none; }
-    .pad-wrap.mapping .pad [data-map] { cursor: pointer; }
-    .pad-wrap.mapping .pad .hit { pointer-events: all; }
-    .pad-wrap .pad .mapped, .pad-wrap .pad .mapped .key, .pad-wrap .pad .mapped .cap, .pad-wrap .pad .mapped .trig-bg { stroke: var(--accent); stroke-width: 2.5; }
-    .pad-wrap .pad .map-wait, .pad-wrap .pad .map-wait .key, .pad-wrap .pad .map-wait .cap, .pad-wrap .pad .map-wait .trig-bg { stroke: var(--warn); stroke-width: 3; }
+    .pad-wrap.mapping .pad .hit { pointer-events: all; cursor: pointer; }
+    .pad .map-target { transition: translate 120ms ease-out; }
+    .pad-wrap.mapping .pad .map-hover, .pad .map-wait { translate: 0 -3px; }
+    .pad-wrap .pad .mapped, .pad-wrap .pad .mapped .key, .pad-wrap .pad .mapped .ckey, .pad-wrap .pad .mapped .cap, .pad-wrap .pad .mapped .trig-bg,
+    .pad-wrap.mapping .pad .map-hover, .pad-wrap.mapping .pad .map-hover .key, .pad-wrap.mapping .pad .map-hover .ckey, .pad-wrap.mapping .pad .map-hover .cap, .pad-wrap.mapping .pad .map-hover .trig-bg { stroke: var(--accent); stroke-width: 2.5; }
+    .pad-wrap .pad .map-wait, .pad-wrap .pad .map-wait .key, .pad-wrap .pad .map-wait .ckey, .pad-wrap .pad .map-wait .cap, .pad-wrap .pad .map-wait .trig-bg { stroke: var(--warn); stroke-width: 3; }
+    .pad .map-wait { animation: map-pulse 1s ease-in-out infinite; }
+    @keyframes map-pulse { 50% { opacity: 0.45; } }
+    .map-tip { position: absolute; display: none; transform: translate(-50%, -100%); padding: 3px 8px; border-radius: 7px; background: var(--text); color: var(--panel); font-size: 12px; font-weight: 600; white-space: nowrap; pointer-events: none; z-index: 2; }
+    .map-tip.show { display: block; }
+    @media (prefers-reduced-motion: reduce) { .pad .map-target { transition: none; } .pad .map-wait { animation: none; } }
     input[type=search] { font: inherit; color: var(--text); background: var(--panel-2); border: 1px solid var(--line-strong); border-radius: 10px; padding: 8px 12px; min-height: 38px; width: 100%; }
 
     /* Header */
@@ -336,12 +343,12 @@
           <!-- DualSense-style controller in one colour per theme, wide touchpad with light bar -->
           <svg class="pad" viewBox="0 0 520 340" aria-hidden="true">
             <!-- L2 / R2 -->
-            <g data-map="l2" transform="rotate(-7 152 34)">
+            <g id="g-l2" transform="rotate(-7 152 34)">
               <rect class="trig-bg" x="116" y="20" width="72" height="24" rx="10"/>
               <rect class="trig-fill" id="t-l2" x="116" y="20" width="0" height="24" rx="10"/>
               <text class="lbl" x="152" y="36">L2</text>
             </g>
-            <g data-map="r2" transform="rotate(7 368 34)">
+            <g id="g-r2" transform="rotate(7 368 34)">
               <rect class="trig-bg" x="332" y="20" width="72" height="24" rx="10"/>
               <rect class="trig-fill" id="t-r2" x="332" y="20" width="0" height="24" rx="10"/>
               <text class="lbl" x="368" y="36">R2</text>
@@ -373,15 +380,13 @@
             <g class="stick" id="s-l" transform="translate(200 192)"><circle class="cap" r="18"/><circle class="cap-ring" r="11"/></g>
             <circle class="well" cx="320" cy="192" r="27"/>
             <g class="stick" id="s-r" transform="translate(320 192)"><circle class="cap" r="18"/><circle class="cap-ring" r="11"/></g>
-            <!-- wider click areas for the two thin buttons -->
-            <rect class="hit" data-map="create" x="148" y="64" width="34" height="42"/>
-            <rect class="hit" data-map="options" x="338" y="64" width="34" height="42"/>
             <!-- PS and mute -->
-            <circle class="ckey" id="k-ps" cx="260" cy="186" r="9"/>
-            <path class="ps-glyph" d="M257.5,191 V181 h3.5 a2.5,2.5 0 0 1 0,5 h-3.5"/>
+            <g id="g-ps"><circle class="ckey" id="k-ps" cx="260" cy="186" r="9"/>
+            <path class="ps-glyph" d="M257.5,191 V181 h3.5 a2.5,2.5 0 0 1 0,5 h-3.5"/></g>
             <rect class="ckey" id="k-mute" x="251" y="206" width="18" height="7" rx="3.5"/>
           </svg>
           <div class="pad-hint" id="padHint"></div>
+          <div class="map-tip" id="mapTip"></div>
         </div>
 
         <div class="readouts">
@@ -466,7 +471,7 @@
         st: ['Livre', 'Na fila', 'Aguardando perfil', 'Pronto', 'Falhou'],
         conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (cabo)', 'Dongle 2.4G', 'Rede'],
         test: 'Teste do controle', health: 'Saúde da conexão',
-        map: 'Mapear botões', mapDone: 'Concluir', mapHint: 'Clique no botão do desenho que quer configurar.',
+        map: 'Mapear botões', mapDone: 'Concluir', mapCancel: 'Cancelar', mapHint: 'Clique no botão do desenho que quer configurar.',
         mapPress: (b, n) => `Aperte no controle o que vai virar ${b}… ${n} s`, mapSaved: (a, b) => `Salvo: ${a} agora vira ${b}.`,
         mapBack: b => `${b} voltou ao padrão.`, mapTimeout: 'Tempo esgotado, nada mudou. Clique no botão de novo.', mapPs: 'O PS não pode virar outro botão. Aperte outro.',
         mapMany: 'Aperte no máximo 3 botões juntos.', mapBad: 'Essa troca não foi salva: são no máximo 8 trocas por controle.', mapLost: 'Sem resposta do PS5, a troca não foi salva.',
@@ -516,7 +521,7 @@
         st: ['Free', 'Queued', 'Waiting for profile', 'Ready', 'Failed'],
         conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (cable)', '2.4G dongle', 'Network'],
         test: 'Controller test', health: 'Connection health',
-        map: 'Map buttons', mapDone: 'Done', mapHint: 'Click the button in the drawing that you want to set.',
+        map: 'Map buttons', mapDone: 'Done', mapCancel: 'Cancel', mapHint: 'Click the button in the drawing that you want to set.',
         mapPress: (b, n) => `Press on the controller what becomes ${b}… ${n} s`, mapSaved: (a, b) => `Saved: ${a} now becomes ${b}.`,
         mapBack: b => `${b} is back to default.`, mapTimeout: 'Time is up, nothing changed. Click the button again.', mapPs: 'PS cannot become another button. Press a different one.',
         mapMany: 'Press at most 3 buttons together.', mapBad: 'That was not saved: each controller can have at most 8 changes.', mapLost: 'No answer from the PS5, the change was not saved.',
@@ -583,6 +588,7 @@
     let selected = Number(load('omnipad.slot', '0')) || 0;
     let remapRules = {}, remapShown = '';
     let mapOn = false, mapWait = '', mapEnd = 0, mapSeen = 0, mapIgnore = 0, mapKey = '', mapTimer = 0, mapText = '', mapWarn = false;
+    let mapFresh = false, mapPsUntil = 0, mapHover = '';
     let last = null;          // last /api/state
     let failures = 0;
     const hist = [[], [], []]; // per slot: [{t, inputs, injected}]
@@ -615,8 +621,9 @@
       $('hTest').textContent = T.test; $('hHealth').textContent = T.health; $('hLog').textContent = T.log;
       $('hBt').textContent = T.bt; $('kBtAdapter').textContent = T.btAdapter; $('kBtAddr').textContent = T.btAddr;
       $('kBtPaired').textContent = T.btPaired; $('kBtPads').textContent = T.btPads; $('btnBtForget').textContent = T.btForget;
-      mapText = '';
       remapShown = '';
+      mapText = '';
+      if (mapWait) mapCancel();
       $('btnDiag').textContent = T.diag; $('hDiag').textContent = T.hDiag; $('hStart').textContent = T.start;
       $('startSteps').innerHTML = '';
       T.steps.forEach(t => { const li = document.createElement('li'); li.textContent = t; $('startSteps').appendChild(li); });
@@ -678,7 +685,7 @@
       cross: 14, circle: 13, square: 15, triangle: 12, l1: 10, r1: 11, l2: 8, r2: 9, l3: 1, r3: 2,
       options: 3, create: 0, touchpad: 20, ps: 16, up: 4, down: 6, left: 7, right: 5,
     };
-    const MAP_SECONDS = 5, MAP_MAX_COMBO = 3, PS_BIT = 1 << REMAP_BITS.ps;
+    const MAP_SECONDS = 10, MAP_PS_WARN_MS = 2500, MAP_MAX_COMBO = 3, PS_BIT = 1 << REMAP_BITS.ps;
     function remapLabel(b) { return REMAP_NAMES[b] || `${T.dpad} ${REMAP_DPAD[b] || b}`; }
     function remapKey(s) { return `${s.vid}:${s.pid}`; }
     function remapSplit(text) { return text ? text.split(',') : []; }
@@ -686,36 +693,74 @@
     function sameCombo(a, b) { return a.split('+').sort().join() === b.split('+').sort().join(); }
     function mapEls(name) {
       const ids = { touchpad: 'k-touch', triangle: 'f-tri', circle: 'f-cir', cross: 'f-crs', square: 'f-sqr', l3: 's-l', r3: 's-r',
-        l1: 'k-l1', r1: 'k-r1', up: 'k-up', down: 'k-down', left: 'k-left', right: 'k-right', ps: 'k-ps', create: 'k-create', options: 'k-options' };
-      const el = ids[name] ? $(ids[name]) : document.querySelector(`svg.pad g[data-map="${name}"]`);
-      return el;
+        l1: 'k-l1', r1: 'k-r1', l2: 'g-l2', r2: 'g-r2', up: 'k-up', down: 'k-down', left: 'k-left', right: 'k-right',
+        ps: 'g-ps', create: 'k-create', options: 'k-options' };
+      return $(ids[name]);
     }
+    /* Click areas apart from the buttons, in the drawing's coordinates: a button that rises under
+     * the mouse would otherwise leave it and fall back, again and again. */
+    const MAP_HITS = {
+      l2: [114, 12, 76, 34], r2: [330, 12, 76, 34], l1: [106, 46, 90, 20], r1: [324, 46, 90, 20],
+      touchpad: [184, 66, 152, 78], create: [148, 66, 34, 42], options: [338, 66, 34, 42],
+      up: [106, 106, 24, 30], down: [106, 144, 24, 30], left: [84, 128, 30, 24], right: [122, 128, 30, 24],
+      triangle: [387, 98, 30, 30], circle: [414, 125, 30, 30], cross: [387, 152, 30, 30], square: [360, 125, 30, 30],
+      l3: [173, 165, 54, 54], r3: [293, 165, 54, 54], ps: [248, 174, 24, 24],
+    };
     function buildMapTargets() {
-      Object.keys(REMAP_BITS).forEach(name => { const el = mapEls(name); if (el) el.dataset.map = name; });
+      const pad = document.querySelector('svg.pad');
+      Object.entries(MAP_HITS).forEach(([name, [x, y, width, height]]) => {
+        mapEls(name).classList.add('map-target');
+        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        hit.setAttribute('class', 'hit');
+        hit.dataset.map = name;
+        Object.entries({ x, y, width, height }).forEach(([k, v]) => hit.setAttribute(k, v));
+        pad.appendChild(hit);
+      });
     }
 
-    function mapSay(text, warn) { mapText = text; mapWarn = !!warn; remapShown = ''; }
+    function mapRules() {
+      const s = last && last.slots[selected];
+      return s ? remapSplit(remapRules[remapKey(s)]) : [];
+    }
+
+    function setMapHover(name) {
+      if (mapHover) mapEls(mapHover).classList.remove('map-hover');
+      mapHover = mapOn ? name : '';
+      const tip = $('mapTip');
+      tip.classList.toggle('show', !!mapHover);
+      if (!mapHover) return;
+      mapEls(mapHover).classList.add('map-hover');
+      const rule = mapRules().find(r => r.split('=')[1] === mapHover);
+      tip.textContent = remapLabel(mapHover) + (rule ? ` ← ${comboLabel(rule.split('=')[0])}` : '');
+      const box = document.querySelector(`.hit[data-map="${mapHover}"]`).getBoundingClientRect();
+      const wrap = $('padWrap').getBoundingClientRect();
+      tip.style.left = `${box.left + box.width / 2 - wrap.left}px`;
+      tip.style.top = `${box.top - wrap.top - 8}px`;
+    }
+
+    function mapSay(text, warn) { mapText = text; mapWarn = !!warn; }
+
+    function refreshRemap() { if (last) renderRemap(last.slots[selected]); }
 
     function renderRemap(s) {
       const known = s && s.status !== ST_FREE && (s.vid || s.pid);
-      if (mapOn && (!known || remapKey(s) !== mapKey)) stopMapping();
+      if (mapOn && (!known || `${selected}|${remapKey(s)}` !== mapKey)) stopMapping();
       const rules = known ? remapSplit(remapRules[remapKey(s)]) : [];
-      if (mapWait) mapTick(s);
-      const shown = [lang, known ? remapKey(s) : '', rules.join(), mapOn, mapWait, mapText, mapWarn].join('|');
-      if (shown === remapShown) return;      // render() runs 30 times a second: touch the page only on a change
+      setText($('mapMsg'), mapText || (mapOn ? T.mapHint : ''));
+      $('mapMsg').classList.toggle('warn', mapWarn);
+      const shown = [lang, known ? remapKey(s) : '', rules.join(), mapOn, mapWait].join('|');
+      if (shown === remapShown) return;      // render() runs many times a second: rebuild only on a change
       remapShown = shown;
       $('mapBar').style.display = known ? '' : 'none';
-      $('btnMap').textContent = mapOn ? T.mapDone : rules.length ? `${T.map} (${rules.length})` : T.map;
-      $('mapMsg').textContent = mapText || (mapOn ? T.mapHint : '');
-      $('mapMsg').classList.toggle('warn', mapWarn);
+      $('btnMap').textContent = mapWait ? T.mapCancel : mapOn ? T.mapDone : rules.length ? `${T.map} (${rules.length})` : T.map;
       $('padWrap').classList.toggle('mapping', mapOn);
       const targets = rules.map(r => r.split('=')[1]);
-      Object.keys(REMAP_BITS).forEach(name => {
+      Object.keys(MAP_HITS).forEach(name => {
         const el = mapEls(name);
-        if (!el) return;
         el.classList.toggle('mapped', mapOn && targets.includes(name));
         el.classList.toggle('map-wait', name === mapWait);
       });
+      setMapHover(mapHover);
       const box = $('mapList');
       box.innerHTML = '';
       if (!mapOn || !rules.length) return;
@@ -744,57 +789,64 @@
     }
 
     function toggleMapping() {
-      if (mapOn) { stopMapping(); } else if (last) {
+      if (mapWait) {
+        mapCancel();
+        mapSay('');
+      } else if (mapOn) {
+        stopMapping();
+      } else if (last) {
         mapOn = true;
-        mapKey = remapKey(last.slots[selected]);
+        mapKey = `${selected}|${remapKey(last.slots[selected])}`;
         mapSay('');
       }
-      if (last) renderRemap(last.slots[selected]);
+      refreshRemap();
     }
 
-    function stopMapping() { mapCancel(); mapOn = false; mapSay(''); }
-    function mapCancel() { clearInterval(mapTimer); mapWait = ''; }
+    function stopMapping() { mapCancel(); mapOn = false; setMapHover(''); mapSay(''); }
+    function mapCancel() { clearInterval(mapTimer); mapWait = ''; mapPsUntil = 0; }
 
     function mapAsk(name) {
-      const s = last && last.slots[selected];
-      if (!s) return;
       mapCancel();
       mapWait = name;
       mapEnd = performance.now() + MAP_SECONDS * 1000;
       mapSeen = 0;
-      mapIgnore = s.raw_buttons;             // what is already held does not count until released
+      mapIgnore = 0;
+      mapFresh = true;                       // the read on its way may hold presses from before this click
+      mapSay('');
       mapCountdown();
       mapTimer = setInterval(mapCountdown, 200);
-      renderRemap(s);
     }
 
     function mapCountdown() {
-      const left = Math.ceil((mapEnd - performance.now()) / 1000);
+      const now = performance.now(), left = Math.ceil((mapEnd - now) / 1000);
       const s = last && last.slots[selected];
-      if (left > 0) {
-        if (!mapText || !mapWarn) mapSay(T.mapPress(remapLabel(mapWait), left));
-      } else if (mapSeen && s) {
-        mapCommit(s);
+      if (left <= 0) {
+        if (mapSeen && s) { mapCommit(s); } else { mapCancel(); mapSay(T.mapTimeout, true); }
+      } else if (now < mapPsUntil) {
+        mapSay(T.mapPs, true);
       } else {
-        mapCancel();
-        mapSay(T.mapTimeout, true);
+        mapSay(T.mapPress(remapLabel(mapWait), left));
       }
-      if (s) renderRemap(s);
+      refreshRemap();
     }
 
-    /* A combo is everything held until the last button comes back up. */
+    /* Called once per read of the state. A combo is everything held until the last button comes back up. */
     function mapTick(s) {
       const raw = s.raw_buttons;
+      if (mapFresh) {
+        mapFresh = false;
+        mapIgnore = raw;                     // what is already held does not count until released
+        return;
+      }
       mapIgnore &= raw;
       const held = raw & ~mapIgnore;
       const pressed = (raw | s.raw_seen) & ~mapIgnore;   // raw_seen holds a tap shorter than the time between reads
       if (pressed & PS_BIT) {
-        mapIgnore |= PS_BIT;                 // until it is released: the press also reached the console
+        mapIgnore |= raw & PS_BIT;           // until it is released: the press also reached the console
         mapSeen = 0;
-        mapSay(T.mapPs, true);
+        mapPsUntil = performance.now() + MAP_PS_WARN_MS;
         return;
       }
-      if (pressed && mapWarn) mapSay('');
       mapSeen |= pressed;
       if (mapSeen && !held) mapCommit(s);
     }
@@ -897,6 +949,7 @@
       });
 
       const s = d.slots[selected] || d.slots[0];
+      if (mapWait) mapTick(s);
       renderRemap(s);
       const free = s.status === ST_FREE;
       const gotInput = s.input_age_ms >= 0;
@@ -1164,9 +1217,18 @@
       $('btnBtForget').addEventListener('click', () => { if (confirm(T.confirmForget)) post('/api/bt_forget'); });
       $('btnDiag').addEventListener('click', copyDiag);
       $('btnMap').addEventListener('click', toggleMapping);
-      document.querySelector('svg.pad').addEventListener('click', e => {
-        const el = e.target.closest('[data-map]');
+      const pad = document.querySelector('svg.pad');
+      pad.addEventListener('click', e => {
+        const el = e.target.closest('.hit');
         if (el && mapOn) mapAsk(el.dataset.map);
+      });
+      pad.addEventListener('pointerover', e => {
+        const el = e.target.closest('.hit');
+        setMapHover(el && e.pointerType !== 'touch' ? el.dataset.map : '');
+      });
+      pad.addEventListener('pointerleave', () => setMapHover(''));
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && mapWait) { mapCancel(); mapSay(''); refreshRemap(); }
       });
       $('logFilter').addEventListener('input', renderLog);
       $('btnPause').addEventListener('click', () => { logPaused = !logPaused; $('btnPause').textContent = logPaused ? T.resume : T.pause; if (!logPaused) renderLog(); });
