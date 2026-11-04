@@ -187,12 +187,14 @@ static int queue_pop(bt_queue_t *q, uint8_t *out, int max)
 
 /* ---- USB transport -------------------------------------------------------- */
 
-/* The console's own radio. Only MediaTek has been seen there (0e8d:3603 on ugen0.2); external
- * MediaTek USB adapters are rare, so the whole vendor is left alone. */
+/* The console's own radio: MediaTek (0e8d:3603 on ugen0.2), or Marvell on some consoles. A user with
+ * only a 2.4G dongle showed 1286:2059 taken as an adapter, and another lost the DualSense when
+ * starting the payload (reports of 4 Nov). External USB adapters of these vendors are rare, so the
+ * whole vendor is left alone. */
 static int is_internal_radio(uint16_t vid, uint16_t pid)
 {
     (void)pid;
-    return vid == 0x0e8d;
+    return vid == 0x0e8d || vid == 0x1286;
 }
 
 /* Finds the HCI interface (class E0/01/01): its event, ACL in and ACL out endpoints */

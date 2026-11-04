@@ -62,7 +62,7 @@ The engine is organized into **6 core layers**:
 
 #### B. Bluetooth Through a USB Adapter (v1.1.0)
 The console's internal radio stays with the DualSense. OmniPad drives its own USB Bluetooth adapter instead:
-1. `bt_adapter.c` scans `/dev/ugen*.*` every 2 s for an HCI interface (class `0xE0:0x01:0x01`). It skips MediaTek (`0e8d`), the console's own radio, before sending it any request.
+1. `bt_adapter.c` scans `/dev/ugen*.*` every 2 s for an HCI interface (class `0xE0:0x01:0x01`). It skips MediaTek (`0e8d`) and Marvell (`1286`), the console's own radio, before sending it any request.
 2. It resets the chip. A Realtek RTL8761B still on its ROM gets the linux-firmware patch, sent in 252-byte fragments with vendor command `0xFC20`.
 3. The transport keeps one read queued on the event endpoint (interrupt) and one on the ACL endpoint (bulk). It joins packets that arrive in several pieces.
 4. The AnyPad host (`src/bt/host.c`) takes over. It handles inquiry, Secure Simple Pairing, link keys, L2CAP, SDP (client and a one-record server) and the HID channels. Each connected pad gets a virtual DualSense slot through the same `vpad_*` calls the USB pads use.

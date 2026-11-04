@@ -76,7 +76,7 @@ What the gate does not cover: it never runs on a PS5. It does not prove that a c
 ## Hard rules
 
 - **A change for one controller or adapter must not degrade the ones that work.** The driver table only isolates USB pads: Bluetooth pads share one radio and one host, and a stored pad can take radio time from a connected one. A change to shared code (`src/bt/`, `bt_adapter.c`, `ps5_vpad.c`, `usb_hotplug.c`, the main loop) says which working controllers it can affect. It does not enter `main` until those were checked on the PS5, with reports/s measured from `/api/state` against the reference in `SPECS.md`.
-- **Never send any request to the console's internal Bluetooth radio** (MediaTek, vendor `0e8d`) beyond reading its device descriptor. Sharing it locks up the DualSense until the console restarts.
+- **Never send any request to the console's internal Bluetooth radio** (MediaTek, vendor `0e8d`, or Marvell, vendor `1286`) beyond reading its device descriptor. Sharing it locks up the DualSense until the console restarts.
 - Never inject into or patch system processes other than the existing `SceShellUI`/`SceShellCore` calls in `shellui_inject.c`. Do not revive the dropped `SceRemotePlay` route.
 - No warnings in the payload build. Fix the code, don't suppress the warning.
 - Never bypass the gate (`--no-verify` or similar), and never commit with it red.
