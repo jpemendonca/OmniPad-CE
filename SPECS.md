@@ -125,7 +125,8 @@ GitHub releases on `jpemendonca/OmniPad-CE`. Assets: `OmniPad-CE.elf` and the Re
 - **2026-10-27: notifications follow the system language**. Since 2026-11-03 in seven languages, English by default. The translations are ours, with no native review, so reports from users are expected to correct them.
 - **2026-11-03: 1.5.0 went out without rechecking the Xbox Series and the short search on a good chip (UB500)**: the maintainer no longer has them and decided so. They rest on the 2 Nov PS5 tests and on the simulator.
 - **2026-11-03: a DS4 once stayed linked and mute**, 18 s after reconnecting on the Baseus clone, until switched off. It did not happen again and the cause is unknown; the maintainer closed it. `bt_adapter.c` logs "silent for" with the transport counters, so a recurrence explains itself.
-- **2026-11-03: release notes and commit messages are in English** from v1.5.0 on. The Portuguese user guide stays.
+- **2026-11-03: the project is in English** from v1.5.0 on. `docs/COMECE_AQUI.md`, the Portuguese user guide, stays.
+- **2026-11-03: a USB DS4 only accepts report 0x01.** Through the 8BitDo adapter, stray presses and PS presses repeating every ~70 ms were seen, and once `SceShellUI` restarted right after them. The parser took any other first byte as a report with no ID. On 1.5.1 the symptoms stopped, but no ignored report showed in the log (`unparsed N bytes`), so this cause is not proven. The maintainer closed it. `vpad_update` still has no limit on PS injections.
 - **2026-11-03: the dashboard follows the console's language** through `lang` in `/api/state`. A language picked on the page is saved in that browser and wins.
 - **2026-10-27: CSR8510 clones get no background search while linked, and locked-up adapters get a USB reset.** A clone locked up 25 s after a DS4 connected.
 - **2026-11-02: Xbox Series over Bluetooth LE.** Four things held it back, and they helped every Bluetooth pad:

@@ -4,7 +4,7 @@ Only rules you can check by reading a diff go here.
 
 ## Language
 
-- Code, identifiers, comments, log lines and test names are in English.
+- Everything in the project is in English: code, identifiers, comments, log lines, test names, docs, commit messages and releases. The one exception is `docs/COMECE_AQUI.md`, the Portuguese getting-started guide.
 - Text the user reads goes in every language the app has: English, Portuguese, Spanish, French, German, Russian and Japanese. The dashboard uses its `I18N` table and notifications use the table in `src/ui_text.c`; `make test` fails if a language lacks a text or changes its arguments. Docs: `README.md` and `docs/*.md` are in English, and `docs/COMECE_AQUI.md` is in Portuguese.
 - Commit messages: a Conventional Commits prefix in English (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`), then the description in English. Commits up to v1.5.0 have it in Portuguese.
 
