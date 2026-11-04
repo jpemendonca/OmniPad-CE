@@ -6,7 +6,7 @@ Only rules you can check by reading a diff go here.
 
 - Code, identifiers, comments, log lines and test names are in English.
 - Text the user reads goes in every language the app has: English, Portuguese, Spanish, French, German, Russian and Japanese. The dashboard uses its `I18N` table and notifications use the table in `src/ui_text.c`; `make test` fails if a language lacks a text or changes its arguments. Docs: `README.md` and `docs/*.md` are in English, and `docs/COMECE_AQUI.md` is in Portuguese.
-- Commit messages: a Conventional Commits prefix in English (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`), then the description in Portuguese. This is what the history already uses.
+- Commit messages: a Conventional Commits prefix in English (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`), then the description in English. Commits up to v1.5.0 have it in Portuguese.
 
 ## Comments
 

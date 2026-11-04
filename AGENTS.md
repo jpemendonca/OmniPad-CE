@@ -61,8 +61,8 @@ What the gate does not cover: it never runs on a PS5. It does not prove that a c
   2. Run `make -f ps5.mk clean`, then the full gate.
   3. Tag `vX.Y.Z` on `main`.
   4. Run `gh release create` with `dist/OmniPad-CE.elf` and `firmware/rtl_bt/LICENCE.rtlwifi_firmware.txt`.
-  5. Write the release notes in Portuguese: what's new, what was tested on the PS5, the sha256, and the licences. Keep them positive: no lists of what was not tested, no bugs of older versions, no apologies. Tell the maintainer in the chat about anything left open, and list as tested only what was tested.
-  6. Title the release `OmniPad CE X.Y.Z: <one-line summary in Portuguese>`. OmniPad CE is the project, not an unofficial build: never call a release "não oficial".
+  5. Write the release notes in English: what's new, what was tested on the PS5, the sha256, and the licences. Keep them positive: no lists of what was not tested, no bugs of older versions, no apologies. Tell the maintainer in the chat about anything left open, and list as tested only what was tested.
+  6. Title the release `OmniPad CE X.Y.Z: <one-line summary in English>`. OmniPad CE is the project, not an unofficial build: never call a release "não oficial".
 
 ## Reading the PS5
 
