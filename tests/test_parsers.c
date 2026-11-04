@@ -7,6 +7,28 @@
 #include "../src/usb_controllers.h"
 #include "../src/profiles.h"
 
+static void test_ds4_usb_otherReport_isIgnored(void)
+{
+    /* arrange: what the 8BitDo adapter mixed in, as far as the PS5 log shows: first byte 0 */
+    uint8_t report[64];
+    memset(report, 0, sizeof(report));
+    report[1] = 0x7F;
+    report[4] = 0x78;   /* would read as square, cross and circle */
+    report[5] = 0x08;   /* would read as R2 */
+    report[6] = 0x01;   /* would read as PS */
+    pad_state_t st;
+    pad_state_neutral(&st);
+
+    /* act */
+    int res = usb_parse_input_report(CTRL_SONY_DS4, report, sizeof(report), &st);
+
+    /* assert */
+    printf("Testing DualShock 4 USB ignores other reports... ");
+    assert(res == 0);
+    assert(st.buttons == 0);
+    printf("PASS\n");
+}
+
 static void test_ds4_usb_parsing(void)
 {
     printf("Testing DualShock 4 USB parsing... ");
@@ -305,6 +327,7 @@ int main(void)
     printf("========================================\n");
 
     test_ds4_usb_parsing();
+    test_ds4_usb_otherReport_isIgnored();
     test_switch_pro_usb_parsing();
     test_xbox_xinput_parsing();
     test_machenike_g5_pro_pc_mode_zero_byte1();

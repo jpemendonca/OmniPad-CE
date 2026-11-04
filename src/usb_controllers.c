@@ -164,9 +164,11 @@ int usb_parse_input_report(usb_controller_type_t type, const uint8_t *data, size
     }
 
     case CTRL_SONY_DS4: {
-        /* Standard DS4 USB report: report ID 0x01, sticks at offsets 1..4 */
-        int offset = (data[0] == 0x01) ? 1 : 0;
-        if (len < (size_t)(offset + 9)) return 0;
+        /* Standard DS4 USB report: report ID 0x01, sticks at offsets 1..4. The 8BitDo adapter
+         * mixes in reports with other first bytes; read as buttons, they pressed arrows and face
+         * buttons by themselves and turned one PS press into several (PS5, 3 Nov). */
+        const int offset = 1;
+        if (data[0] != 0x01 || len < (size_t)(offset + 9)) return 0;
 
         st->lx = data[offset + 0];
         st->ly = data[offset + 1];
