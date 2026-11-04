@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="light">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -137,6 +137,7 @@
     .led.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
     .led.bad { background: var(--bad); box-shadow: 0 0 8px var(--bad); }
     .seg { display: inline-flex; gap: 4px; }
+    .lang-sel { font: inherit; font-size: 12px; font-weight: 600; color: var(--text); background: var(--panel); border: 1px solid var(--line-strong); border-radius: 8px; min-height: 30px; padding: 4px 8px; }
     .seg button { min-height: 30px; padding: 4px 10px; font-size: 12px; border-radius: 8px; }
     .seg button[aria-pressed=true] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
     .seg svg { width: 14px; height: 14px; display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -258,6 +259,7 @@
     html.tv .wrap { max-width: 1500px; padding: 24px; }
     html.tv button { min-height: 56px; padding: 12px 22px; font-size: 17px; }
     html.tv .seg button { min-height: 44px; font-size: 16px; }
+    html.tv .lang-sel { min-height: 44px; font-size: 16px; }
     html.tv .brand h1 { font-size: 28px; }
     html.tv .status .st-main { font-size: 20px; }
     html.tv .pill { font-size: 15px; padding: 6px 12px; }
@@ -303,10 +305,7 @@
           <button type="button" data-set-theme="light" id="btnLight"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
           <button type="button" data-set-theme="dark" id="btnDark"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>
         </div>
-        <div class="seg" role="group" aria-label="Idioma / Language">
-          <button type="button" data-lang="pt">PT</button>
-          <button type="button" data-lang="en">EN</button>
-        </div>
+        <select class="lang-sel" id="langSel" aria-label="Language"></select>
       </div>
     </header>
 
@@ -467,7 +466,7 @@
       pt: {
         linkOk: 'Conectado ao PS5', linkWait: 'Conectando…', linkBad: 'Sem resposta',
         offline: 'Sem resposta do PS5. Confira se o payload ainda está rodando e se o PS5 está na mesma rede.',
-        player: 'Jogador', free: 'Livre', waiting: 'Aguardando controle',
+        player: 'Jogador', free: 'Livre', waiting: 'Aguardando controle', controller: 'Controle',
         st: ['Livre', 'Na fila', 'Aguardando perfil', 'Pronto', 'Falhou'],
         conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (cabo)', 'Dongle 2.4G', 'Rede'],
         test: 'Teste do controle', health: 'Saúde da conexão',
@@ -517,7 +516,7 @@
       en: {
         linkOk: 'Connected to PS5', linkWait: 'Connecting…', linkBad: 'No response',
         offline: 'No response from the PS5. Check that the payload is still running and the PS5 is on the same network.',
-        player: 'Player', free: 'Free', waiting: 'Waiting for a controller',
+        player: 'Player', free: 'Free', waiting: 'Waiting for a controller', controller: 'Controller',
         st: ['Free', 'Queued', 'Waiting for profile', 'Ready', 'Failed'],
         conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (cable)', '2.4G dongle', 'Network'],
         test: 'Controller test', health: 'Connection health',
@@ -563,8 +562,259 @@
           'Press PS on the controller and pick a profile on the screen that appears.',
           'This page also opens on the PS5 itself: Media tab, OmniPad icon.'
         ]
+      },
+      es: {
+        linkOk: 'Conectado a la PS5', linkWait: 'Conectando…', linkBad: 'Sin respuesta',
+        offline: 'Sin respuesta de la PS5. Comprueba que el payload sigue en marcha y que la PS5 está en la misma red.',
+        player: 'Jugador', free: 'Libre', waiting: 'Esperando un mando', controller: 'Mando',
+        st: ['Libre', 'En cola', 'Esperando perfil', 'Listo', 'Falló'],
+        conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (cable)', 'Dongle 2.4G', 'Red'],
+        test: 'Prueba del mando', health: 'Estado de la conexión',
+        map: 'Mapear botones', mapDone: 'Listo', mapCancel: 'Cancelar', mapHint: 'Haz clic en el botón del dibujo que quieres configurar.',
+        mapPress: (b, n) => `Pulsa en el mando lo que será ${b}… ${n} s`, mapSaved: (a, b) => `Guardado: ${a} ahora es ${b}.`,
+        mapBack: b => `${b} ha vuelto a su valor predeterminado.`, mapTimeout: 'Se acabó el tiempo, nada ha cambiado. Haz clic en el botón otra vez.', mapPs: 'PS no puede ser otro botón. Pulsa uno distinto.',
+        mapMany: 'Pulsa como máximo 3 botones a la vez.', mapBad: 'No se ha guardado: cada mando admite como máximo 8 cambios.', mapLost: 'Sin respuesta de la PS5, el cambio no se ha guardado.',
+        mapDefault: 'Volver al predeterminado', mapReset: 'Restaurar todo', mapScope: 'Se aplica a este modelo de mando y queda guardado.', dpad: 'Cruceta',
+        hintFree: 'Conecta un mando por USB o dongle para probarlo aquí.',
+        hintWait: 'Pulsa cualquier botón para empezar.',
+        ls: 'Stick izquierdo', rs: 'Stick derecho', none: 'Ningún botón pulsado',
+        kRate: 'Informes/s', kAge: 'Último informe', kInj: 'Inyecciones/s', kUp: 'Conectado desde hace',
+        kConn: 'Conexión', kState: 'Estado en la PS5', kBat: 'Batería', batUnknown: 'no informa', batCharging: 'cargando',
+        ago: 'atrás', never: 'nunca',
+        idle: (s, lim) => s < lim
+          ? `Sin datos desde hace ${s}s. Por la regla de inactividad (${lim} s), el slot se libera en ${lim - s}s y la pantalla de perfil vuelve con el siguiente botón.`
+          : `Sin datos desde hace ${s}s. Por la regla de inactividad (${lim} s), el slot se libera en cualquier momento y la pantalla de perfil vuelve con el siguiente botón.`,
+        quiet: 'Este mando solo envía datos cuando algo cambia. En reposo, los informes/s bajan a cero, y es normal.',
+        ps: 'Simular botón PS', drop: 'Desconectar slot', dropAll: 'Desconectar todos', stop: 'Detener OmniPad',
+        confirmStop: '¿Detener OmniPad? Los mandos dejarán de funcionar hasta que cargues el payload otra vez.',
+        confirmDropAll: '¿Desconectar todos los mandos virtuales?',
+        log: 'Registro en vivo', filter: 'Filtrar el registro…', pause: 'Pausar', resume: 'Continuar', clear: 'Limpiar',
+        qAll: 'Todo', qUsb: 'USB', qSlot: 'Slots', qErr: 'Errores',
+        raw: 'registro completo', up: 'activo desde hace', light: 'Tema claro', dark: 'Tema oscuro',
+        bt: 'Bluetooth (adaptador USB)', btAdapter: 'Adaptador', btAddr: 'Dirección', btPaired: 'Emparejados', btPads: 'Conectados',
+        btState: { 'no adapter': 'Sin adaptador', starting: 'Iniciando', ready: 'Listo', stopping: 'Deteniendo' },
+        btNoAdapter: 'Conecta un adaptador Bluetooth USB a la PS5. El DualSense sigue en la radio de la propia consola.',
+        btIdle: 'Para conectar, pon el mando en modo de emparejamiento (DS4: mantén Share + PS). OmniPad busca por sí solo. Los mandos ya emparejados vuelven al pulsar PS.',
+        btPairing: () => 'Buscando mandos en modo de emparejamiento…',
+        btPair: 'Emparejar mando', btCancel: 'Detener búsqueda', btWait: 'Enviando…', btForget: 'Olvidar emparejados',
+        confirmForget: '¿Olvidar todos los mandos emparejados? Habrá que emparejarlos otra vez.',
+        upd: (v) => `Hay una nueva versión de OmniPad CE: ${v}.`, updLink: 'Ver y descargar',
+        stOn: 'OmniPad en marcha', stOff: 'Sin respuesta de OmniPad',
+        pads: (n) => n === 0 ? 'Ningún mando' : n === 1 ? '1 mando' : `${n} mandos`,
+        btShort: { 'no adapter': 'Bluetooth: sin adaptador', starting: 'Bluetooth: iniciando', ready: 'Bluetooth: listo', stopping: 'Bluetooth: deteniendo' },
+        diag: 'Copiar diagnóstico', hDiag: 'Diagnóstico',
+        diagCopied: 'Copiado. Pégalo en una issue de GitHub (OmniPad-CE) para pedir ayuda.',
+        diagManual: 'No se pudo copiar solo. Selecciona el texto de abajo y cópialo.',
+        start: 'Primeros pasos',
+        steps: [
+          'Mando con cable o dongle 2.4G: conéctalo a un puerto USB de la PS5.',
+          'Mando Bluetooth: conecta un adaptador Bluetooth USB a la PS5 y pon el mando en modo de emparejamiento (DS4: mantén Share + PS hasta que la luz parpadee rápido).',
+          'Pulsa PS en el mando y elige el perfil en la pantalla que aparece.',
+          'Este panel también se abre en la propia PS5: pestaña Multimedia, icono OmniPad.'
+        ]
+      },
+      fr: {
+        linkOk: 'Connecté à la PS5', linkWait: 'Connexion…', linkBad: 'Pas de réponse',
+        offline: 'Pas de réponse de la PS5. Vérifiez que le payload tourne toujours et que la PS5 est sur le même réseau.',
+        player: 'Joueur', free: 'Libre', waiting: 'En attente d’une manette', controller: 'Manette',
+        st: ['Libre', 'En file', 'En attente du profil', 'Prêt', 'Échec'],
+        conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (câble)', 'Dongle 2.4G', 'Réseau'],
+        test: 'Test de la manette', health: 'État de la connexion',
+        map: 'Mapper les boutons', mapDone: 'Terminé', mapCancel: 'Annuler', mapHint: 'Cliquez sur le bouton du dessin à configurer.',
+        mapPress: (b, n) => `Appuyez sur la manette sur ce qui deviendra ${b}… ${n} s`, mapSaved: (a, b) => `Enregistré : ${a} devient ${b}.`,
+        mapBack: b => `${b} est revenu par défaut.`, mapTimeout: 'Temps écoulé, rien n’a changé. Cliquez à nouveau sur le bouton.', mapPs: 'PS ne peut pas devenir un autre bouton. Appuyez sur un autre.',
+        mapMany: 'Appuyez sur 3 boutons au maximum ensemble.', mapBad: 'Non enregistré : chaque manette accepte 8 changements au maximum.', mapLost: 'Pas de réponse de la PS5, le changement n’a pas été enregistré.',
+        mapDefault: 'Revenir par défaut', mapReset: 'Tout restaurer', mapScope: 'S’applique à ce modèle de manette et reste enregistré.', dpad: 'Croix',
+        hintFree: 'Branchez une manette en USB ou par dongle pour la tester ici.',
+        hintWait: 'Appuyez sur un bouton pour commencer.',
+        ls: 'Stick gauche', rs: 'Stick droit', none: 'Aucun bouton appuyé',
+        kRate: 'Rapports/s', kAge: 'Dernier rapport', kInj: 'Injections/s', kUp: 'Connectée depuis',
+        kConn: 'Connexion', kState: 'État sur la PS5', kBat: 'Batterie', batUnknown: 'non indiquée', batCharging: 'en charge',
+        ago: 'plus tôt', never: 'jamais',
+        idle: (s, lim) => s < lim
+          ? `Aucune donnée depuis ${s}s. Selon la règle d’inactivité (${lim} s), le slot sera libéré dans ${lim - s}s et l’écran de profil reviendra au prochain bouton.`
+          : `Aucune donnée depuis ${s}s. Selon la règle d’inactivité (${lim} s), le slot peut être libéré à tout moment et l’écran de profil reviendra au prochain bouton.`,
+        quiet: 'Cette manette n’envoie des données que lorsque quelque chose change. Au repos, les rapports/s tombent à zéro, c’est normal.',
+        ps: 'Simuler le bouton PS', drop: 'Déconnecter le slot', dropAll: 'Tout déconnecter', stop: 'Arrêter OmniPad',
+        confirmStop: 'Arrêter OmniPad ? Les manettes ne fonctionneront plus tant que le payload ne sera pas relancé.',
+        confirmDropAll: 'Déconnecter toutes les manettes virtuelles ?',
+        log: 'Journal en direct', filter: 'Filtrer le journal…', pause: 'Pause', resume: 'Reprendre', clear: 'Effacer',
+        qAll: 'Tout', qUsb: 'USB', qSlot: 'Slots', qErr: 'Erreurs',
+        raw: 'journal brut', up: 'actif depuis', light: 'Thème clair', dark: 'Thème sombre',
+        bt: 'Bluetooth (adaptateur USB)', btAdapter: 'Adaptateur', btAddr: 'Adresse', btPaired: 'Appairées', btPads: 'Connectées',
+        btState: { 'no adapter': 'Pas d’adaptateur', starting: 'Démarrage', ready: 'Prêt', stopping: 'Arrêt' },
+        btNoAdapter: 'Branchez un adaptateur Bluetooth USB sur la PS5. La DualSense reste sur la radio de la console.',
+        btIdle: 'Pour connecter, mettez la manette en mode d’appairage (DS4 : maintenez Share + PS). OmniPad cherche tout seul. Les manettes déjà appairées reviennent avec PS.',
+        btPairing: () => 'Recherche de manettes en mode d’appairage…',
+        btPair: 'Appairer une manette', btCancel: 'Arrêter la recherche', btWait: 'Envoi…', btForget: 'Oublier les appairées',
+        confirmForget: 'Oublier toutes les manettes appairées ? Il faudra les appairer à nouveau.',
+        upd: (v) => `Une nouvelle version d’OmniPad CE est disponible : ${v}.`, updLink: 'Voir et télécharger',
+        stOn: 'OmniPad actif', stOff: 'Pas de réponse d’OmniPad',
+        pads: (n) => n === 0 ? 'Aucune manette' : n === 1 ? '1 manette' : `${n} manettes`,
+        btShort: { 'no adapter': 'Bluetooth : pas d’adaptateur', starting: 'Bluetooth : démarrage', ready: 'Bluetooth : prêt', stopping: 'Bluetooth : arrêt' },
+        diag: 'Copier le diagnostic', hDiag: 'Diagnostic',
+        diagCopied: 'Copié. Collez-le dans une issue GitHub (OmniPad-CE) pour demander de l’aide.',
+        diagManual: 'Copie automatique impossible. Sélectionnez le texte ci-dessous et copiez-le.',
+        start: 'Premiers pas',
+        steps: [
+          'Manette filaire ou dongle 2.4G : branchez-la sur un port USB de la PS5.',
+          'Manette Bluetooth : branchez un adaptateur Bluetooth USB sur la PS5 et mettez la manette en mode d’appairage (DS4 : maintenez Share + PS jusqu’à ce que la lumière clignote vite).',
+          'Appuyez sur PS sur la manette et choisissez le profil à l’écran.',
+          'Cette page s’ouvre aussi sur la PS5 : onglet Multimédia, icône OmniPad.'
+        ]
+      },
+      de: {
+        linkOk: 'Mit PS5 verbunden', linkWait: 'Verbinde…', linkBad: 'Keine Antwort',
+        offline: 'Keine Antwort von der PS5. Prüfe, ob das Payload noch läuft und die PS5 im selben Netzwerk ist.',
+        player: 'Spieler', free: 'Frei', waiting: 'Warte auf Controller', controller: 'Controller',
+        st: ['Frei', 'In Warteschlange', 'Warte auf Profil', 'Bereit', 'Fehlgeschlagen'],
+        conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (Kabel)', '2.4G-Dongle', 'Netzwerk'],
+        test: 'Controller-Test', health: 'Verbindungsstatus',
+        map: 'Tasten belegen', mapDone: 'Fertig', mapCancel: 'Abbrechen', mapHint: 'Klicke in der Zeichnung auf die Taste, die du belegen willst.',
+        mapPress: (b, n) => `Drücke am Controller, was ${b} werden soll… ${n} s`, mapSaved: (a, b) => `Gespeichert: ${a} ist jetzt ${b}.`,
+        mapBack: b => `${b} ist wieder auf Standard.`, mapTimeout: 'Zeit abgelaufen, nichts geändert. Klicke die Taste noch einmal an.', mapPs: 'PS kann keine andere Taste werden. Drücke eine andere.',
+        mapMany: 'Drücke höchstens 3 Tasten gleichzeitig.', mapBad: 'Nicht gespeichert: Pro Controller sind höchstens 8 Änderungen möglich.', mapLost: 'Keine Antwort von der PS5, die Änderung wurde nicht gespeichert.',
+        mapDefault: 'Auf Standard zurück', mapReset: 'Alles zurücksetzen', mapScope: 'Gilt für dieses Controller-Modell und bleibt gespeichert.', dpad: 'Steuerkreuz',
+        hintFree: 'Schließe einen Controller per USB oder Dongle an, um ihn hier zu testen.',
+        hintWait: 'Drücke eine beliebige Taste, um zu beginnen.',
+        ls: 'Linker Stick', rs: 'Rechter Stick', none: 'Keine Taste gedrückt',
+        kRate: 'Berichte/s', kAge: 'Letzter Bericht', kInj: 'Injektionen/s', kUp: 'Verbunden seit',
+        kConn: 'Verbindung', kState: 'Status auf der PS5', kBat: 'Akku', batUnknown: 'nicht gemeldet', batCharging: 'lädt',
+        ago: 'her', never: 'nie',
+        idle: (s, lim) => s < lim
+          ? `Seit ${s}s keine Daten. Nach der Inaktivitätsregel (${lim} s) wird der Slot in ${lim - s}s frei, und beim nächsten Tastendruck kommt der Profilbildschirm zurück.`
+          : `Seit ${s}s keine Daten. Nach der Inaktivitätsregel (${lim} s) wird der Slot jeden Moment frei, und beim nächsten Tastendruck kommt der Profilbildschirm zurück.`,
+        quiet: 'Dieser Controller sendet nur Daten, wenn sich etwas ändert. Im Ruhezustand fallen die Berichte/s auf null, das ist normal.',
+        ps: 'PS-Taste simulieren', drop: 'Slot trennen', dropAll: 'Alle trennen', stop: 'OmniPad beenden',
+        confirmStop: 'OmniPad beenden? Die Controller funktionieren erst wieder, wenn du das Payload neu lädst.',
+        confirmDropAll: 'Alle virtuellen Controller trennen?',
+        log: 'Live-Protokoll', filter: 'Protokoll filtern…', pause: 'Pause', resume: 'Fortsetzen', clear: 'Leeren',
+        qAll: 'Alle', qUsb: 'USB', qSlot: 'Slots', qErr: 'Fehler',
+        raw: 'Rohprotokoll', up: 'läuft seit', light: 'Helles Design', dark: 'Dunkles Design',
+        bt: 'Bluetooth (USB-Adapter)', btAdapter: 'Adapter', btAddr: 'Adresse', btPaired: 'Gekoppelt', btPads: 'Verbunden',
+        btState: { 'no adapter': 'Kein Adapter', starting: 'Startet', ready: 'Bereit', stopping: 'Stoppt' },
+        btNoAdapter: 'Stecke einen USB-Bluetooth-Adapter in die PS5. Der DualSense bleibt auf dem Funk der Konsole.',
+        btIdle: 'Zum Verbinden versetze den Controller in den Kopplungsmodus (DS4: Share + PS halten). OmniPad sucht von selbst. Gekoppelte Controller kommen mit PS zurück.',
+        btPairing: () => 'Suche Controller im Kopplungsmodus…',
+        btPair: 'Controller koppeln', btCancel: 'Suche stoppen', btWait: 'Sende…', btForget: 'Kopplungen löschen',
+        confirmForget: 'Alle gekoppelten Controller vergessen? Sie müssen dann neu gekoppelt werden.',
+        upd: (v) => `Neue OmniPad-CE-Version verfügbar: ${v}.`, updLink: 'Ansehen und laden',
+        stOn: 'OmniPad läuft', stOff: 'Keine Antwort von OmniPad',
+        pads: (n) => n === 0 ? 'Kein Controller' : n === 1 ? '1 Controller' : `${n} Controller`,
+        btShort: { 'no adapter': 'Bluetooth: kein Adapter', starting: 'Bluetooth: startet', ready: 'Bluetooth: bereit', stopping: 'Bluetooth: stoppt' },
+        diag: 'Diagnose kopieren', hDiag: 'Diagnose',
+        diagCopied: 'Kopiert. Füge es in ein GitHub-Issue (OmniPad-CE) ein, um Hilfe zu bekommen.',
+        diagManual: 'Automatisches Kopieren ging nicht. Markiere den Text unten und kopiere ihn.',
+        start: 'Erste Schritte',
+        steps: [
+          'Kabel-Controller oder 2.4G-Dongle: an einen USB-Anschluss der PS5 stecken.',
+          'Bluetooth-Controller: USB-Bluetooth-Adapter in die PS5 stecken und den Controller in den Kopplungsmodus versetzen (DS4: Share + PS halten, bis das Licht schnell blinkt).',
+          'Drücke PS am Controller und wähle das Profil auf dem Bildschirm.',
+          'Diese Seite öffnet sich auch auf der PS5 selbst: Tab Medien, Symbol OmniPad.'
+        ]
+      },
+      ru: {
+        linkOk: 'Подключено к PS5', linkWait: 'Подключение…', linkBad: 'Нет ответа',
+        offline: 'PS5 не отвечает. Убедитесь, что payload ещё работает и PS5 в той же сети.',
+        player: 'Игрок', free: 'Свободно', waiting: 'Ожидание контроллера', controller: 'Контроллер',
+        st: ['Свободно', 'В очереди', 'Ожидание профиля', 'Готово', 'Ошибка'],
+        conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (кабель)', 'Донгл 2.4G', 'Сеть'],
+        test: 'Проверка контроллера', health: 'Состояние подключения',
+        map: 'Назначить кнопки', mapDone: 'Готово', mapCancel: 'Отмена', mapHint: 'Нажмите на рисунке кнопку, которую хотите настроить.',
+        mapPress: (b, n) => `Нажмите на контроллере то, что станет ${b}… ${n} с`, mapSaved: (a, b) => `Сохранено: ${a} теперь ${b}.`,
+        mapBack: b => `${b}: возвращено по умолчанию.`, mapTimeout: 'Время вышло, ничего не изменилось. Нажмите на кнопку ещё раз.', mapPs: 'PS нельзя сделать другой кнопкой. Нажмите другую.',
+        mapMany: 'Нажимайте не больше 3 кнопок одновременно.', mapBad: 'Не сохранено: на контроллер можно не больше 8 замен.', mapLost: 'PS5 не отвечает, замена не сохранена.',
+        mapDefault: 'Вернуть по умолчанию', mapReset: 'Сбросить всё', mapScope: 'Действует для этой модели контроллера и сохраняется.', dpad: 'Крестовина',
+        hintFree: 'Подключите контроллер по USB или через донгл, чтобы проверить его здесь.',
+        hintWait: 'Нажмите любую кнопку, чтобы начать.',
+        ls: 'Левый стик', rs: 'Правый стик', none: 'Кнопки не нажаты',
+        kRate: 'Отчётов/с', kAge: 'Последний отчёт', kInj: 'Инъекций/с', kUp: 'Подключён',
+        kConn: 'Подключение', kState: 'Состояние на PS5', kBat: 'Батарея', batUnknown: 'нет данных', batCharging: 'заряжается',
+        ago: 'назад', never: 'никогда',
+        idle: (s, lim) => s < lim
+          ? `Нет данных ${s} с. По правилу простоя (${lim} с) слот освободится через ${lim - s} с, и при следующем нажатии вернётся экран профиля.`
+          : `Нет данных ${s} с. По правилу простоя (${lim} с) слот может освободиться в любой момент, и при следующем нажатии вернётся экран профиля.`,
+        quiet: 'Этот контроллер отправляет данные только при изменениях. В покое отчёты/с падают до нуля, это нормально.',
+        ps: 'Имитировать кнопку PS', drop: 'Отключить слот', dropAll: 'Отключить все', stop: 'Остановить OmniPad',
+        confirmStop: 'Остановить OmniPad? Контроллеры не будут работать, пока вы снова не загрузите payload.',
+        confirmDropAll: 'Отключить все виртуальные контроллеры?',
+        log: 'Журнал в реальном времени', filter: 'Фильтр журнала…', pause: 'Пауза', resume: 'Продолжить', clear: 'Очистить',
+        qAll: 'Все', qUsb: 'USB', qSlot: 'Слоты', qErr: 'Ошибки',
+        raw: 'полный журнал', up: 'работает', light: 'Светлая тема', dark: 'Тёмная тема',
+        bt: 'Bluetooth (USB-адаптер)', btAdapter: 'Адаптер', btAddr: 'Адрес', btPaired: 'Сопряжено', btPads: 'Подключено',
+        btState: { 'no adapter': 'Нет адаптера', starting: 'Запуск', ready: 'Готов', stopping: 'Остановка' },
+        btNoAdapter: 'Подключите USB-адаптер Bluetooth к PS5. DualSense остаётся на встроенном модуле консоли.',
+        btIdle: 'Чтобы подключить, переведите контроллер в режим сопряжения (DS4: удерживайте Share + PS). OmniPad ищет сам. Сопряжённые контроллеры возвращаются по нажатию PS.',
+        btPairing: () => 'Поиск контроллеров в режиме сопряжения…',
+        btPair: 'Сопрячь контроллер', btCancel: 'Остановить поиск', btWait: 'Отправка…', btForget: 'Забыть сопряжённые',
+        confirmForget: 'Забыть все сопряжённые контроллеры? Их придётся сопрягать заново.',
+        upd: (v) => `Доступна новая версия OmniPad CE: ${v}.`, updLink: 'Посмотреть и скачать',
+        stOn: 'OmniPad работает', stOff: 'OmniPad не отвечает',
+        pads: (n) => n === 0 ? 'Нет контроллеров' : n === 1 ? '1 контроллер' : `${n} контроллера`,
+        btShort: { 'no adapter': 'Bluetooth: нет адаптера', starting: 'Bluetooth: запуск', ready: 'Bluetooth: готов', stopping: 'Bluetooth: остановка' },
+        diag: 'Копировать диагностику', hDiag: 'Диагностика',
+        diagCopied: 'Скопировано. Вставьте в issue на GitHub (OmniPad-CE), чтобы попросить помощи.',
+        diagManual: 'Не удалось скопировать автоматически. Выделите текст ниже и скопируйте.',
+        start: 'Первые шаги',
+        steps: [
+          'Проводной контроллер или донгл 2.4G: подключите к USB-порту PS5.',
+          'Bluetooth-контроллер: подключите USB-адаптер Bluetooth к PS5 и переведите контроллер в режим сопряжения (DS4: удерживайте Share + PS, пока свет не замигает быстро).',
+          'Нажмите PS на контроллере и выберите профиль на появившемся экране.',
+          'Эта страница открывается и на самой PS5: вкладка «Мультимедиа», значок OmniPad.'
+        ]
+      },
+      ja: {
+        linkOk: 'PS5に接続中', linkWait: '接続しています…', linkBad: '応答なし',
+        offline: 'PS5から応答がありません。ペイロードが動作中か、PS5が同じネットワークにあるか確認してください。',
+        player: 'プレイヤー', free: '空き', waiting: 'コントローラー待ち', controller: 'コントローラー',
+        st: ['空き', '待機中', 'プロフィール待ち', '準備完了', '失敗'],
+        conn: ['—', 'Bluetooth', 'Bluetooth LE', 'USB (ケーブル)', '2.4Gドングル', 'ネットワーク'],
+        test: 'コントローラーのテスト', health: '接続の状態',
+        map: 'ボタン割り当て', mapDone: '完了', mapCancel: 'キャンセル', mapHint: '設定したいボタンを図の中でクリックしてください。',
+        mapPress: (b, n) => `${b} にするボタンをコントローラーで押してください… ${n} 秒`, mapSaved: (a, b) => `保存しました: ${a} は ${b} になります。`,
+        mapBack: b => `${b} を標準に戻しました。`, mapTimeout: '時間切れです。変更はありません。もう一度ボタンをクリックしてください。', mapPs: 'PSボタンは他のボタンにできません。別のボタンを押してください。',
+        mapMany: '同時に押せるのは3つまでです。', mapBad: '保存できません: 変更はコントローラーごとに8つまでです。', mapLost: 'PS5から応答がなく、保存できませんでした。',
+        mapDefault: '標準に戻す', mapReset: 'すべて標準に戻す', mapScope: 'このコントローラーの機種に適用され、保存されます。', dpad: '方向キー',
+        hintFree: 'USBまたはドングルでコントローラーを接続すると、ここでテストできます。',
+        hintWait: 'いずれかのボタンを押すと始まります。',
+        ls: '左スティック', rs: '右スティック', none: 'ボタンは押されていません',
+        kRate: 'レポート/秒', kAge: '最新のレポート', kInj: '送信/秒', kUp: '接続時間',
+        kConn: '接続方法', kState: 'PS5での状態', kBat: 'バッテリー', batUnknown: '不明', batCharging: '充電中',
+        ago: '前', never: 'なし',
+        idle: (s, lim) => s < lim
+          ? `${s}秒間データがありません。無操作ルール (${lim}秒) により、スロットは${lim - s}秒後に解放され、次にボタンを押すとプロフィール画面に戻ります。`
+          : `${s}秒間データがありません。無操作ルール (${lim}秒) により、スロットはまもなく解放され、次にボタンを押すとプロフィール画面に戻ります。`,
+        quiet: 'このコントローラーは変化があるときだけデータを送ります。操作していないとレポート/秒は0になりますが、正常です。',
+        ps: 'PSボタンを再現', drop: 'スロットを切断', dropAll: 'すべて切断', stop: 'OmniPadを停止',
+        confirmStop: 'OmniPadを停止しますか? ペイロードを再度読み込むまでコントローラーは使えません。',
+        confirmDropAll: '仮想コントローラーをすべて切断しますか?',
+        log: 'ライブログ', filter: 'ログを絞り込む…', pause: '一時停止', resume: '再開', clear: 'クリア',
+        qAll: 'すべて', qUsb: 'USB', qSlot: 'スロット', qErr: 'エラー',
+        raw: '生ログ', up: '稼働時間', light: 'ライトテーマ', dark: 'ダークテーマ',
+        bt: 'Bluetooth (USBアダプター)', btAdapter: 'アダプター', btAddr: 'アドレス', btPaired: 'ペアリング済み', btPads: '接続中',
+        btState: { 'no adapter': 'アダプターなし', starting: '起動中', ready: '準備完了', stopping: '停止中' },
+        btNoAdapter: 'USB BluetoothアダプターをPS5に接続してください。DualSenseは本体の無線のまま使えます。',
+        btIdle: '接続するには、コントローラーをペアリングモードにしてください (DS4: Share + PS を長押し)。OmniPadが自動で探します。ペアリング済みのコントローラーはPSボタンで戻ります。',
+        btPairing: () => 'ペアリングモードのコントローラーを探しています…',
+        btPair: 'コントローラーをペアリング', btCancel: '検索を停止', btWait: '送信中…', btForget: 'ペアリングを削除',
+        confirmForget: 'ペアリング済みのコントローラーをすべて削除しますか? 再度ペアリングが必要になります。',
+        upd: (v) => `OmniPad CEの新しいバージョンがあります: ${v}。`, updLink: '見る・ダウンロード',
+        stOn: 'OmniPad動作中', stOff: 'OmniPadから応答なし',
+        pads: (n) => n === 0 ? 'コントローラーなし' : n === 1 ? 'コントローラー 1台' : `コントローラー ${n}台`,
+        btShort: { 'no adapter': 'Bluetooth: アダプターなし', starting: 'Bluetooth: 起動中', ready: 'Bluetooth: 準備完了', stopping: 'Bluetooth: 停止中' },
+        diag: '診断をコピー', hDiag: '診断',
+        diagCopied: 'コピーしました。GitHubのissue (OmniPad-CE) に貼り付けて質問してください。',
+        diagManual: '自動でコピーできませんでした。下の文字を選択してコピーしてください。',
+        start: 'はじめに',
+        steps: [
+          '有線コントローラーまたは2.4Gドングル: PS5のUSBポートに接続します。',
+          'Bluetoothコントローラー: USB BluetoothアダプターをPS5に接続し、コントローラーをペアリングモードにします (DS4: ライトが速く点滅するまで Share + PS を長押し)。',
+          'コントローラーのPSボタンを押し、表示された画面でプロフィールを選びます。',
+          'このページはPS5本体でも開けます: メディアタブのOmniPadアイコン。'
+        ]
       }
     };
+    const LANG_NAMES = { en: 'English', pt: 'Português', es: 'Español', fr: 'Français', de: 'Deutsch', ru: 'Русский', ja: '日本語' };
 
     /* Bits from src/pad_types.h */
     const BTN = [
@@ -582,7 +832,11 @@
     function load(k, d) { try { return localStorage.getItem(k) || d; } catch (e) { return d; } }
     function save(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
 
-    let lang = load('omnipad.lang', (navigator.language || 'pt').slice(0, 2)) === 'en' ? 'en' : 'pt';
+    /* The viewer's own choice wins. Without one the page starts on the browser's language, and
+     * moves to the console's as soon as the first state arrives. */
+    const langChosen = !!I18N[load('omnipad.lang', '')];
+    let lang = langChosen ? load('omnipad.lang', 'en') : I18N[(navigator.language || '').slice(0, 2)] ? navigator.language.slice(0, 2) : 'en';
+    let langFollowsConsole = !langChosen;
     let T = I18N[lang];
     let theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
     let selected = Number(load('omnipad.slot', '0')) || 0;
@@ -614,8 +868,8 @@
 
     function applyLang() {
       T = I18N[lang];
-      document.documentElement.lang = lang === 'en' ? 'en' : 'pt-BR';
-      document.querySelectorAll('[data-lang]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+      document.documentElement.lang = lang === 'pt' ? 'pt-BR' : lang;
+      $('langSel').value = lang;
       $('btnLight').setAttribute('aria-label', T.light); $('btnLight').title = T.light;
       $('btnDark').setAttribute('aria-label', T.dark); $('btnDark').title = T.dark;
       $('hTest').textContent = T.test; $('hHealth').textContent = T.health; $('hLog').textContent = T.log;
@@ -943,7 +1197,7 @@
         // the log numbers slots from 0; phones only show the short form
         b.querySelector('.pl').innerHTML = `<span class="long">${T.player} ${i + 2} · slot ${i}</span><span class="short">P${i + 2}</span>`;
         b.querySelector('.led').className = 'led ' + slotLed(s);
-        b.querySelector('.nm').textContent = free ? T.free : (s.name || 'Controller');
+        b.querySelector('.nm').textContent = free ? T.free : (s.name || T.controller);
         b.querySelector('.sub').textContent = free ? T.waiting : `${connName(s.conn)} · ${T.st[s.status] || ''}`;
         renderBattery(b.querySelector('.bat'), free ? null : s);
       });
@@ -1037,6 +1291,10 @@
         const first = !last;
         last = d; failures = 0; lastOk = t; setLink('ok');
         if (first) checkUpdate();
+        if (langFollowsConsole && I18N[d.lang]) {
+          langFollowsConsole = false;
+          if (d.lang !== lang) { lang = d.lang; applyLang(); }
+        }
         render(d);
       } catch (e) {
         failures++;
@@ -1198,9 +1456,10 @@
     }
 
     function wire() {
-      document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => {
-        lang = b.dataset.lang; save('omnipad.lang', lang); applyLang();
-      }));
+      Object.entries(LANG_NAMES).forEach(([code, name]) => $('langSel').add(new Option(name, code)));
+      $('langSel').addEventListener('change', e => {
+        lang = e.target.value; langFollowsConsole = false; save('omnipad.lang', lang); applyLang();
+      });
       document.querySelectorAll('#themeSeg [data-set-theme]').forEach(b => b.addEventListener('click', () => {
         theme = b.dataset.setTheme; save('omnipad.theme', theme); applyTheme();
       }));

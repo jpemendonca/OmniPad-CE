@@ -118,7 +118,7 @@ class Handler(BaseHTTPRequestHandler):
         if PROXY and url.path.startswith("/api/"):
             self._proxy("GET")
         elif url.path == "/api/state":
-            state = {"version": "1.0.4-mock", "build": 0, "uptime_ms": now_ms(), "now_ms": now_ms(),
+            state = {"version": "1.0.4-mock", "build": 0, "lang": "en", "uptime_ms": now_ms(), "now_ms": now_ms(),
                      "slots": [ds4_slot(t), dongle.slot(t), FREE]}
             for slot in state["slots"]:
                 slot["raw_buttons"] = slot["raw_seen"] = slot["buttons"]

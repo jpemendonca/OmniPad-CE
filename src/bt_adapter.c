@@ -6,6 +6,7 @@
 #include "usb_hotplug.h"
 #include "pad_types.h"
 #include "log.h"
+#include "ui_text.h"
 #include "rest.h"
 #include "util.h"
 
@@ -958,8 +959,7 @@ static void run_host(bt_dev_t *d)
     set_state("ready", NULL);
     g_bt.resets = 0;
     log_line("bt: ready, %d paired pad(s). Paired pads connect when switched on.", host_paired_count(h));
-    notify_ps5(ui_text("OmniPad: adaptador Bluetooth pronto. Coloque o controle em pareamento (DS4: Share + PS)",
-                       "OmniPad: Bluetooth adapter ready. Put the controller in pairing mode (DS4: Share + PS)"));
+    notify_ps5("%s", ui_text(UI_BT_READY));
     log_line("bt: searching on its own: put a pad in pairing mode (DS4: hold Share + PS) to connect it");
 
     long last_publish = 0, last_alive = now_ms();
@@ -1028,8 +1028,7 @@ static void run_host(bt_dev_t *d)
             } else if (!p->told_press && now - p->ready_at > BT_TELL_PRESS_MS) {
                 p->told_press = 1;
                 log_line("bt: pad in host slot %d is paired and has sent no input yet", i);
-                notify_ps5(ui_text("OmniPad: controle pareado. Aperte um botao nele",
-                                   "OmniPad: controller paired. Press a button on it"));
+                notify_ps5("%s", ui_text(UI_BT_PAIRED));
             }
         }
 
@@ -1093,8 +1092,7 @@ static void *bt_worker(void *arg)
             if (reset_back_by && now_ms() > reset_back_by) {
                 reset_back_by = 0;
                 log_line("bt: the adapter did not come back after its USB reset");
-                notify_ps5(ui_text("OmniPad: o adaptador Bluetooth travou. Tire e plugue de novo",
-                                   "OmniPad: the Bluetooth adapter locked up. Unplug it and plug it again"));
+                notify_ps5("%s", ui_text(UI_BT_LOCKED));
             }
             sleep_ms(BT_SCAN_INTERVAL_MS);
             continue;
@@ -1138,8 +1136,7 @@ static void *bt_worker(void *arg)
             }
         }
         if (!started) {
-            notify_ps5(ui_text("OmniPad: o adaptador Bluetooth nao iniciou. Tire e plugue de novo, ou veja o painel",
-                               "OmniPad: the Bluetooth adapter did not start. Unplug and plug it again, or see the dashboard"));
+            notify_ps5("%s", ui_text(UI_BT_NO_START));
             snprintf(g_bt.done, sizeof(g_bt.done), "%s", d->path);
             g_bt.done_ids = (uint32_t)d->vid << 16 | d->pid;
         } else {

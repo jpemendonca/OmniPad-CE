@@ -48,6 +48,9 @@ host-test:
 	./$(BUILD)/test_bt_sim
 	clang -O1 -Isrc tests/test_remap.c src/remap.c src/util.c src/log.c -lpthread -o $(BUILD)/test_remap
 	./$(BUILD)/test_remap
+	clang -O1 -Isrc tests/test_ui_text.c src/ui_text.c -o $(BUILD)/test_ui_text
+	./$(BUILD)/test_ui_text
+	python3 tools/check_i18n.py
 
 check-tests:
 	python3 tools/check_tests_catch_bugs.py

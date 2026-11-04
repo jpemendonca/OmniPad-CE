@@ -1,5 +1,6 @@
 #include "web.h"
 #include "remap.h"
+#include "ui_text.h"
 #include "ps5_vpad.h"
 #include "usb_hotplug.h"
 #include "bt_adapter.h"
@@ -200,8 +201,8 @@ static void handle_client(int cfd)
         long now = now_ms();
         char json[4096];
         int jlen = snprintf(json, sizeof(json),
-            "{\"version\":\"%s\",\"build\":%d,\"uptime_ms\":%ld,\"now_ms\":%ld,\"slots\":[",
-            ANYPAD_VERSION, ANYPAD_BUILD, now - g_started_at, now);
+            "{\"version\":\"%s\",\"build\":%d,\"lang\":\"%s\",\"uptime_ms\":%ld,\"now_ms\":%ld,\"slots\":[",
+            ANYPAD_VERSION, ANYPAD_BUILD, ui_lang_code(), now - g_started_at, now);
 
         for (int i = 0; i < MAX_SLOTS; i++) {
             vpad_slot_info_t info;

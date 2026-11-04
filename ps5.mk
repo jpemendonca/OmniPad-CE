@@ -13,7 +13,7 @@ CFLAGS    := -std=c11 -Wall -Wextra -O2 -Isrc -I$(GEN)
 CFLAGS    += -DANYPAD_VERSION='"$(VERSION)"' -DANYPAD_BUILD=$(BUILD_NUM)
 LDLIBS    += -lScePad -lSceUserService -lSceSystemService -lSceAppInstUtil -ldl
 
-SRCS := src/util.c src/log.c src/profiles.c \
+SRCS := src/util.c src/log.c src/ui_text.c src/profiles.c \
         src/usb_controllers.c src/pad_drivers.c src/usb_hotplug.c src/remap.c \
         src/bt_rtl.c src/bt_sched.c src/bt_adapter.c src/launcher.c src/rest.c \
         src/bt/host.c src/bt/le.c src/bt/smp_crypto.c src/bt/bt_profiles.c src/bt/generic.c src/bt/crc32.c \

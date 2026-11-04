@@ -13,7 +13,7 @@ Use third-party controllers on a jailbroken PS5 (FW 7.00 – 13.60). They plug i
 > - Bluetooth controllers through your own USB adapter, so the DualSense keeps the console's internal radio.
 > - The 8BitDo Ultimate 2C.
 > - A dashboard that also opens on the PS5 itself, from the Media tab.
-> - Notifications in the console's language and a Portuguese guide.
+> - Notifications and dashboard in the console's language (7 languages), and a Portuguese guide.
 > - One driver per controller model.
 >
 > Bugs and requests go to [Issues](https://github.com/jpemendonca/OmniPad-CE/issues). Paste the dashboard's **Copy diagnostics** text into them.
@@ -85,7 +85,7 @@ On the PS5 itself, open the **OmniPad** icon in the **Media** tab. It is install
 - **Actions:** simulate the PS button, free a slot, or stop OmniPad.
 - **Copy diagnostics:** the version, controllers, Bluetooth state and the end of the log in one text, to paste when asking for help.
 
-Light and dark themes, Portuguese and English.
+Light and dark themes, in English, Portuguese, Spanish, French, German, Russian and Japanese.
 
 ---
 

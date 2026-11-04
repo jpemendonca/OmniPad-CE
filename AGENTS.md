@@ -104,7 +104,8 @@ What the gate does not cover: it never runs on a PS5. It does not prove that a c
 | `src/launcher.c` | The Media tab tile (`/user/app/OMNP00001`) |
 | `src/web.c`, `web/index.html` | Dashboard server, HTTP API, and the single-file page (embedded at build time) |
 | `src/shellui_inject.c` | ptrace calls into SceShellUI/SceShellCore (PS button, profile bind) |
-| `src/log.c` | Log file, notifications, `ui_text` (PT or EN by system language) |
+| `src/log.c` | Log file, notifications |
+| `src/ui_text.c` | Notification texts in every language, chosen by the system language |
 | `tests/` | Host tests (`make test`) |
 | `tools/` | Toolchain setup, firmware download, embedders, mock dashboard, screenshots, PC probes |
 | `assets/launcher/` | Tile icon (`icon.html` renders `icon0.png`) |

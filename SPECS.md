@@ -8,7 +8,7 @@ In scope:
 - USB pads and 2.4 GHz dongles, through one driver per model.
 - Bluetooth pads through a separate USB Bluetooth adapter.
 - A dashboard on port 8095, also reachable from a Media tab tile.
-- PS5 notifications in Portuguese or English.
+- PS5 notifications and dashboard in English, Portuguese, Spanish, French, German, Russian and Japanese, following the console's language. English when it has no translation.
 
 Out of scope:
 - The console's internal Bluetooth radio.
@@ -69,7 +69,7 @@ HTTP on port 8095 (`web.c`):
 | Route | Does |
 |---|---|
 | `GET /` | Dashboard. `?tv=1` switches to the TV layout. |
-| `GET /api/state` | Version, uptime, per slot (status, name, conn, battery, charging, battery_known, vid/pid, buttons, raw_buttons (before the rules of `remap.c`), raw_seen (pressed since the last read, cleared by reading), sticks, triggers, counters, idle release), and `bt` (state, adapter, address, pairing_left, paired, pads) |
+| `GET /api/state` | Version, console language (`lang`), uptime, per slot (status, name, conn, battery, charging, battery_known, vid/pid, buttons, raw_buttons (before the rules of `remap.c`), raw_seen (pressed since the last read, cleared by reading), sticks, triggers, counters, idle release), and `bt` (state, adapter, address, pairing_left, paired, pads) |
 | `GET /api/status` | Older per-slot summary |
 | `GET /api/log[?since=N]` | Up to 32 KB of the log. `X-Log-Offset` says where the next read starts. |
 | `POST /api/pair?seconds=N` | Bluetooth search for N s. `0` stops it. |
@@ -122,7 +122,8 @@ GitHub releases on `jpemendonca/OmniPad-CE`. Assets: `OmniPad-CE.elf` and the Re
   - a key is forgotten only when the pad refuses it.
 - **2026-10-25: the adapter searches by itself.** The user only puts the pad in pairing mode, with no dashboard needed.
 - **2026-10-27: Media tab tile** with the same mechanism as ps5-web-file-manager: an app with no executable, plus a `deeplinkUri`.
-- **2026-10-27: notifications follow the system language**, Portuguese or English.
+- **2026-10-27: notifications follow the system language**. Since 2026-11-03 in seven languages, English by default. The translations are ours, with no native review, so reports from users are expected to correct them.
+- **2026-11-03: the dashboard follows the console's language** through `lang` in `/api/state`. A language picked on the page is saved in that browser and wins.
 - **2026-10-27: CSR8510 clones get no background search while linked, and locked-up adapters get a USB reset.** A clone locked up 25 s after a DS4 connected.
 - **2026-11-02: Xbox Series over Bluetooth LE.** Four things held it back, and they helped every Bluetooth pad:
   - HCI commands now wait for the controller's credits. CSR clones dropped commands sent early, an LE Create Connection among them.
