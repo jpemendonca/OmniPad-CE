@@ -569,10 +569,12 @@ static void start_identification(int slot)
         }
         if (handle > 0) {
             g_slots[slot].status = VP_READY;
+            log_line("vpad: slot %d ready without klog (handle %d)", slot, handle);
             notify_ps5(ui_text(UI_PAD_CONNECTED),
                        g_slots[slot].name[0] ? g_slots[slot].name : ui_text(UI_CONTROLLER), slot + 2);
         } else {
             g_slots[slot].status = VP_FAILED;
+            log_line("vpad: slot %d failed: no klog and no handle found", slot);
         }
     }
 }
