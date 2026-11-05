@@ -285,6 +285,7 @@ static int open_kernel_log(void)
         if (connect(fd, (struct sockaddr *)&sin, sizeof(sin)) == 0) {
             fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
             g_log_is_dev = 0;
+            log_line("vpad: reading the kernel log from the klog server (port 3232)");
             return fd;
         }
         close(fd);
@@ -294,6 +295,7 @@ static int open_kernel_log(void)
     fd = open("/dev/klog", O_RDONLY | O_NONBLOCK);
     if (fd >= 0) {
         g_log_is_dev = 1;
+        log_line("vpad: reading the kernel log from /dev/klog");
         return fd;
     }
 
@@ -366,6 +368,19 @@ static uint64_t parse_device_id_from_klog(const char *line)
     return hex_to_u64(p);
 }
 
+/* What the kernel log said during an identification, for reports where no device id was found */
+#define KLOG_SHOWN_MAX 40
+static int g_klog_lines, g_klog_shown;
+
+static void show_klog_line(const char *line)
+{
+    g_klog_lines++;
+    if (g_klog_shown >= KLOG_SHOWN_MAX) return;
+    if (!strcasestr(line, "pad") && !strcasestr(line, "device")) return;
+    g_klog_shown++;
+    log_line("klog: %.160s", line);
+}
+
 static void poll_kernel_log(void)
 {
     char buf[512];
@@ -379,6 +394,7 @@ static void poll_kernel_log(void)
             }
             g_line[g_line_len] = '\0';
             g_line_len = 0;
+            show_klog_line(g_line);
 
             int kh = parse_klog_handle(g_line);
             if (kh > 0 && g_klog_handle <= 0) {
@@ -520,6 +536,8 @@ static void start_identification(int slot)
     g_matches = 0;
     g_match_dev = 0;
     g_klog_handle = -1;
+    g_klog_lines = 0;
+    g_klog_shown = 0;
 
     int32_t ret = 0;
 #ifdef __PROSPERO__
@@ -549,6 +567,11 @@ static void start_identification(int slot)
             handle = remote_h;
             log_line("vpad: slot %d remote SceShellCore AddDevice returned handle %d", slot, handle);
         }
+    }
+
+    if (handle <= 0) {
+        log_line("vpad: slot %d no handle from AddDevice, pad[] = %d %d %d %d %d %d", slot,
+                 param.pad[0], param.pad[1], param.pad[2], param.pad[3], param.pad[4], param.pad[5]);
     }
 
     g_slots[slot].handle = handle;
@@ -593,7 +616,8 @@ static void finish_identification(long now)
     if (g_matches == 1) {
         s->device_id = g_match_dev;
     } else {
-        log_line("vpad: slot %d device_id not uniquely resolved in klog (%d matches)", slot, g_matches);
+        log_line("vpad: slot %d device_id not uniquely resolved in klog (%d matches, %d lines read)",
+                 slot, g_matches, g_klog_lines);
     }
 
     /* Handle resolution:
@@ -654,8 +678,13 @@ static void finish_identification(long now)
     }
     s->ps_pending_on_ready = 0;
 
-    log_line("vpad: slot %d ready (handle %d, alt %d, dev 0x%llx, user 0x%08x)",
-             slot, s->handle, s->alt_handle, (unsigned long long)s->device_id, (unsigned)s->user_id);
+    if (s->handle <= 0) {
+        log_line("vpad: slot %d HAS NO HANDLE: its input cannot reach the console (dev 0x%llx, user 0x%08x)",
+                 slot, (unsigned long long)s->device_id, (unsigned)s->user_id);
+    } else {
+        log_line("vpad: slot %d ready (handle %d, alt %d, dev 0x%llx, user 0x%08x)",
+                 slot, s->handle, s->alt_handle, (unsigned long long)s->device_id, (unsigned)s->user_id);
+    }
 }
 
 void vpad_poll(long now)
