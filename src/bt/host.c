@@ -302,8 +302,48 @@ static acl_pool *pool_of(host_t *h, const link_t *l)
     return l->le && h->le_separate ? &h->lep : &h->br;
 }
 
-/* Sends one L2CAP frame, unfragmented. With no controller buffer free the
- * frame is dropped; everything sent here is retried or refreshed. */
+/* A packet just went to the controller: one of its buffers is taken. */
+static void pool_take(acl_pool *pool)
+{
+    pool->credits--;
+    if (pool->count == INFLIGHT_MAX) {
+        pool->head = (pool->head + 1) % INFLIGHT_MAX;
+        pool->count--;
+    }
+    pool->inflight[(pool->head + pool->count) % INFLIGHT_MAX] = now_ms();
+    pool->count++;
+}
+
+/* A frame bigger than the controller's buffer goes in pieces. Some adapters hold 27 bytes per LE
+ * packet, and the 65-byte SMP public key was dropped there, so an Xbox pad never paired (issue 4). */
+static int l2_send_split(host_t *h, link_t *l, acl_pool *pool, unsigned mtu, unsigned cid,
+                         const unsigned char *d, int len)
+{
+    unsigned char pkt[HCI_PKT_MAX], frame[HCI_PKT_MAX];
+    int total = 4 + len, room = (int)mtu, off;
+
+    if (pool->credits < (total + room - 1) / room) {
+        log_line("l2cap: no controller buffers free for a %d-byte frame, dropped", len);
+        return 0;
+    }
+    put16(frame, (unsigned)len);
+    put16(frame + 2, cid);
+    memcpy(frame + 4, d, (size_t)len);
+    for (off = 0; off < total; off += room) {
+        int n = total - off < room ? total - off : room;
+        unsigned start = l->le ? 0x0000 : 0x2000;
+
+        put16(pkt, (l->handle & 0x0FFF) | (off ? 0x1000 : start));
+        put16(pkt + 2, (unsigned)n);
+        memcpy(pkt + 4, frame + off, (size_t)n);
+        if (!h->hci.ops->acl_send(h->hci.ctx, pkt, 4 + n)) return 0;
+        pool_take(pool);
+    }
+    return 1;
+}
+
+/* Sends one L2CAP frame. With no controller buffer free the frame is dropped;
+ * everything sent here is retried or refreshed. */
 int l2_send(host_t *h, link_t *l, unsigned cid, const unsigned char *d, int len)
 {
     unsigned char pkt[HCI_PKT_MAX];
@@ -311,11 +351,12 @@ int l2_send(host_t *h, link_t *l, unsigned cid, const unsigned char *d, int len)
     unsigned mtu = l->le && h->le_separate ? h->le_mtu : h->acl_mtu;
 
     if (!l->connected) return 0;
-    if (8 + len > (int)sizeof pkt || (mtu && 4 + len > (int)mtu)) {
+    if (8 + len > (int)sizeof pkt) {
         log_line("l2cap: %d-byte frame too large", len);
         return 0;
     }
     pool_expire(pool);
+    if (mtu && 4 + len > (int)mtu) return l2_send_split(h, l, pool, mtu, cid, d, len);
     if (pool->credits <= 0) {
         log_line("l2cap: no controller buffer free, frame dropped");
         return 0;
@@ -328,13 +369,7 @@ int l2_send(host_t *h, link_t *l, unsigned cid, const unsigned char *d, int len)
     memcpy(pkt + 8, d, (size_t)len);
     if (!h->hci.ops->acl_send(h->hci.ctx, pkt, 8 + len)) return 0;
 
-    pool->credits--;
-    if (pool->count == INFLIGHT_MAX) {
-        pool->head = (pool->head + 1) % INFLIGHT_MAX;
-        pool->count--;
-    }
-    pool->inflight[(pool->head + pool->count) % INFLIGHT_MAX] = now_ms();
-    pool->count++;
+    pool_take(pool);
     return 1;
 }
 
