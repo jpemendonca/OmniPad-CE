@@ -55,7 +55,7 @@ What the gate does not cover: it never runs on a PS5. It does not prove that a c
 
 ## Test builds and releases
 
-- Test build: `make -f ps5.mk VERSION=<x.y.z-label> BUILD_NUM=<n>`. The label and number are compiled in and appear in the notification and on the dashboard. Rename the output to `dist/OmniPad-CE-b<n>-teste-<tema>.elf`, and remove copies it supersedes. `dist/` keeps the current release, the previous one, the current test build, and the two files the maintainer asked to keep: `OmniPad-PS5-1.0.4-original-do-autor.elf` (upstream) and `OmniPad-PS5-b32-estavel.elf`.
+- Test build: `make -f ps5.mk VERSION=<x.y.z-label> BUILD_NUM=<n>`. The label and number are compiled in and appear in the notification and on the dashboard. Rename the output to `dist/OmniPad-CE-b<n>-test-<topic>.elf`, with the label and topic in English, and remove copies it supersedes. `dist/` keeps the current release, the previous one, the current test build, and the two files the maintainer asked to keep: `OmniPad-PS5-1.0.4-original-do-autor.elf` (upstream) and `OmniPad-PS5-b32-estavel.elf`.
 - Release: only when the maintainer asks for one explicitly in the chat. Publishing is public and needs that OK every time.
   1. Bump `src/version.h`.
   2. Run `make -f ps5.mk clean`, then the full gate.
