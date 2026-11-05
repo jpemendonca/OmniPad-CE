@@ -25,7 +25,7 @@ All peripherals in this table connect directly to any USB-A or USB-C port on the
 |---|---|:---:|---|
 | **Machenike G5 Pro / G5 Pro Max SE** | 2.4GHz USB Dongle or USB-C Cable | 🟢 **Verified on PS5 Hardware** | Fully tested & verified in real 3-player gameplay on FW 13.60. Instant plug & play. |
 | **ShanWan 2.4G Gamepad** | 2.4GHz USB Dongle (`1a34:f517`) | 🟢 **Verified on PS5 Hardware** | Dongle shared with Machenike; dispatches via native XInput report parser. |
-| **Microsoft Xbox Series X\|S** | USB-C Cable (`045e:0b12`) | 🟢 **Verified on PS5 Hardware (community)** | Decodes GIP input reports (`0x20`). Also works over Bluetooth, see section 3. |
+| **Microsoft Xbox Series X\|S** | USB-C Cable (`045e:0b12`) | 🟢 **Verified on PS5 Hardware (community)** | Decodes GIP input reports (`0x20`). On this cable, Share acts as the touchpad and can be changed with Map buttons. Also works over Bluetooth, see section 3. |
 | **Microsoft Xbox One** | Micro-USB Cable | 🟡 **Experimental (Spec-Implemented)** | Same GIP decoder as the Series pad. |
 | **Microsoft Xbox 360 Controller** | Wired USB Cable (`045e:028e`) | 🟡 **Experimental (Spec-Implemented)** | Standard XInput report parser and periodic LED keepalive implemented. |
 | **Sony DualShock 4** | Micro-USB Cable (`054c:05c4`/`09cc`) | 🟢 **Verified on PS5 Hardware (community)** | Verified with a CUH-ZCT1 (`054c:05c4`): 64-byte HID reports at 250Hz, buttons and sticks mapped correctly. `09cc` (CUH-ZCT2) not yet tested. Also works over Bluetooth, see section 3. |
@@ -33,7 +33,8 @@ All peripherals in this table connect directly to any USB-A or USB-C port on the
 | **Nintendo Switch Pro Controller** | USB-C Cable (`057e:2009`) | 🟡 **Experimental (Spec-Implemented)** | 3-step USB activation handshake implemented. |
 | **8BitDo USB Wireless Adapter 2 with a DualShock 4** | USB adapter (`2dc8:3107`, then `054c:05c4`) | 🟢 **Verified on PS5 Hardware** | Idle it shows as `2dc8:3107`, which OmniPad leaves alone. When the DS4 connects it turns into a USB DS4. |
 | **8BitDo Wireless USB Adapter (v1, or v2 with other controllers)** | USB 2.4G Dongle (`2dc8:*`) | 🟡 **Experimental (Spec-Implemented)** | Bridges controllers into standard USB HID/XInput. |
-| **8BitDo Ultimate Wireless** | 2.4GHz USB Dongle (`2dc8:310b`) | 🟡 **Experimental (Spec-Implemented)** | Gets the same player LED command as the Ultimate 2C. |
+| **8BitDo Ultimate 2** | 2.4GHz USB Dongle (`2dc8:310b`) | 🟡 **Experimental (Spec-Implemented)** | Gets the same player LED command as the Ultimate 2C. |
+| **8BitDo Ultimate 2C Wireless** | 2.4GHz USB Dongle (`2dc8:310a`) | 🟡 **Experimental (Spec-Implemented)** | Same handling as the `2dc8:3106` below. Its receiver shows as `2dc8:301c` until the pad is on. |
 | **8BitDo Ultimate 2C Wireless** | 2.4GHz USB Dongle or USB-C Cable (`2dc8:3106`) | 🟢 **Verified on PS5 Hardware (community)** | Briefly enumerates as a vendor HID device (`2dc8:3016`) and then as XInput (`2dc8:3106`). Sends no input until it gets the XInput player-LED command (`01 03 02`) on interrupt OUT endpoint `0x05`, and re-enumerates after ~10s without it. |
 | **GameSir G7 Pro 8K** | 2.4GHz USB Dongle | 🟢 **Verified on PS5 Hardware (community)** | A user on r/ps5homebrew reported it working well. Its USB ID and firmware were not reported. A G7 Pro was also reported working over Bluetooth in issue #1. |
 | **Logitech Gamepads (F310, F710)** | USB Cable / 2.4G Receiver | 🟡 **Experimental (Spec-Implemented)** | Operates in either XInput or standard HID mode. |

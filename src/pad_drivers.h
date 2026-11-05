@@ -21,6 +21,7 @@
 #define PADDRV_GIP             (1u << 0)  /* Xbox One/Series: GIP power-on + LED, EP 0x82/0x02, ACK packets */
 #define PADDRV_X360_KEEPALIVE  (1u << 1)  /* re-send the player LED every 1.5s (genuine Xbox 360 pad) */
 #define PADDRV_XINPUT_LED_OUT  (1u << 2)  /* set the player LED on the interrupt OUT endpoint once connected */
+#define PADDRV_SHARE_END_26    (1u << 3)  /* Xbox Series: Share is bit 0 of the byte 26 from the report's end; it acts as the touchpad */
 
 typedef int (*pad_parse_fn)(const uint8_t *data, size_t len, pad_state_t *st);
 

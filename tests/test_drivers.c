@@ -43,14 +43,16 @@ static const expect_t k_expect[] = {
     { 0x2345, 0xe02b, 0, "MACHENIKE G5 Pro / ShanWan Pad", CTRL_XBOX_XINPUT, CONN_USB_WIRED,      0,     PADDRV_XINPUT_LED_OUT, 0 },
     { 0x2f24, 0x0001, 0, "MACHENIKE G5 Pro / ShanWan Pad", CTRL_XBOX_XINPUT, CONN_USB_WIRED,      0,     PADDRV_XINPUT_LED_OUT, 0 },
     { 0x045e, 0x028e, 0, "Xbox 360 / Machenike (XInput)",  CTRL_XBOX_XINPUT, CONN_USB_WIRED,      0,     PADDRV_XINPUT_LED_OUT | PADDRV_X360_KEEPALIVE, 0 },
-    { 0x045e, 0x0b12, 0, "Xbox Controller (USB/XInput)",   CTRL_XBOX_XINPUT, CONN_USB_WIRED,      0,     PADDRV_GIP, 0 },
+    { 0x045e, 0x0b12, 0, "Xbox Controller (USB/XInput)",   CTRL_XBOX_XINPUT, CONN_USB_WIRED,      0,     PADDRV_GIP | PADDRV_SHARE_END_26, 0 },
+    { 0x045e, 0x0b13, 0, "Xbox Controller (USB/XInput)",   CTRL_XBOX_XINPUT, CONN_USB_WIRED,      0,     PADDRV_GIP, 0 },
     { 0x045e, 0x02ea, 0, "Xbox Controller (USB/XInput)",   CTRL_XBOX_XINPUT, CONN_USB_WIRED,      0,     PADDRV_GIP, 0 },
     { 0x045e, 0x0719, 1, "Xbox 360 Wireless Receiver",     CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 60000, 0, 0 },
     { 0x054c, 0x09cc, 0, "Sony DualShock 4 (USB)",         CTRL_SONY_DS4,    CONN_USB_WIRED,      0,     0, 0 },
     { 0x054c, 0x0268, 0, "Sony DualShock 3 (USB)",         CTRL_SONY_DS3,    CONN_USB_WIRED,      0,     0, 0 },
     { 0x057e, 0x2009, 0, "Nintendo Switch Pro (USB)",      CTRL_NINTENDO_SWITCH_PRO, CONN_USB_WIRED, 0, 0, 0 },
     { 0x2dc8, 0x3012, 0, "8BitDo Adapter/Pad (USB)",       CTRL_8BITDO_ADAPTER, CONN_USB_DONGLE_24G, 60000, 0, 0 },
-    { 0x2dc8, 0x310b, 0, "8BitDo Ultimate Wireless",       CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 60000, PADDRV_XINPUT_LED_OUT, 0 },
+    { 0x2dc8, 0x310a, 0, "8BitDo Ultimate 2C",             CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 0,     PADDRV_XINPUT_LED_OUT, 0 },
+    { 0x2dc8, 0x310b, 0, "8BitDo Ultimate 2",              CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 60000, PADDRV_XINPUT_LED_OUT, 0 },
     { 0x2dc8, 0x3109, 1, "XInput Compatible Controller",   CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 60000, PADDRV_XINPUT_LED_OUT, 0 },
     { 0x0079, 0x0006, 0, "Generic USB HID Gamepad",        CTRL_GENERIC_HID, CONN_USB_WIRED,      0,     0, 0 },
     { 0xbeef, 0x0001, 1, "XInput Compatible Controller",   CTRL_XBOX_XINPUT, CONN_USB_WIRED,      0,     PADDRV_XINPUT_LED_OUT, 0 },
@@ -79,6 +81,7 @@ static void test_driver_table(void)
     /* Devices that must never be claimed as controllers */
     static const uint16_t k_not_pads[][2] = {
         { 0x2dc8, 0x3016 },  /* 8BitDo receiver HID mode while no pad is connected */
+        { 0x2dc8, 0x301c },  /* the same, on the 2dc8:310a (issue 3) */
         { 0x0e8d, 0x3603 },  /* PS5 internal Bluetooth radio */
         { 0x0781, 0x5583 },  /* SanDisk flash drive */
         { 0x054c, 0x0b8f },  /* Sony device that is not a pad */
@@ -153,9 +156,116 @@ static const capture_t k_8bitdo[] = {
     { "L2 pressed",            "00 14 00 00 c9 00 00 00 00 00 00 00 00 00 11 16 30 68 00 10", PAD_BTN_L2, 128, 128, 128, 128, 201, 0 },
 };
 
+/* ---- 3. GIP packets ---- */
+
+static int parse_on(uint16_t pid, const char *hex, pad_state_t *st)
+{
+    uint8_t buf[64];
+    size_t len = parse_hex(hex, buf, sizeof(buf));
+    pad_state_neutral(st);
+    return pad_driver_parse(pad_driver_lookup(0x045e, pid), buf, len, st);
+}
+
+#define GIP_PRESS_A   "20 00 05 0e 10 00 00 00 00 00 00 00 00 00 00 00 00 00"
+#define GIP_TAIL_0    "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+#define GIP_TAIL_SHARE "01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+
+static void test_gip_statusPacket_isNotInput(void)
+{
+    /* arrange: bytes rebuilt from the log of issue 4, where it read as 0x30 with LX=32 LY=79 */
+    pad_state_t st;
+
+    /* act */
+    int parsed = parse_on(0x0b12, "03 20 4f 04 00 01 00 00", &st);
+
+    /* assert */
+    CHECK(!parsed, "a status packet must not reach the virtual pad");
+}
+
+static void test_gip_input_stillDecoded(void)
+{
+    /* arrange */
+    pad_state_t st;
+
+    /* act */
+    int parsed = parse_on(0x02ea, GIP_PRESS_A, &st);
+
+    /* assert */
+    CHECK(parsed && st.buttons == PAD_BTN_CROSS, "A on a GIP report, got 0x%08x", st.buttons);
+}
+
+static void test_gip_guide_pressAndRelease(void)
+{
+    /* arrange */
+    pad_state_t st;
+
+    /* act */
+    int pressed = parse_on(0x0b12, "07 20 02 02 01 5b", &st);
+    uint32_t held = st.buttons;
+    int released = parse_on(0x0b12, "07 20 03 02 00 5b", &st);
+
+    /* assert */
+    CHECK(pressed && held == PAD_BTN_PS, "Guide pressed, got 0x%08x", held);
+    CHECK(released && st.buttons == 0, "Guide released with no ghost press, got 0x%08x", st.buttons);
+}
+
+static void test_gip_xinputReport_stillDecoded(void)
+{
+    /* arrange: a clone that uses a GIP ID and speaks XInput */
+    pad_state_t st;
+
+    /* act */
+    int parsed = parse_on(0x02ea, "00 14 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00", &st);
+
+    /* assert */
+    CHECK(parsed && st.buttons == PAD_DPAD_UP, "XInput report, got 0x%08x", st.buttons);
+}
+
+static void test_gip_shareOnSeries_actsAsTouchpad(void)
+{
+    /* arrange */
+    pad_state_t st;
+
+    /* act */
+    int pressed = parse_on(0x0b12, GIP_PRESS_A " " GIP_TAIL_SHARE, &st);
+    uint32_t with_share = st.buttons;
+    parse_on(0x0b12, GIP_PRESS_A " " GIP_TAIL_0, &st);
+    uint32_t without_share = st.buttons;
+
+    /* assert */
+    CHECK(pressed && with_share == (PAD_BTN_CROSS | PAD_BTN_TOUCHPAD), "Share pressed, got 0x%08x", with_share);
+    CHECK(without_share == PAD_BTN_CROSS, "Share released, got 0x%08x", without_share);
+}
+
+static void test_gip_shareByte_onlyOnTheSeriesCable(void)
+{
+    /* arrange */
+    pad_state_t st;
+
+    /* act */
+    parse_on(0x02ea, GIP_PRESS_A " " GIP_TAIL_SHARE, &st);
+    uint32_t xbox_one = st.buttons;
+    parse_on(0x0b12, "20 00 05 0e 10 00 00 00 00 00 00 00 00 00 00 00 00 00 01", &st);
+    uint32_t short_report = st.buttons;
+    /* 30 bytes: 26 from the end is the buttons byte, not a Share byte */
+    parse_on(0x0b12, "20 00 05 0e 11 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00", &st);
+    uint32_t mid_report = st.buttons;
+
+    /* assert */
+    CHECK(mid_report == PAD_BTN_CROSS, "the Share byte must not land on the buttons, got 0x%08x", mid_report);
+    CHECK(xbox_one == PAD_BTN_CROSS, "other GIP models keep that byte unread, got 0x%08x", xbox_one);
+    CHECK(short_report == PAD_BTN_CROSS, "a short report has no Share byte, got 0x%08x", short_report);
+}
+
 int main(void)
 {
     test_driver_table();
+    test_gip_statusPacket_isNotInput();
+    test_gip_input_stillDecoded();
+    test_gip_guide_pressAndRelease();
+    test_gip_xinputReport_stillDecoded();
+    test_gip_shareOnSeries_actsAsTouchpad();
+    test_gip_shareByte_onlyOnTheSeriesCable();
     replay("DualShock 4", pad_driver_lookup(0x054c, 0x05c4), k_ds4, sizeof(k_ds4) / sizeof(k_ds4[0]));
     replay("8BitDo Ultimate 2C", pad_driver_for_xinput_class(0x2dc8, 0x3106), k_8bitdo, sizeof(k_8bitdo) / sizeof(k_8bitdo[0]));
 

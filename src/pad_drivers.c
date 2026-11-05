@@ -3,6 +3,8 @@
 #define WIRED   CONN_USB_WIRED
 #define DONGLE  CONN_USB_DONGLE_24G
 #define IDLE_DONGLE_MS 60000L  /* a dongle stays on USB when its pad switches off; silence is the only hint */
+#define GIP_INPUT_MIN 18       /* bytes usb_parse_input_report reads from a GIP 0x20 report */
+#define GIP_GUIDE_MIN 5        /* and from a GIP 0x07 packet */
 
 /* Recognised by VID/PID. Exact entries must come before the vendor-wide (pid 0) entry of
  * the same vendor: the first match wins. */
@@ -29,7 +31,7 @@ static const pad_driver_t k_drivers[] = {
     { 0x045e, 0x02ea, "Xbox Controller (USB/XInput)",   CTRL_XBOX_XINPUT, WIRED, 0, PADDRV_GIP, NULL, NULL },
     { 0x045e, 0x0b00, "Xbox Controller (USB/XInput)",   CTRL_XBOX_XINPUT, WIRED, 0, PADDRV_GIP, NULL, NULL },
     { 0x045e, 0x0b05, "Xbox Controller (USB/XInput)",   CTRL_XBOX_XINPUT, WIRED, 0, PADDRV_GIP, NULL, NULL },
-    { 0x045e, 0x0b12, "Xbox Controller (USB/XInput)",   CTRL_XBOX_XINPUT, WIRED, 0, PADDRV_GIP, NULL, NULL },
+    { 0x045e, 0x0b12, "Xbox Controller (USB/XInput)",   CTRL_XBOX_XINPUT, WIRED, 0, PADDRV_GIP | PADDRV_SHARE_END_26, NULL, NULL },
     { 0x045e, 0x0b13, "Xbox Controller (USB/XInput)",   CTRL_XBOX_XINPUT, WIRED, 0, PADDRV_GIP, NULL, NULL },
 
     /* Machenike, ShanWan, Thunderobot, GameSir (cable, dongle and PC modes) */
@@ -45,9 +47,11 @@ static const pad_driver_t k_drivers[] = {
     { 0x1a34, 0,      "ShanWan Gamepad",                CTRL_XBOX_XINPUT, DONGLE, IDLE_DONGLE_MS, PADDRV_XINPUT_LED_OUT, NULL, NULL },
 
     /* 8BitDo receivers and pads in their HID modes */
-    { 0x2dc8, 0x310a, "8BitDo Adapter/Pad (USB)",       CTRL_8BITDO_ADAPTER, DONGLE, IDLE_DONGLE_MS, 0, NULL, NULL },
-    /* An Ultimate Wireless on its dongle sent nothing without the player LED, like the 2C (issue 3) */
-    { 0x2dc8, 0x310b, "8BitDo Ultimate Wireless",       CTRL_XBOX_XINPUT, DONGLE, IDLE_DONGLE_MS, PADDRV_XINPUT_LED_OUT, NULL, NULL },
+    /* An Ultimate 2C on this ID sent nothing without the player LED, like 2dc8:3106 (issue 3). Its
+     * receiver shows as 2dc8:301c, not claimed, until the pad is on. No idle rule, as on the 3106. */
+    { 0x2dc8, 0x310a, "8BitDo Ultimate 2C",             CTRL_XBOX_XINPUT, DONGLE, 0, PADDRV_XINPUT_LED_OUT, NULL, NULL },
+    /* Sent nothing on its dongle without the player LED either (issue 3) */
+    { 0x2dc8, 0x310b, "8BitDo Ultimate 2",              CTRL_XBOX_XINPUT, DONGLE, IDLE_DONGLE_MS, PADDRV_XINPUT_LED_OUT, NULL, NULL },
     { 0x2dc8, 0x2100, "8BitDo Adapter/Pad (USB)",       CTRL_8BITDO_ADAPTER, DONGLE, IDLE_DONGLE_MS, 0, NULL, NULL },
     { 0x2dc8, 0x3012, "8BitDo Adapter/Pad (USB)",       CTRL_8BITDO_ADAPTER, DONGLE, IDLE_DONGLE_MS, 0, NULL, NULL },
 
@@ -97,8 +101,30 @@ const pad_driver_t *pad_driver_for_xinput_class(uint16_t vid, uint16_t pid)
     return find(k_xinput_class_drivers, sizeof(k_xinput_class_drivers) / sizeof(k_xinput_class_drivers[0]), vid, pid);
 }
 
+/* One GIP packet that is not an XInput report. Only 0x20 and 0x07 carry input. The others are status
+ * packets: a Series pad sends one every 20 s, and the generic layout read it as a stick move and
+ * D-pad presses (issue 4). */
+static int gip_parse(const pad_driver_t *drv, const uint8_t *data, size_t len, pad_state_t *st)
+{
+    if (data[0] == 0x20 && len >= GIP_INPUT_MIN) {
+        int parsed = usb_parse_input_report(drv->type, data, len, st);
+        /* Short reports have no Share byte: it must not land on the sticks */
+        if (parsed && (drv->flags & PADDRV_SHARE_END_26) && len >= GIP_INPUT_MIN + 26 && (data[len - 26] & 0x01))
+            st->buttons |= PAD_BTN_TOUCHPAD;
+        return parsed;
+    }
+    if (data[0] == 0x07 && len >= GIP_GUIDE_MIN) {
+        if (!usb_parse_input_report(drv->type, data, len, st)) pad_state_neutral(st);   /* Guide released */
+        return 1;
+    }
+    return 0;
+}
+
 int pad_driver_parse(const pad_driver_t *drv, const uint8_t *data, size_t len, pad_state_t *st)
 {
+    /* A first byte of 0x00 is XInput, not GIP: a clone using a GIP ID keeps working */
+    if ((drv->flags & PADDRV_GIP) && len > 0 && data[0] != 0x00) return gip_parse(drv, data, len, st);
+
     int parsed = drv->parse ? drv->parse(data, len, st) : usb_parse_input_report(drv->type, data, len, st);
     if (!parsed) parsed = usb_parse_input_report(CTRL_GENERIC_HID, data, len, st);
     return parsed;
