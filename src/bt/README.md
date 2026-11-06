@@ -18,6 +18,7 @@ The upstream stack shares the PS5's internal radio with the system. Here it runs
 - `host.c` and `host_int.h`: a small SDP server serves one Device ID record. A DS4 calling back opens SDP on the host first and hangs up when that is refused. On the shared radio, the system answered instead. `tests/test_bt_sdp.c` covers it.
 - `host.c` and `host.h`: `host_linked_count`, and a log line for reports the profile does not read.
 - `le.c` and `host_int.h`: log lines for what an LE pad offers, its first notifications, refused requests and its own requests to us.
+- `host.c` and `host.h`: an `on_report` event hands every input report and its parse result to `src/capture.c`, for recordings that host tests replay.
 - `host.c`: `l2_send` splits a frame bigger than the controller's buffer. It used to drop it, and a 27-byte LE buffer lost the SMP public key. `tests/test_bt_l2.c` covers it.
 - `le.c`: every readable HID characteristic is read before subscribing (`G_READS`). An Xbox Series pad subscribed without that stayed silent for 61 s.
 - `le.c` and `host.c`: the Classic search stops while an LE pad is being connected or set up, and a pad that did not connect rests 5 s before the next try. A CSR clone left an LE connection unanswered for a minute with the search running.

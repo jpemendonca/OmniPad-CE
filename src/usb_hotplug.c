@@ -6,6 +6,7 @@
 #include "log.h"
 #include "rest.h"
 #include "util.h"
+#include "capture.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -418,6 +419,10 @@ static void *usb_reader_worker(void *arg)
         if (n > 0) {
             consecutive_errors = 0;
             int parsed = pad_driver_parse(dev->drv, report, (size_t)n, &st);
+            if (capture_wants(dev->slot)) {
+                capture_add(CAPTURE_KIND_USB, dev->slot, dev->vid, dev->pid, report, n, parsed,
+                            st.buttons, st.lx, st.ly, st.rx, st.ry, st.l2, st.r2);
+            }
             if (parsed) {
                 st.conn_type = dev->conn_type;
                 st.vid = dev->vid;

@@ -38,6 +38,10 @@ typedef struct {
      * the raw 24-bit Bluetooth CoD; NULL for the eir buffer when none was
      * supplied. */
     void (*on_discover)(void *ud, const unsigned char addr[6], uint32_t cod);
+    /* OmniPad extension: every input report and what the profile made of it (result: the
+     * parse() value), before on_state. For recordings that host tests replay. NULL: none. */
+    void (*on_report)(void *ud, int slot, uint16_t vid, uint16_t pid, const unsigned char *rep, int len,
+                      int result, const pad_state *st);
 } host_events;
 
 /* OmniPad extension: if set to a non-zero MAC, host_pair() still runs the

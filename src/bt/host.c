@@ -1158,6 +1158,8 @@ void link_input(host_t *h, link_t *l, const unsigned char *rep, int len)
         return;
     }
     if (r == PARSE_FULL) l->full = 1;
+    /* OmniPad: raw reports for recordings (src/capture.c) */
+    if (h->ev.on_report) h->ev.on_report(h->ev.ud, slot_of(h, l), l->vid, l->pid, rep, len, r, &l->st);
     if (r == PARSE_NONE && !l->announced && l->ready) {
         /* OmniPad: until the first report it reads, say what it left out */
         static int budget = 12;

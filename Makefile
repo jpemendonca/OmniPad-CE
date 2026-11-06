@@ -46,6 +46,10 @@ host-test:
 	./$(BUILD)/test_bt_l2
 	clang -O1 -Isrc -Isrc/bt tests/test_bt_profiles.c src/bt/bt_profiles.c src/bt/generic.c src/bt/crc32.c src/util.c src/log.c -o $(BUILD)/test_bt_profiles
 	./$(BUILD)/test_bt_profiles
+	clang -O1 -Isrc tests/test_capture.c src/capture.c src/util.c src/log.c -lpthread -o $(BUILD)/test_capture
+	./$(BUILD)/test_capture
+	clang -O1 -Isrc -Isrc/bt $(HOST_SRCS) tests/test_captures.c src/bt/bt_profiles.c src/bt/generic.c src/bt/crc32.c -o $(BUILD)/test_captures
+	./$(BUILD)/test_captures
 	clang -O1 -Isrc -Isrc/bt tests/test_bt_sim.c src/bt_sched.c src/bt/host.c src/bt/le.c src/bt/smp_crypto.c src/bt/bt_profiles.c src/bt/generic.c src/bt/crc32.c -o $(BUILD)/test_bt_sim
 	./$(BUILD)/test_bt_sim
 	clang -O1 -Isrc tests/test_remap.c src/remap.c src/util.c src/log.c -lpthread -o $(BUILD)/test_remap

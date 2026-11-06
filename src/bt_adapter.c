@@ -6,6 +6,7 @@
 #include "usb_hotplug.h"
 #include "pad_types.h"
 #include "log.h"
+#include "capture.h"
 #include "ui_text.h"
 #include "rest.h"
 #include "util.h"
@@ -921,6 +922,17 @@ static void on_state(void *ud, int hs, const pad_state *st)
     vpad_update(g_bt.pads[hs].vslot, &s);
 }
 
+static void on_report(void *ud, int hs, uint16_t vid, uint16_t pid, const unsigned char *rep, int len,
+                      int result, const pad_state *st)
+{
+    (void)ud;
+    if (hs < 0 || hs >= HOST_MAX_PADS) return;
+    int vslot = g_bt.pads[hs].vslot;
+    if (vslot < 0 || !capture_wants(vslot)) return;
+    capture_add(CAPTURE_KIND_BT, vslot, vid, pid, rep, len, result,
+                st->buttons, st->lx, st->ly, st->rx, st->ry, st->l2, st->r2);
+}
+
 static void on_disconnect(void *ud, int hs)
 {
     (void)ud;
@@ -950,6 +962,7 @@ static void run_host(bt_dev_t *d)
     ev.on_connect = on_connect;
     ev.on_state = on_state;
     ev.on_disconnect = on_disconnect;
+    ev.on_report = on_report;
     for (int i = 0; i < HOST_MAX_PADS; i++) g_bt.pads[i].vslot = -1;
 
     host_t *h = host_open(hci, BT_DB_PATH, &ev);

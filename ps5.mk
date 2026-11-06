@@ -18,7 +18,7 @@ SRCS := src/util.c src/log.c src/ui_text.c src/profiles.c \
         src/bt_rtl.c src/bt_sched.c src/bt_adapter.c src/launcher.c src/rest.c \
         src/bt/host.c src/bt/le.c src/bt/smp_crypto.c src/bt/bt_profiles.c src/bt/generic.c src/bt/crc32.c \
         src/shellui_inject.c src/ps5_vpad.c \
-        src/web.c src/tcp_stream.c src/main.c
+        src/web.c src/tcp_stream.c src/capture.c src/main.c
 
 OBJS := $(patsubst src/%.c,$(BUILD)/%.o,$(SRCS))
 

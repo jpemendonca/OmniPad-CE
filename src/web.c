@@ -10,6 +10,7 @@
 #include "rest.h"
 #include "bt_adapter.h"
 #include "util.h"
+#include "capture.h"
 #include "web_index.h"  /* generated from web/index.html by tools/embed_web.py */
 
 #include <stdio.h>
@@ -157,6 +158,24 @@ static void query_decode(const char *in, char *out, size_t n)
         }
     }
     out[len] = 0;
+}
+
+/* The number after `key` on the request line, or def */
+static int query_int(const char *req, const char *key, int def)
+{
+    const char *p = strstr(req, key);
+    const char *eol = strstr(req, "\r\n");
+    if (!p || (eol && p > eol)) return def;
+    return atoi(p + strlen(key));
+}
+
+static void reply_json(int cfd, const char *body)
+{
+    char res[256];
+    int n = snprintf(res, sizeof(res),
+        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n"
+        "Content-Length: %zu\r\nConnection: close\r\n\r\n%s", strlen(body), body);
+    write(cfd, res, (size_t)n);
 }
 
 static void handle_client(int cfd)
@@ -362,6 +381,43 @@ static void handle_client(int cfd)
         int sfd = open("/data/anypad/stop", O_WRONLY | O_CREAT | O_TRUNC, 0666);
         if (sfd >= 0) close(sfd);
         return;
+    }
+    /* Recordings for tools/record_pads.py: no control on the page */
+    else if (strncmp(req, "POST /api/capture_start", 23) == 0) {
+        int slot = query_int(req, "slot=", -1);
+        int ok = slot >= 0 && slot < MAX_SLOTS && capture_start(slot, query_int(req, "seconds=", 120));
+        reply_json(cfd, ok ? "{\"status\":\"recording\"}" : "{\"status\":\"failed\"}");
+    }
+    else if (strncmp(req, "POST /api/capture_stop", 22) == 0) {
+        capture_stop();
+        reply_json(cfd, "{\"status\":\"stopped\"}");
+    }
+    else if (strncmp(req, "POST /api/capture_mark", 22) == 0) {
+        char label[64] = { 0 };
+        const char *p = strstr(req, "label=");
+        const char *eol = strstr(req, "\r\n");
+        if (p && (!eol || p < eol)) {
+            int i = 0;
+            for (p += 6; *p && *p != ' ' && *p != '&' && *p != '\r' && i < (int)sizeof(label) - 1; p++) label[i++] = *p;
+        }
+        capture_mark(label);
+        reply_json(cfd, "{\"status\":\"marked\"}");
+    }
+    else if (strncmp(req, "GET /api/capture", 16) == 0) {
+        static char capbuf[32768];  /* only the server thread uses it */
+        int next = 0, total = 0, state = 0;
+        int blen = capture_read(query_int(req, "since=", 0), capbuf, (int)sizeof(capbuf), &next, &total, &state);
+        res_len = snprintf(res, sizeof(res),
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/plain; charset=utf-8\r\n"
+            "Cache-Control: no-store\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Access-Control-Expose-Headers: X-Capture-Next, X-Capture-Total, X-Capture-State\r\n"
+            "X-Capture-Next: %d\r\nX-Capture-Total: %d\r\nX-Capture-State: %d\r\n"
+            "Content-Length: %d\r\n"
+            "Connection: close\r\n\r\n", next, total, state, blen);
+        write(cfd, res, (size_t)res_len);
+        if (blen > 0) write_all(cfd, capbuf, (size_t)blen);
     }
     else if (strncmp(req, "GET /api/log", 12) == 0) {
         int lfd = open("/data/anypad/anypad.log", O_RDONLY);
