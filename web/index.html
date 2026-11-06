@@ -1551,7 +1551,7 @@
     /* ---------- report: sent only when the person presses Send (omnipad-diagnostics CONTRACT.md) ---------- */
     const REPORT_API = 'https://omnipad-diagnostics.omnipad-diagnostics.workers.dev/v1/reports';
     const REPORT_LOG_MAX = 200 * 1024, REPORT_MSG_MAX = 2048, REPORT_TRIES = 3;
-    let reportBusy = false;
+    let reportBusy = false, reportDone = false;   /* sent: Send stays off until the panel is opened again */
     const utf8 = new TextEncoder();
 
     function byteLen(s) { return utf8.encode(s).length; }
@@ -1596,6 +1596,8 @@
     }
     function openReport() {
       $('reportBox').classList.add('show');
+      reportDone = false;
+      $('btnReportSend').disabled = false;
       reportSay('', '');
       $('reportBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
       $('reportMsg').focus({ preventScroll: true });
@@ -1608,7 +1610,7 @@
         + log.split('\n').slice(-60).join('\n');
     }
     async function sendReport() {
-      if (reportBusy) return;
+      if (reportBusy || reportDone) return;
       reportBusy = true;
       $('btnReportSend').disabled = true;
       reportSay(T.reportSending, '');
@@ -1629,6 +1631,7 @@
           try { data = await res.json(); } catch (e) { /* no JSON body */ }
           if (res.status === 201 && data.code) {
             reportSay(T.reportSent(data.code), 'ok');
+            reportDone = true;
             $('reportMsg').value = '';
             return;
           }
@@ -1644,7 +1647,7 @@
         reportSay(T.reportFail, 'bad');   /* no internet, or the browser blocked the request */
       } finally {
         reportBusy = false;
-        $('btnReportSend').disabled = false;
+        $('btnReportSend').disabled = reportDone;
       }
     }
 
