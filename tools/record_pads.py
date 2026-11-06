@@ -195,7 +195,10 @@ def main():
         print("The buffer filled before the end: the recording is shorter than the script.")
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     name = "".join(c if c.isalnum() else "_" for c in pad["name"].lower()).strip("_")
-    path = OUT_DIR / f"{pad['vid']:04x}_{pad['pid']:04x}_{LINKS.get(pad['conn'], 'x')}_{name}.txt"
+    stem = f"{pad['vid']:04x}_{pad['pid']:04x}_{LINKS.get(pad['conn'], 'x')}_{name}"
+    path, n = OUT_DIR / f"{stem}.txt", 2
+    while path.exists():  # an adapter can show the same ID as a pad: never overwrite a recording
+        path, n = OUT_DIR / f"{stem}_{n}.txt", n + 1
     header = [f"# {pad['name']} {pad['vid']:04x}:{pad['pid']:04x} over {LINKS.get(pad['conn'], '?')}",
               f"# recorded {date.today()} on OmniPad {info['version']} build {info['build']}, {reports} reports"]
     path.write_text("\n".join(header + lines) + "\n", encoding="utf-8")
