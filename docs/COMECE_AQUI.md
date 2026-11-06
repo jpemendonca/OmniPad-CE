@@ -53,7 +53,9 @@ Ninguém precisa fazer isso: o controle já funciona como está. Se o seu não t
 | O DS4 pareado não volta só com PS | Coloque em pareamento de novo. Ele conecta e fica salvo outra vez. |
 | Depois do repouso, o controle pede o perfil de novo | É o esperado. No repouso o OmniPad solta os controles, como o PS5 faz com o DualSense. Uns 10 segundos depois de acordar, os controles USB voltam pedindo o perfil. Os controles Bluetooth voltam quando você aperta PS. |
 
-Se ainda assim não der certo, abra o painel e toque em **Copiar diagnóstico**. Ele copia a versão, os controles, o Bluetooth e o fim do log num texto só. Cole no grupo ou numa [issue](https://github.com/jpemendonca/OmniPad-CE/issues) pra pedir ajuda.
+Se ainda assim não der certo, abra o painel e toque em **Algum problema? Envie um relatório**, no canto de cima. Conte o que está acontecendo, se quiser, e toque em **Enviar**. O log e o diagnóstico vão direto pro desenvolvedor, e aparece um código curto. Cite esse código no grupo, no Reddit ou numa [issue](https://github.com/jpemendonca/OmniPad-CE/issues). Nada sai do console sem você apertar Enviar, os endereços MAC são cortados e o relatório é apagado em 90 dias.
+
+Se preferir, toque em **Copiar diagnóstico**: ele copia a versão, os controles, o Bluetooth e o fim do log num texto só, pra colar onde você for pedir ajuda.
 
 ## Iniciar sozinho
 
