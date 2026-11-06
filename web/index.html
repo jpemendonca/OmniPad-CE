@@ -1524,7 +1524,7 @@
       const lines = [`OmniPad ${d.version || '?'} build ${d.build || '?'}, up ${fmtDur(d.uptime_ms)}`];
       d.slots.forEach((s, i) => lines.push(`P${i + 2}: ` + (s.status === ST_FREE ? 'free'
         : `${s.name} | ${connName(s.conn)} | ${T.st[s.status] || s.status} | ${hex4(s.vid)}:${hex4(s.pid)} | last report ${fmtDur(s.input_age_ms)} | battery ${s.battery_known ? s.battery + '%' : 'not reported'}`)));
-      Object.keys(remapRules).forEach(k => lines.push(`Remap ${k}: ${remapRules[k]}`));
+      Object.keys(remapRules).forEach(k => lines.push(`Remap ${k.split(':').map(hex4).join(':')}: ${remapRules[k]}`));
       if (d.bt) lines.push(`Bluetooth: ${d.bt.state} | ${d.bt.adapter || '-'} | ${d.bt.address || '-'} | paired ${d.bt.paired} | connected ${d.bt.pads.length}`);
       lines.push(`Browser: ${navigator.userAgent}`);
       return lines;
