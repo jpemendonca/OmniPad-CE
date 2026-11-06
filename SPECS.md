@@ -100,8 +100,9 @@ Reference for checking working controllers on the PS5, measured from `/api/state
 | Controller | Link | Adapter | Reports/s | Injections/s | Measured |
 |---|---|---|---|---|---|
 | DualShock 4 | Bluetooth | CSR8510 clone (Baseus) | 97 | 240 | 2026-11-02 |
+| DualShock 4 | USB | 8BitDo USB Wireless Adapter 2 (`054c:05c4`) | 125 | 241 | 2026-11-05 |
 
-Add a row when a controller gets its first measurement. `tools/check_pads.py` reads this table, so keep its columns.
+The 8BitDo Ultimate 2C has no row: it reports only when something changes, so its rate follows the hands. Add a row when a controller gets its first measurement. `tools/check_pads.py` reads this table, so keep its columns.
 
 ## Secrets and config
 
