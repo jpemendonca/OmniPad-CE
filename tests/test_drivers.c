@@ -49,10 +49,12 @@ static const expect_t k_expect[] = {
     { 0x045e, 0x0719, 1, "Xbox 360 Wireless Receiver",     CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 60000, 0, 0 },
     { 0x054c, 0x09cc, 0, "Sony DualShock 4 (USB)",         CTRL_SONY_DS4,    CONN_USB_WIRED,      0,     0, 0 },
     { 0x054c, 0x0268, 0, "Sony DualShock 3 (USB)",         CTRL_SONY_DS3,    CONN_USB_WIRED,      0,     0, 0 },
-    { 0x057e, 0x2009, 0, "Nintendo Switch Pro (USB)",      CTRL_NINTENDO_SWITCH_PRO, CONN_USB_WIRED, 0, 0, 0 },
+    { 0x057e, 0x2009, 0, "Nintendo Switch Pro (USB)",      CTRL_NINTENDO_SWITCH_PRO, CONN_USB_WIRED, 0, PADDRV_SLOW_START, 0 },
+    { 0x0738, 0x8838, 0, "Mad Catz FightStick TE (PS3)",   CTRL_GENERIC_HID, CONN_USB_WIRED,      0,     0, 0 },
+    { 0x0738, 0x1234, 0, "Generic USB HID Gamepad",        CTRL_GENERIC_HID, CONN_USB_WIRED,      0,     0, 0 },
     { 0x2dc8, 0x3012, 0, "8BitDo Adapter/Pad (USB)",       CTRL_8BITDO_ADAPTER, CONN_USB_DONGLE_24G, 60000, 0, 0 },
     { 0x2dc8, 0x310a, 0, "8BitDo Ultimate 2C",             CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 0,     PADDRV_XINPUT_LED_OUT, 0 },
-    { 0x2dc8, 0x310b, 0, "8BitDo Ultimate 2",              CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 60000, PADDRV_XINPUT_LED_OUT, 0 },
+    { 0x2dc8, 0x310b, 0, "8BitDo Ultimate 2",              CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 0,     PADDRV_XINPUT_LED_OUT, 0 },
     { 0x2dc8, 0x3109, 1, "XInput Compatible Controller",   CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 60000, PADDRV_XINPUT_LED_OUT, 0 },
     { 0x0079, 0x0006, 0, "Generic USB HID Gamepad",        CTRL_GENERIC_HID, CONN_USB_WIRED,      0,     0, 0 },
     { 0xbeef, 0x0001, 1, "XInput Compatible Controller",   CTRL_XBOX_XINPUT, CONN_USB_WIRED,      0,     PADDRV_XINPUT_LED_OUT, 0 },
@@ -85,6 +87,8 @@ static void test_driver_table(void)
         { 0x0e8d, 0x3603 },  /* PS5 internal Bluetooth radio */
         { 0x0781, 0x5583 },  /* SanDisk flash drive */
         { 0x054c, 0x0b8f },  /* Sony device that is not a pad */
+        { 0x1038, 0x12cd },  /* SteelSeries Arctis Nova Pro headset (issue 7) */
+        { 0x1532, 0x0527 },  /* Razer headset: same risk, same vendor rule removed */
     };
     for (size_t i = 0; i < sizeof(k_not_pads) / sizeof(k_not_pads[0]); i++) {
         CHECK(pad_driver_lookup(k_not_pads[i][0], k_not_pads[i][1]) == NULL,
@@ -257,9 +261,68 @@ static void test_gip_shareByte_onlyOnTheSeriesCable(void)
     CHECK(short_report == PAD_BTN_CROSS, "a short report has no Share byte, got 0x%08x", short_report);
 }
 
+/* ---- 4. Mad Catz FightStick TE (PS3) ---- */
+
+static int parse_stick(const char *hex, pad_state_t *st)
+{
+    uint8_t buf[32];
+    size_t len = parse_hex(hex, buf, sizeof(buf));
+    pad_state_neutral(st);
+    return pad_driver_parse(pad_driver_lookup(0x0738, 0x8838), buf, len, st);
+}
+
+static void test_ps3_stick_atRest_pressesNothing(void)
+{
+    /* arrange: bytes 1 and 2 are the ones report BVUV showed; the generic layout read them as a stick */
+    pad_state_t st;
+
+    /* act */
+    int parsed = parse_stick("00 00 08 80 80 80 80 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00", &st);
+
+    /* assert */
+    CHECK(parsed && st.buttons == 0, "nothing is held at rest, got 0x%08x", st.buttons);
+    CHECK(st.lx == 128 && st.ly == 128 && st.rx == 128 && st.ry == 128, "sticks centred, got %d,%d %d,%d", st.lx, st.ly, st.rx, st.ry);
+    CHECK(st.l2 == 0 && st.r2 == 0, "triggers released");
+}
+
+static void test_ps3_stick_buttonsAndHat_areRead(void)
+{
+    /* arrange */
+    pad_state_t st;
+
+    /* act: cross, then R2 + PS, then the hat down-left */
+    parse_stick("02 00 08 80 80 80 80", &st);
+    uint32_t cross = st.buttons;
+    parse_stick("80 10 08 80 80 80 80", &st);
+    uint32_t r2_ps = st.buttons;
+    int r2 = st.r2;
+    parse_stick("00 00 05 80 80 80 80", &st);
+    uint32_t hat = st.buttons;
+
+    /* assert */
+    CHECK(cross == PAD_BTN_CROSS, "cross, got 0x%08x", cross);
+    CHECK(r2_ps == (PAD_BTN_R2 | PAD_BTN_PS) && r2 == 255, "R2 and PS, got 0x%08x", r2_ps);
+    CHECK(hat == (PAD_DPAD_DOWN | PAD_DPAD_LEFT), "hat down-left, got 0x%08x", hat);
+}
+
+static void test_ps3_stick_shortReport_isNotInput(void)
+{
+    /* arrange */
+    pad_state_t st;
+
+    /* act */
+    int parsed = parse_stick("00 00 08", &st);
+
+    /* assert */
+    CHECK(!parsed, "a short report must not fall through to the generic layout");
+}
+
 int main(void)
 {
     test_driver_table();
+    test_ps3_stick_atRest_pressesNothing();
+    test_ps3_stick_buttonsAndHat_areRead();
+    test_ps3_stick_shortReport_isNotInput();
     test_gip_statusPacket_isNotInput();
     test_gip_input_stillDecoded();
     test_gip_guide_pressAndRelease();

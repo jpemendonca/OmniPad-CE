@@ -6,14 +6,39 @@
 #define GIP_INPUT_MIN 18       /* bytes usb_parse_input_report reads from a GIP 0x20 report */
 #define GIP_GUIDE_MIN 5        /* and from a GIP 0x07 packet */
 
+/* PS3 arcade sticks have no report id: two bytes of buttons, the hat (8 = centred), four stick bytes.
+ * The generic layout read the centred hat as a stick and its bytes as held buttons (report BVUV). */
+static int parse_ps3_stick(const uint8_t *data, size_t len, pad_state_t *st)
+{
+    static const uint32_t k_first[8] = { PAD_BTN_SQUARE, PAD_BTN_CROSS, PAD_BTN_CIRCLE, PAD_BTN_TRIANGLE,
+                                         PAD_BTN_L1, PAD_BTN_R1, PAD_BTN_L2, PAD_BTN_R2 };
+    static const uint32_t k_second[6] = { PAD_BTN_SHARE, PAD_BTN_OPTIONS, PAD_BTN_L3, PAD_BTN_R3,
+                                          PAD_BTN_PS, PAD_BTN_TOUCHPAD };
+    static const uint32_t k_hat[8] = { PAD_DPAD_UP, PAD_DPAD_UP | PAD_DPAD_RIGHT, PAD_DPAD_RIGHT,
+                                       PAD_DPAD_DOWN | PAD_DPAD_RIGHT, PAD_DPAD_DOWN,
+                                       PAD_DPAD_DOWN | PAD_DPAD_LEFT, PAD_DPAD_LEFT, PAD_DPAD_UP | PAD_DPAD_LEFT };
+    if (len < 7) return 0;
+    pad_state_neutral(st);
+    for (int i = 0; i < 8; i++) if (data[0] & (1u << i)) st->buttons |= k_first[i];
+    for (int i = 0; i < 6; i++) if (data[1] & (1u << i)) st->buttons |= k_second[i];
+    if (data[2] < 8) st->buttons |= k_hat[data[2]];
+    st->lx = data[3];
+    st->ly = data[4];
+    st->rx = data[5];
+    st->ry = data[6];
+    if (st->buttons & PAD_BTN_L2) st->l2 = 255;
+    if (st->buttons & PAD_BTN_R2) st->r2 = 255;
+    return 1;
+}
+
 /* Recognised by VID/PID. Exact entries must come before the vendor-wide (pid 0) entry of
  * the same vendor: the first match wins. */
 static const pad_driver_t k_drivers[] = {
     /* Nintendo */
-    { 0x057e, 0x2009, "Nintendo Switch Pro (USB)",      CTRL_NINTENDO_SWITCH_PRO, WIRED, 0, 0, NULL, NULL },
-    { 0x057e, 0x2017, "Nintendo NSO Controller (USB)",  CTRL_NINTENDO_SWITCH_PRO, WIRED, 0, 0, NULL, NULL },
-    { 0x057e, 0x2019, "Nintendo NSO Controller (USB)",  CTRL_NINTENDO_SWITCH_PRO, WIRED, 0, 0, NULL, NULL },
-    { 0x057e, 0x201a, "Nintendo NSO Controller (USB)",  CTRL_NINTENDO_SWITCH_PRO, WIRED, 0, 0, NULL, NULL },
+    { 0x057e, 0x2009, "Nintendo Switch Pro (USB)",      CTRL_NINTENDO_SWITCH_PRO, WIRED, 0, PADDRV_SLOW_START, NULL, NULL },
+    { 0x057e, 0x2017, "Nintendo NSO Controller (USB)",  CTRL_NINTENDO_SWITCH_PRO, WIRED, 0, PADDRV_SLOW_START, NULL, NULL },
+    { 0x057e, 0x2019, "Nintendo NSO Controller (USB)",  CTRL_NINTENDO_SWITCH_PRO, WIRED, 0, PADDRV_SLOW_START, NULL, NULL },
+    { 0x057e, 0x201a, "Nintendo NSO Controller (USB)",  CTRL_NINTENDO_SWITCH_PRO, WIRED, 0, PADDRV_SLOW_START, NULL, NULL },
 
     /* Sony */
     { 0x054c, 0x05c4, "Sony DualShock 4 (USB)",         CTRL_SONY_DS4, WIRED, 0, 0, NULL,
@@ -50,12 +75,14 @@ static const pad_driver_t k_drivers[] = {
     /* An Ultimate 2C on this ID sent nothing without the player LED, like 2dc8:3106 (issue 3). Its
      * receiver shows as 2dc8:301c, not claimed, until the pad is on. No idle rule, as on the 3106. */
     { 0x2dc8, 0x310a, "8BitDo Ultimate 2C",             CTRL_XBOX_XINPUT, DONGLE, 0, PADDRV_XINPUT_LED_OUT, NULL, NULL },
-    /* Sent nothing on its dongle without the player LED either (issue 3) */
-    { 0x2dc8, 0x310b, "8BitDo Ultimate 2",              CTRL_XBOX_XINPUT, DONGLE, IDLE_DONGLE_MS, PADDRV_XINPUT_LED_OUT, NULL, NULL },
+    /* Sent nothing on its dongle without the player LED either (issue 3). It reports only on change,
+     * so the idle rule dropped it during cutscenes (reported on Reddit, 8 Nov). */
+    { 0x2dc8, 0x310b, "8BitDo Ultimate 2",              CTRL_XBOX_XINPUT, DONGLE, 0, PADDRV_XINPUT_LED_OUT, NULL, NULL },
     { 0x2dc8, 0x2100, "8BitDo Adapter/Pad (USB)",       CTRL_8BITDO_ADAPTER, DONGLE, IDLE_DONGLE_MS, 0, NULL, NULL },
     { 0x2dc8, 0x3012, "8BitDo Adapter/Pad (USB)",       CTRL_8BITDO_ADAPTER, DONGLE, IDLE_DONGLE_MS, 0, NULL, NULL },
 
-    /* Generic PC HID pads (DragonRise, Betop, Retro-Bit, Mayflash, PDP, Razer...) */
+    /* Generic PC HID pads (DragonRise, Betop, Retro-Bit, Mayflash, PDP...). Not SteelSeries or Razer:
+     * they also make headsets, and an Arctis Nova Pro (1038:12cd) was taken as a pad (issue 7). */
     { 0x0079, 0, "Generic USB HID Gamepad", CTRL_GENERIC_HID, WIRED, 0, 0, NULL, NULL },
     { 0x0810, 0, "Generic USB HID Gamepad", CTRL_GENERIC_HID, WIRED, 0, 0, NULL, NULL },
     { 0x11ff, 0, "Generic USB HID Gamepad", CTRL_GENERIC_HID, WIRED, 0, 0, NULL, NULL },
@@ -63,9 +90,8 @@ static const pad_driver_t k_drivers[] = {
     { 0x20d6, 0, "Generic USB HID Gamepad", CTRL_GENERIC_HID, WIRED, 0, 0, NULL, NULL },
     { 0x24c6, 0, "Generic USB HID Gamepad", CTRL_GENERIC_HID, WIRED, 0, 0, NULL, NULL },
     { 0x146b, 0, "Generic USB HID Gamepad", CTRL_GENERIC_HID, WIRED, 0, 0, NULL, NULL },
+    { 0x0738, 0x8838, "Mad Catz FightStick TE (PS3)",   CTRL_GENERIC_HID, WIRED, 0, 0, parse_ps3_stick, NULL },
     { 0x0738, 0, "Generic USB HID Gamepad", CTRL_GENERIC_HID, WIRED, 0, 0, NULL, NULL },
-    { 0x1038, 0, "Generic USB HID Gamepad", CTRL_GENERIC_HID, WIRED, 0, 0, NULL, NULL },
-    { 0x1532, 0, "Generic USB HID Gamepad", CTRL_GENERIC_HID, WIRED, 0, 0, NULL, NULL },
 };
 
 /* Not in the table above, but the USB interface descriptor says XInput (class 0xFF/0x5D).
@@ -125,7 +151,10 @@ int pad_driver_parse(const pad_driver_t *drv, const uint8_t *data, size_t len, p
     /* A first byte of 0x00 is XInput, not GIP: a clone using a GIP ID keeps working */
     if ((drv->flags & PADDRV_GIP) && len > 0 && data[0] != 0x00) return gip_parse(drv, data, len, st);
 
-    int parsed = drv->parse ? drv->parse(data, len, st) : usb_parse_input_report(drv->type, data, len, st);
+    /* A driver's own parser knows its reports: what it refuses is not input */
+    if (drv->parse) return drv->parse(data, len, st);
+
+    int parsed = usb_parse_input_report(drv->type, data, len, st);
     if (!parsed) parsed = usb_parse_input_report(CTRL_GENERIC_HID, data, len, st);
     return parsed;
 }

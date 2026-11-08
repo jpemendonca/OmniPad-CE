@@ -114,6 +114,8 @@ GitHub releases on `jpemendonca/OmniPad-CE`. Assets: `OmniPad-CE.elf` and the Re
 
 ## Decisions
 
+- **2026-11-08: a Switch-mode USB device starts on its reader thread** (`PADDRV_SLOW_START`). An 8BitDo adapter in that mode took 15 s to answer the handshake, which stopped the main loop, read as rest mode and released every pad. Other drivers keep their start-up path.
+- **2026-11-08: SteelSeries and Razer are no longer pads by vendor.** A SteelSeries headset was taken as a controller. XInput pads of these brands still match through their interface descriptor.
 - **2026-11-06: reports go from the dashboard's browser to the omnipad-diagnostics API** (Cloudflare Workers + D1, contract in that repo's `CONTRACT.md`). The payload has no TLS, so the page posts with `fetch`. It sends the end of the log (up to 200 KB, read in `/api/log` pages), the diagnostics text, version, build, firmware and an optional message, and only when the person presses Send. On a 413 it halves the log and tries again. No contact field: the message is free text.
 
 - **2026-10-22: one IN transfer kept queued per USB pad.** Restarting a timed-out transfer every 15 ms lost presses from pads that report only on change.

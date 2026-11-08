@@ -38,6 +38,7 @@ typedef struct {
     pad_conn_type_t       conn_type;
     pthread_t             thread;
     volatile int          stop_thread;
+    volatile int          starting;     /* its reader thread is still running the handshake */
     long                  idle_release_ms;  /* free the slot after this long without input; 0 = never */
 
 #ifdef __PROSPERO__
@@ -356,6 +357,22 @@ static void *usb_reader_worker(void *arg)
     log_line("usb_hotplug: Reader thread started for slot %d (%s on %s)",
              dev->slot, dev->name, dev->dev_path);
 
+    if (dev->starting) {
+        /* An 8BitDo adapter in Switch mode left each of these requests to time out: 15 s on the main
+         * loop stopped every pad and read as rest mode (issue 11). Only this pad waits here. */
+        usb_init_controller_handshake(dev->fd, dev->type);
+#ifdef __PROSPERO__
+        if (!usb_fs_setup_device(dev)) {
+            log_line("usb_hotplug: Failed to setup usb_fs for %s, closing", dev->dev_path);
+            dev->stop_thread = 1;
+            dev->starting = 0;
+            return NULL;
+        }
+#endif
+        vpad_add(dev->slot, dev->conn_type, dev->name);
+        dev->starting = 0;
+    }
+
 #ifdef __PROSPERO__
     int is_xbox_one = (dev->drv->flags & PADDRV_GIP) != 0;
     int is_genuine_x360 = (dev->drv->flags & PADDRV_X360_KEEPALIVE) != 0;
@@ -611,7 +628,8 @@ static void probe_usb_devices(void)
             log_line("usb_hotplug: Claiming %s on %s (slot %d)", ctrl_name, path, slot);
 
             /* Perform controller-specific wake-up / LED handshake */
-            usb_init_controller_handshake(fd, ctype);
+            int slow_start = (drv->flags & PADDRV_SLOW_START) != 0;
+            if (!slow_start) usb_init_controller_handshake(fd, ctype);
 
             usb_slot_device_t *sdev = &g_usb_hotplug.devices[slot];
             memset(sdev, 0, sizeof(usb_slot_device_t));
@@ -625,9 +643,10 @@ static void probe_usb_devices(void)
             sdev->type = ctype;
             sdev->name = ctrl_name;
             sdev->stop_thread = 0;
+            sdev->starting = slow_start;
 
 #ifdef __PROSPERO__
-            if (!usb_fs_setup_device(sdev)) {
+            if (!slow_start && !usb_fs_setup_device(sdev)) {
                 log_line("usb_hotplug: Failed to setup usb_fs for %s, closing", path);
                 close(fd);
                 memset(sdev, 0, sizeof(usb_slot_device_t));
@@ -646,14 +665,14 @@ static void probe_usb_devices(void)
                 if (drv->idle_release_ms) {
                     log_line("usb_hotplug: slot %d idle release after %lds without input", slot, drv->idle_release_ms / 1000);
                 } else {
-                    log_line("usb_hotplug: slot %d idle release off (pad announces power-off)", slot);
+                    log_line("usb_hotplug: slot %d idle release off", slot);
                 }
             }
             if (drv->verified) {
                 log_line("usb_hotplug: slot %d driver '%s' verified on %s", slot, drv->name, drv->verified);
             }
 
-            vpad_add(slot, sdev->conn_type, ctrl_name);
+            if (!slow_start) vpad_add(slot, sdev->conn_type, ctrl_name);
             pthread_create(&sdev->thread, NULL, usb_reader_worker, sdev);
         }
     }
@@ -693,7 +712,8 @@ void usb_hotplug_poll(long now)
 
     pthread_mutex_lock(&g_usb_hotplug.lock);
     for (int i = 0; i < MAX_SLOTS; i++) {
-        if (g_usb_hotplug.devices[i].active) {
+        /* Still starting: joining its thread now would stop the main loop for what is left of its wait */
+        if (g_usb_hotplug.devices[i].active && !g_usb_hotplug.devices[i].starting) {
             if (access(g_usb_hotplug.devices[i].dev_path, F_OK) != 0 ||
                 g_usb_hotplug.devices[i].stop_thread) {
                 log_line("usb_hotplug: Controller disconnected from %s (slot %d)",
