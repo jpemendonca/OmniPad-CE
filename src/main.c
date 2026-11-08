@@ -82,7 +82,6 @@ int main(int argc, char **argv)
     log_line("==================================================");
     log_line("%s v%s (Build %d)", ANYPAD_NAME, ANYPAD_VERSION, ANYPAD_BUILD);
     log_line("%s", ANYPAD_DESCRIPTION);
-    log_line("Environment: FW 13.60 (kstuff-1.13-fpkg-dr-test5 / shadowmountplus v1.7 Beta 4)");
     log_line("==================================================");
 
     /* Signal any running previous instance to terminate */
