@@ -48,7 +48,7 @@ DAMAGE.
 
 ## Media tab icon
 
-The controller glyph in `assets/launcher/icon0.png` is "sports_esports" from [Material Symbols](https://github.com/google/material-design-icons) by Google, under the Apache License 2.0.
+The controller glyph in `assets/launcher/icon0.png` and in the favicon of `web/index.html` is "sports_esports" from [Material Symbols](https://github.com/google/material-design-icons) by Google, under the Apache License 2.0.
 
 ## Bluetooth host
 
