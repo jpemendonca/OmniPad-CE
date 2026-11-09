@@ -89,12 +89,12 @@ Any USB device with a Bluetooth HCI interface (class `E0/01/01`) is used, except
 |---|---|
 | **Sony DualShock 4** (CUH-ZCT1, Bluetooth id `054c:09cc`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting by pressing PS |
 | **Xbox Series X\|S** (Bluetooth LE, `045e:0b13`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting when switched on. Its battery is not read yet |
-| Nintendo Joy-Con (`057e:2006`, `057e:2007`), always the two together | 🟡 Joined and played once on a PS5. Still being tested on generic adapters |
+| Nintendo Joy-Con (`057e:2006`, `057e:2007`), always the two together | 🟡 Joined with a profile picked on a PS5, on a generic CSR adapter. Still being tested |
 | Switch Pro, 8BitDo, generic Bluetooth HID | 🟡 Profiles come from AnyPad, not tested through the adapter |
 
 ### Using it
 
-- **Joy-Cons:** OmniPad takes them only as a pair, as one controller. Hold the sync button on one until the notification asks for the other, then hold the sync button on the other. The profile screen opens when both are connected. Turning one off ends the controller, and the other one waits again. Map buttons treats the pair as model `057e:2008`. Motion is not sent yet.
+- **Joy-Cons:** OmniPad takes them only as a pair, as one controller. Hold the sync button on one until the notification asks for the other, then hold the sync button on the other. The profile screen opens when both are connected. Buttons follow the position on a PS5 pad: B is Cross, A is Circle, Y is Square and X is Triangle, so B confirms. Turning one off ends the controller, and the other one waits again. Map buttons treats the pair as model `057e:2008`. Motion is not sent yet.
 - **New controller:** put it in pairing mode (DS4: hold Share + PS). While no Bluetooth pad is connected, OmniPad searches all the time. With one connected, it looks for 3.8 s every 20 s. The dashboard's **Pair controller** button opens a 2-minute search as well.
 - **Paired controller:** press PS. It calls the adapter and reconnects. The keys are stored in `/data/anypad/omnipad_bt.db`.
 - **Forget paired pads:** dashboard, **Forget paired**.
