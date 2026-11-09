@@ -8,11 +8,13 @@ Na página de [Releases](https://github.com/jpemendonca/OmniPad-CE/releases), ba
 
 ## 2. Mande pro PS5 e inicie
 
-Use o loader de payloads que você já usa, como o PLK Payload Manager.
+Serve o loader de payloads que você já usa. Só mandar o arquivo não basta: se você não iniciar, o OmniPad não roda e nada acontece. Os jeitos mais comuns:
 
-1. Mande o `OmniPad-CE.elf` pro PS5.
-2. **Inicie o payload.** No PLK, depois de mandar o arquivo, aperte **Launch**. Só mandar não basta: se você não iniciar, o OmniPad não roda e nada acontece.
-3. Confira o aviso no canto da tela: **"OmniPad ... ativo"**. Ele também mostra o endereço do painel. Sem esse aviso, o OmniPad não está rodando.
+- **Prospero Manager:** mande o `OmniPad-CE.elf` e clique em **Iniciar** (**Launch**).
+- **Pendrive e payload manager:** copie o `OmniPad-CE.elf` pra raiz de um pendrive formatado em exFAT, plugue no PS5 e inicie pelo seu payload manager.
+- **PLK Payload Manager:** mande o `OmniPad-CE.elf` e aperte **Launch**.
+
+Depois de iniciar, confira o aviso no canto da tela: **"OmniPad ... ativo"**. Ele também mostra o endereço do painel. Sem esse aviso, o OmniPad não está rodando.
 
 ## 3. Conecte o controle
 
@@ -49,7 +51,7 @@ Ninguém precisa fazer isso: o controle já funciona como está. Se o seu não t
 
 | O que acontece | O que fazer |
 |---|---|
-| Nenhum aviso do OmniPad apareceu | O payload não foi iniciado. Mande de novo e aperte **Launch** (ou o equivalente no seu loader). |
+| Nenhum aviso do OmniPad apareceu | O payload não foi iniciado. Mande de novo e clique em **Iniciar** ou **Launch** no seu loader. |
 | O painel não abre no celular | O celular e o PS5 precisam estar na mesma rede. Confira o IP no aviso de "ativo". |
 | O ícone da aba Mídia abre uma página de erro | O OmniPad não está rodando. Inicie o payload e abra o ícone de novo. |
 | Controle com fio não responde | Alguns cabos só carregam, sem passar dados. Teste outro cabo. |

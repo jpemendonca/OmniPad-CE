@@ -9,7 +9,7 @@ This project is developed by AI agents with one human, the maintainer, who tests
 Every change is judged against this path, as the user walks it:
 
 1. Download `OmniPad-CE.elf` from the GitHub release.
-2. Send it to the PS5 with a payload loader and **start it** (Launch in PLK). The notification "OmniPad … ativo/running" appears.
+2. Get it to the PS5 with a payload loader, by network or from an exFAT USB drive, and **start it** (Launch). The notification "OmniPad … ativo/running" appears.
 3. Connect a controller. For a USB cable or a 2.4 GHz dongle, plug it in. For Bluetooth, plug in a USB adapter and put the controller in pairing mode. The notification "… conectado/connected (jogador N)" appears.
 4. Press PS on that controller, pick a profile, and play.
 5. If something fails, open the dashboard: the OmniPad icon in the Media tab, or `http://<PS5_IP>:8105`. Then copy the diagnostics into a GitHub issue.

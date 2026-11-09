@@ -47,7 +47,12 @@ Full tables with VID:PID: [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md).
 ## Quick start
 
 1. Download `OmniPad-CE.elf` from [Releases](../../releases).
-2. Send it to the PS5 with your payload loader **and start it** (in PLK, press **Launch**). A notification "OmniPad ... ativo" confirms it is running. No notification means it did not start.
+2. Get it to the PS5 **and start it**. Sending the file is not enough. Any payload loader works, and these are common:
+   - **Prospero Manager:** send `OmniPad-CE.elf`, then press **Launch**.
+   - **USB drive and a payload manager:** copy `OmniPad-CE.elf` to the root of a USB drive formatted as exFAT, plug it into the PS5, and start it from your payload manager.
+   - **PLK Payload Manager:** send `OmniPad-CE.elf`, then press **Launch**.
+
+   A notification "OmniPad ... running" confirms it started. No notification means it did not start.
 3. Connect a controller:
    - **USB cable or 2.4 GHz dongle:** plug it into any USB port.
    - **Bluetooth:** plug a USB Bluetooth adapter into the PS5 (see below), then put the controller in pairing mode. On a DS4, hold Share + PS until the light flashes fast. OmniPad finds it by itself. Next time, pressing PS is enough.
