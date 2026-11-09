@@ -22,7 +22,11 @@ Use o loader de payloads que você já usa, como o PLK Payload Manager.
   2. Coloque o controle em pareamento. No DS4, segure **Share + PS** até a luz piscar rápido. No Xbox, segure o botão de parear, em cima do controle, até o logo piscar rápido.
   3. Em alguns segundos ele conecta. Da próxima vez, é só ligar o controle: **PS** no DS4, o botão **Xbox** no Xbox.
 
-- **Dois Joy-Cons como um controle só:** conecte os dois por Bluetooth. Em até 1 minuto depois de conectar o segundo, segure **L** no esquerdo e **R** no direito por 1 segundo. Aparece o aviso "Joy-Cons unidos". Pra separar, desligue um deles: o outro volta a funcionar sozinho, de lado.
+- **Dois Joy-Cons como um controle só:**
+  1. Com nenhum controle Bluetooth conectado, segure o botão de sincronizar do primeiro Joy-Con até ele conectar.
+  2. Ligue o segundo. Se ele já foi pareado, aperte uma seta ou um botão da frente uma vez. Se nunca foi, conecte ele primeiro, sozinho, e depois repita com o outro: os adaptadores "CSR 4.0" não procuram controle novo com outro conectado.
+  3. Aparece o aviso "segundo Joy-Con aguardando". Em até 1 minuto, segure **L** no esquerdo e **R** no direito por 1 segundo. Aparece "Joy-Cons unidos".
+  4. Escolha o perfil, se a tela estiver aberta. Pra dois jogadores, aperte outro botão no segundo Joy-Con, e ele vira um controle separado. Pra separar os unidos, desligue um deles: o outro volta a funcionar sozinho, de lado.
 
 O DualSense oficial continua sendo o jogador 1, sem fio, como sempre. O OmniPad não mexe no rádio Bluetooth do PS5.
 

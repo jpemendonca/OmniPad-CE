@@ -94,7 +94,7 @@ Any USB device with a Bluetooth HCI interface (class `E0/01/01`) is used, except
 
 ### Using it
 
-- **Two Joy-Cons as one controller:** within 60 s of connecting the second one, hold L on the left one and R on the right one for 1 s. They become one controller on the slot of the one that connected first. Turn one off to separate them: the other goes back to working alone, sideways. Map buttons treats the joined pair as its own model, `057e:2008`. Motion is not sent yet.
+- **Two Joy-Cons as one controller:** the second Joy-Con to connect waits, with no controller of its own on the console. Within 60 s, hold L on the left one and R on the right one for 1 s. They become one controller on the slot of the one that connected first. For two players, press any other button on the second one, or wait the 60 s: it becomes a separate controller, which still can join until the 60 s end. Turn one off to separate joined Joy-Cons: the other goes back to working alone, sideways. Map buttons treats the joined pair as its own model, `057e:2008`. Motion is not sent yet.
 - **New controller:** put it in pairing mode (DS4: hold Share + PS). While no Bluetooth pad is connected, OmniPad searches all the time. With one connected, it looks for 3.8 s every 20 s. The dashboard's **Pair controller** button opens a 2-minute search as well.
 - **Paired controller:** press PS. It calls the adapter and reconnects. The keys are stored in `/data/anypad/omnipad_bt.db`.
 - **Forget paired pads:** dashboard, **Forget paired**.

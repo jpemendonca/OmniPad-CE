@@ -45,6 +45,11 @@ int joycon_can_join(const joycon_t *a, const joycon_t *b, long now)
     return now - newest <= JOYCON_JOIN_WINDOW_MS;
 }
 
+int joycon_wait_over(const joycon_t *j, long now)
+{
+    return now - j->linked_at > JOYCON_JOIN_WINDOW_MS || (j->last.buttons & ~(uint32_t)(PAD_L2 | PAD_R2)) != 0;
+}
+
 /* The older one may already have a user's profile on its slot */
 int joycon_first_keeps_slot(const joycon_t *a, const joycon_t *b)
 {

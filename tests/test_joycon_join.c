@@ -280,6 +280,27 @@ static void test_joycon_can_join_secondOneJustConnected_joins(void)
     CHECK(joycon_first_keeps_slot(&l, &r), "the older one keeps its slot");
 }
 
+static void test_joycon_wait_over_timeAndButtons_endTheWait(void)
+{
+    /* arrange */
+    joycon_t j;
+    pad_state st;
+    pad_state_reset(&st);
+    joycon_start(&j, VID, PID_L, 1000);
+
+    /* act and assert */
+    CHECK(!joycon_wait_over(&j, 61000), "it can wait the whole time joining stays open");
+    CHECK(joycon_wait_over(&j, 61001), "then it takes a slot, for a second player");
+
+    st.buttons = PAD_L2 | PAD_R2;
+    joycon_track(&j, &st, 2000);
+    CHECK(!joycon_wait_over(&j, 2000), "the shoulders are how a player joins, or a finger next to them");
+
+    st.buttons = PAD_CROSS;
+    joycon_track(&j, &st, 3000);
+    CHECK(joycon_wait_over(&j, 3000), "any other button means someone plays with this one alone");
+}
+
 static void test_joycon_can_join_wrongPairs_doNotJoin(void)
 {
     /* arrange */
@@ -312,6 +333,7 @@ int main(void)
     test_joycon_can_join_oneLetGo_doesNotJoin();
     test_joycon_can_join_twoPlayersLongAfterConnecting_doesNotJoin();
     test_joycon_can_join_secondOneJustConnected_joins();
+    test_joycon_wait_over_timeAndButtons_endTheWait();
     test_joycon_can_join_wrongPairs_doNotJoin();
     printf("test_joycon_join: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;

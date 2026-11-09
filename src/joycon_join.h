@@ -14,6 +14,7 @@ typedef enum { JOYCON_NONE, JOYCON_LEFT, JOYCON_RIGHT } joycon_side_t;
 typedef struct {
     joycon_side_t side;
     int       mate;         /* host slot of the other half, -1: alone */
+    int       waiting;      /* connected with no slot of its own, in case it joins */
     long      linked_at;    /* when it connected */
     long      held_since;   /* when its L or R went down; 0: up */
     pad_state last;         /* its latest report, as the profile reads it: held sideways */
@@ -30,6 +31,10 @@ int joycon_can_pair(const joycon_t *a, const joycon_t *b);
 
 /* 1 if a and b can pair, both hold their L or R long enough, and the newer one connected recently. */
 int joycon_can_join(const joycon_t *a, const joycon_t *b, long now);
+
+/* 1 if a Joy-Con that waits to join should take a slot of its own: its time ran out, or it pressed
+ * a button other than the shoulders, so someone is playing with it. */
+int joycon_wait_over(const joycon_t *j, long now);
 
 /* 1 if a keeps its slot when joining b, 0 if b keeps it. */
 int joycon_first_keeps_slot(const joycon_t *a, const joycon_t *b);
