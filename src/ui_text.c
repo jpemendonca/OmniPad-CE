@@ -18,6 +18,8 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_PAIRED] = "OmniPad: controller paired. Press a button on it",
         [UI_BT_LOCKED] = "OmniPad: the Bluetooth adapter locked up. Unplug it and plug it again",
         [UI_BT_NO_START] = "OmniPad: the Bluetooth adapter did not start. Unplug and plug it again, or see the dashboard",
+        [UI_JC_HINT] = "OmniPad: two Joy-Cons found. Hold L and R together for 1 s to use them as one controller",
+        [UI_JC_JOINED] = "OmniPad: Joy-Cons joined as one controller (player %d)",
     },
     [UI_PT] = {
         [UI_RUNNING] = "OmniPad %s ativo. Painel: aba Midia",
@@ -29,6 +31,8 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_PAIRED] = "OmniPad: controle pareado. Aperte um botao nele",
         [UI_BT_LOCKED] = "OmniPad: o adaptador Bluetooth travou. Tire e plugue de novo",
         [UI_BT_NO_START] = "OmniPad: o adaptador Bluetooth nao iniciou. Tire e plugue de novo, ou veja o painel",
+        [UI_JC_HINT] = "OmniPad: dois Joy-Cons encontrados. Segure L e R juntos por 1 s para usar como um unico controle",
+        [UI_JC_JOINED] = "OmniPad: Joy-Cons unidos em um controle (jogador %d)",
     },
     [UI_ES] = {
         [UI_RUNNING] = "OmniPad %s activo. Panel: pestaña Multimedia",
@@ -40,6 +44,8 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_PAIRED] = "OmniPad: mando emparejado. Pulsa un botón en él",
         [UI_BT_LOCKED] = "OmniPad: el adaptador Bluetooth se bloqueó. Desconéctalo y vuelve a conectarlo",
         [UI_BT_NO_START] = "OmniPad: el adaptador Bluetooth no arrancó. Desconéctalo y vuelve a conectarlo, o mira el panel",
+        [UI_JC_HINT] = "OmniPad: dos Joy-Con detectados. Mantén L y R a la vez 1 s para usarlos como un solo mando",
+        [UI_JC_JOINED] = "OmniPad: Joy-Con unidos en un solo mando (jugador %d)",
     },
     [UI_FR] = {
         [UI_RUNNING] = "OmniPad %s actif. Tableau de bord : onglet Multimédia",
@@ -51,6 +57,8 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_PAIRED] = "OmniPad : manette appairée. Appuyez sur un de ses boutons",
         [UI_BT_LOCKED] = "OmniPad : l'adaptateur Bluetooth est bloqué. Débranchez-le puis rebranchez-le",
         [UI_BT_NO_START] = "OmniPad : l'adaptateur Bluetooth n'a pas démarré. Débranchez-le puis rebranchez-le, ou consultez le tableau de bord",
+        [UI_JC_HINT] = "OmniPad : deux Joy-Con détectés. Maintenez L et R ensemble 1 s pour les utiliser comme une seule manette",
+        [UI_JC_JOINED] = "OmniPad : Joy-Con réunis en une seule manette (joueur %d)",
     },
     [UI_DE] = {
         [UI_RUNNING] = "OmniPad %s läuft. Dashboard: Tab Medien",
@@ -62,6 +70,8 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_PAIRED] = "OmniPad: Controller gekoppelt. Drücke eine Taste darauf",
         [UI_BT_LOCKED] = "OmniPad: Der Bluetooth-Adapter hängt. Zieh ihn ab und steck ihn wieder ein",
         [UI_BT_NO_START] = "OmniPad: Der Bluetooth-Adapter ist nicht gestartet. Zieh ihn ab und steck ihn wieder ein oder sieh im Dashboard nach",
+        [UI_JC_HINT] = "OmniPad: Zwei Joy-Con erkannt. Halte L und R 1 s gedrückt, um sie als einen Controller zu nutzen",
+        [UI_JC_JOINED] = "OmniPad: Joy-Con zu einem Controller verbunden (Spieler %d)",
     },
     [UI_RU] = {
         [UI_RUNNING] = "OmniPad %s запущен. Панель: вкладка «Мультимедиа»",
@@ -73,6 +83,8 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_PAIRED] = "OmniPad: контроллер сопряжён. Нажмите на нём кнопку",
         [UI_BT_LOCKED] = "OmniPad: адаптер Bluetooth завис. Отключите его и подключите снова",
         [UI_BT_NO_START] = "OmniPad: адаптер Bluetooth не запустился. Отключите его и подключите снова или откройте панель",
+        [UI_JC_HINT] = "OmniPad: найдены два Joy-Con. Удерживайте L и R 1 с, чтобы использовать их как один контроллер",
+        [UI_JC_JOINED] = "OmniPad: Joy-Con объединены в один контроллер (игрок %d)",
     },
     [UI_JA] = {
         [UI_RUNNING] = "OmniPad %s 起動中。ダッシュボード: メディアタブ",
@@ -84,6 +96,8 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_PAIRED] = "OmniPad: コントローラーをペアリングしました。ボタンを押してください",
         [UI_BT_LOCKED] = "OmniPad: Bluetoothアダプターが応答しません。抜き差ししてください",
         [UI_BT_NO_START] = "OmniPad: Bluetoothアダプターを起動できませんでした。抜き差しするか、ダッシュボードを確認してください",
+        [UI_JC_HINT] = "OmniPad: Joy-Conを2台検出しました。LとRを1秒間同時に押すと1台のコントローラーとして使えます",
+        [UI_JC_JOINED] = "OmniPad: Joy-Conを1台のコントローラーにまとめました (プレイヤー %d)",
     },
 };
 

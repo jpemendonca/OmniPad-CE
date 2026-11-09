@@ -89,10 +89,12 @@ Any USB device with a Bluetooth HCI interface (class `E0/01/01`) is used, except
 |---|---|
 | **Sony DualShock 4** (CUH-ZCT1, Bluetooth id `054c:09cc`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting by pressing PS |
 | **Xbox Series X\|S** (Bluetooth LE, `045e:0b13`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting when switched on. Its battery is not read yet |
-| Switch Pro, 8BitDo, Joy-Con, generic Bluetooth HID | 🟡 Profiles come from AnyPad, not tested through the adapter |
+| Nintendo Joy-Con (`057e:2006`, `057e:2007`) | 🟡 One alone, held sideways, was recorded on a PS5. Joining two into one controller is not yet tested on a console |
+| Switch Pro, 8BitDo, generic Bluetooth HID | 🟡 Profiles come from AnyPad, not tested through the adapter |
 
 ### Using it
 
+- **Two Joy-Cons as one controller:** within 60 s of connecting the second one, hold L on the left one and R on the right one for 1 s. They become one controller on the slot of the one that connected first. Turn one off to separate them: the other goes back to working alone, sideways. Map buttons treats the joined pair as its own model, `057e:2008`. Motion is not sent yet.
 - **New controller:** put it in pairing mode (DS4: hold Share + PS). While no Bluetooth pad is connected, OmniPad searches all the time. With one connected, it looks for 3.8 s every 20 s. The dashboard's **Pair controller** button opens a 2-minute search as well.
 - **Paired controller:** press PS. It calls the adapter and reconnects. The keys are stored in `/data/anypad/omnipad_bt.db`.
 - **Forget paired pads:** dashboard, **Forget paired**.

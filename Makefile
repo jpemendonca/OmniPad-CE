@@ -58,6 +58,8 @@ host-test:
 	./$(BUILD)/test_ui_text
 	clang -O1 -Isrc tests/test_ps_gate.c -o $(BUILD)/test_ps_gate
 	./$(BUILD)/test_ps_gate
+	clang -O1 -Isrc -Isrc/bt tests/test_joycon_join.c src/joycon_join.c src/bt/bt_profiles.c src/bt/generic.c src/bt/crc32.c src/util.c src/log.c -o $(BUILD)/test_joycon_join
+	./$(BUILD)/test_joycon_join
 	python3 tools/check_i18n.py
 
 check-tests:
