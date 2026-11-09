@@ -6,18 +6,10 @@
 #define JOYCON_L_PID 0x2006
 #define JOYCON_R_PID 0x2007
 
-#define JOYCON_JOIN_HOLD_MS 1000
-
-/* On a single Joy-Con held sideways, L and R are that player's L2. Two players aiming at once would
- * press this chord too, so it only joins Joy-Cons that have just connected. */
-#define JOYCON_JOIN_WINDOW_MS 60000
-#define JOYCON_JOIN_BUTTON PAD_L2
-
-void joycon_start(joycon_t *j, uint16_t vid, uint16_t pid, long now)
+void joycon_start(joycon_t *j, uint16_t vid, uint16_t pid)
 {
     memset(j, 0, sizeof(*j));
     j->mate = -1;
-    j->linked_at = now;
     pad_state_reset(&j->last);
     if (vid != JOYCON_VID) j->side = JOYCON_NONE;
     else if (pid == JOYCON_L_PID) j->side = JOYCON_LEFT;
@@ -25,35 +17,9 @@ void joycon_start(joycon_t *j, uint16_t vid, uint16_t pid, long now)
     else j->side = JOYCON_NONE;
 }
 
-void joycon_track(joycon_t *j, const pad_state *st, long now)
-{
-    j->last = *st;
-    if (!(st->buttons & JOYCON_JOIN_BUTTON)) j->held_since = 0;
-    else if (!j->held_since) j->held_since = now;
-}
-
 int joycon_can_pair(const joycon_t *a, const joycon_t *b)
 {
     return a->side != JOYCON_NONE && b->side != JOYCON_NONE && a->side != b->side && a->mate < 0 && b->mate < 0;
-}
-
-int joycon_can_join(const joycon_t *a, const joycon_t *b, long now)
-{
-    if (!joycon_can_pair(a, b) || !a->held_since || !b->held_since) return 0;
-    if (now - a->held_since < JOYCON_JOIN_HOLD_MS || now - b->held_since < JOYCON_JOIN_HOLD_MS) return 0;
-    long newest = a->linked_at > b->linked_at ? a->linked_at : b->linked_at;
-    return now - newest <= JOYCON_JOIN_WINDOW_MS;
-}
-
-int joycon_wait_over(const joycon_t *j, long now)
-{
-    return now - j->linked_at > JOYCON_JOIN_WINDOW_MS || (j->last.buttons & ~(uint32_t)(PAD_L2 | PAD_R2)) != 0;
-}
-
-/* The older one may already have a user's profile on its slot */
-int joycon_first_keeps_slot(const joycon_t *a, const joycon_t *b)
-{
-    return a->linked_at <= b->linked_at;
 }
 
 static uint32_t map_buttons(uint32_t in, const uint32_t table[][2], int n)

@@ -13,8 +13,8 @@ typedef enum {
     UI_BT_PAIRED,
     UI_BT_LOCKED,
     UI_BT_NO_START,
-    UI_JC_HINT,
-    UI_JC_JOINED,           /* %d player */
+    UI_JC_NEED_RIGHT,
+    UI_JC_NEED_LEFT,
     UI_COUNT
 } ui_msg_t;
 

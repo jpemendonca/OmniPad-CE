@@ -2,6 +2,7 @@
 #include "bt_rtl.h"
 #include "bt_sched.h"
 #include "bt/host.h"
+#include "bt/bt_profiles.h"
 #include "joycon_join.h"
 #include "ps5_vpad.h"
 #include "usb_hotplug.h"
@@ -873,13 +874,13 @@ static void to_slot_state(pad_state_t *out, const pad_state *in, const pad_info 
 }
 
 /* The first slot neither a USB pad nor another pad holds; vpad_add takes it atomically. -1: none. */
-static int take_slot(bt_pad_t *p)
+static int take_slot(bt_pad_t *p, const char *name)
 {
     int vslot = -1;
     for (int i = 0; i < MAX_SLOTS && vslot < 0; i++) {
         uint16_t vid, pid;
         if (usb_hotplug_slot_ids(i, &vid, &pid)) continue;
-        if (vpad_add(i, CONN_BLUETOOTH_CLASSIC, p->name)) vslot = i;
+        if (vpad_add(i, CONN_BLUETOOTH_CLASSIC, name)) vslot = i;
     }
     pthread_mutex_lock(&g_bt.lock);
     p->vslot = vslot;
@@ -887,49 +888,38 @@ static int take_slot(bt_pad_t *p)
     return vslot;
 }
 
-/* 1 if a Joy-Con with a slot could join this one. */
-static int joycon_has_mate(int hs)
+/* Joy-Cons stream only when a pair is complete: see profile_joycon_quiet. */
+static void joycons_update_quiet(void)
 {
-    for (int i = 0; i < HOST_MAX_PADS; i++) {
-        if (i != hs && g_bt.pads[i].vslot >= 0 && joycon_can_pair(&g_bt.pads[hs].jc, &g_bt.pads[i].jc)) return 1;
-    }
-    return 0;
+    int paired = 0;
+    for (int i = 0; i < HOST_MAX_PADS; i++) paired |= g_bt.pads[i].jc.mate >= 0;
+    profile_joycon_quiet(!paired);
 }
 
-/* Joins this Joy-Con to another if both hold the chord. The one that keeps its slot serves both, so
- * both pads name it and it stays until the second of them leaves. */
-static void joycons_try_join(int hs, long now)
-{
-    if (rest_quiet()) return;   /* vpad_remove would not free the slot now */
-    for (int i = 0; i < HOST_MAX_PADS; i++) {
-        if (i == hs || (g_bt.pads[i].vslot < 0 && !g_bt.pads[i].jc.waiting)) continue;
-        if (g_bt.pads[hs].vslot < 0 && g_bt.pads[i].vslot < 0) continue;
-        if (!joycon_can_join(&g_bt.pads[hs].jc, &g_bt.pads[i].jc, now)) continue;
-        int keep = g_bt.pads[hs].vslot < 0 ? i : g_bt.pads[i].vslot < 0 ? hs :
-                   joycon_first_keeps_slot(&g_bt.pads[hs].jc, &g_bt.pads[i].jc) ? hs : i;
-        int drop = keep == hs ? i : hs;
-        int slot = g_bt.pads[keep].vslot;
-        int freed = g_bt.pads[drop].vslot;
-        pthread_mutex_lock(&g_bt.lock);
-        g_bt.pads[drop].vslot = slot;
-        g_bt.pads[drop].jc.waiting = 0;
-        g_bt.pads[hs].jc.mate = i;
-        g_bt.pads[i].jc.mate = hs;
-        pthread_mutex_unlock(&g_bt.lock);
-        if (freed >= 0) vpad_remove(freed);
-        log_line("bt: Joy-Cons in host slots %d and %d joined on slot %d (slot %d freed)", hs, i, slot, freed);
-        notify_ps5(ui_text(UI_JC_JOINED), slot + 2);
-        return;
-    }
-}
-
-static void joycon_end_wait(int hs)
+/* OmniPad takes Joy-Cons only as a pair, as the maintainer chose (8 Nov). One alone gets no slot, so
+ * the console opens no profile screen until the other arrives. */
+static void joycon_connected(int hs)
 {
     bt_pad_t *p = &g_bt.pads[hs];
-    p->jc.waiting = 0;
-    int vslot = take_slot(p);
-    if (vslot < 0) log_line("bt: %s stopped waiting to join but every slot is taken", p->name);
-    else log_line("bt: %s stopped waiting to join, on slot %d", p->name, vslot);
+    int mate = -1;
+    for (int i = 0; i < HOST_MAX_PADS && mate < 0; i++) {
+        if (i != hs && joycon_can_pair(&p->jc, &g_bt.pads[i].jc)) mate = i;
+    }
+    if (mate < 0) {
+        log_line("bt: %s waits for the other Joy-Con", p->name);
+        notify_ps5("%s", ui_text(p->jc.side == JOYCON_LEFT ? UI_JC_NEED_RIGHT : UI_JC_NEED_LEFT));
+        return;
+    }
+    int vslot = take_slot(p, "Joy-Cons (Bluetooth)");
+    pthread_mutex_lock(&g_bt.lock);
+    g_bt.pads[mate].vslot = vslot;
+    p->jc.mate = mate;
+    g_bt.pads[mate].jc.mate = hs;
+    pthread_mutex_unlock(&g_bt.lock);
+    pad_state_reset(&g_bt.pads[mate].jc.last);
+    joycons_update_quiet();
+    if (vslot < 0) log_line("bt: Joy-Cons in host slots %d and %d joined but every slot is taken", hs, mate);
+    else log_line("bt: Joy-Cons in host slots %d and %d joined on slot %d", hs, mate, vslot);
 }
 
 static void on_connect(void *ud, int hs, const pad_info *info)
@@ -946,19 +936,14 @@ static void on_connect(void *ud, int hs, const pad_info *info)
     p->last_input_at = now_ms();
     p->silent_since = 0;
     p->silent_logged = 0;
-    joycon_start(&p->jc, info->vid, info->pid, now_ms());
+    joycon_start(&p->jc, info->vid, info->pid);
     pthread_mutex_unlock(&g_bt.lock);
 
-    /* A slot of its own would open a second profile screen on the console, for a virtual pad that
-     * goes away on joining: the maintainer found that confusing (PS5, 8 Nov). */
-    if (!rest_quiet() && joycon_has_mate(hs)) {
-        p->jc.waiting = 1;
-        log_line("bt: %s %s (%04x:%04x) waits to join", p->name, a, info->vid, info->pid);
-        notify_ps5("%s", ui_text(UI_JC_HINT));
+    if (!rest_quiet() && p->jc.side != JOYCON_NONE) {
+        joycon_connected(hs);
         return;
     }
-
-    int vslot = take_slot(p);
+    int vslot = take_slot(p, p->name);
     if (vslot < 0 && rest_quiet()) {
         /* The console is waking up: no new virtual pad now; the pad calls back on PS later */
         log_line("bt: %s %s connected while the console wakes up, dropping it", p->name, a);
@@ -974,15 +959,9 @@ static void on_state(void *ud, int hs, const pad_state *st)
 {
     (void)ud;
     if (hs < 0 || hs >= HOST_MAX_PADS) return;
-    if (g_bt.pads[hs].vslot < 0 && !g_bt.pads[hs].jc.waiting) return;
+    if (g_bt.pads[hs].vslot < 0) return;
     long now = now_ms();
     joycon_t *jc = &g_bt.pads[hs].jc;
-    if (jc->side != JOYCON_NONE) {
-        joycon_track(jc, st, now);
-        if (jc->mate < 0) joycons_try_join(hs, now);
-        if (jc->waiting && !rest_quiet() && (joycon_wait_over(jc, now) || !joycon_has_mate(hs))) joycon_end_wait(hs);
-        if (g_bt.pads[hs].vslot < 0) return;
-    }
     if (g_bt.pads[hs].silent_since) {
         log_line("bt: %s reports again after %ld ms of silence", g_bt.pads[hs].name, now - g_bt.pads[hs].last_input_at);
         g_bt.pads[hs].silent_since = 0;
@@ -992,6 +971,7 @@ static void on_state(void *ud, int hs, const pad_state *st)
     pad_info pair_info;
     pad_state merged;
     if (jc->mate >= 0) {
+        jc->last = *st;
         const bt_pad_t *mate = &g_bt.pads[jc->mate];
         const bt_pad_t *left = jc->side == JOYCON_LEFT ? &g_bt.pads[hs] : mate;
         const bt_pad_t *right = jc->side == JOYCON_LEFT ? mate : &g_bt.pads[hs];
@@ -1026,13 +1006,14 @@ static void on_disconnect(void *ud, int hs)
     int mate = g_bt.pads[hs].jc.mate;
     g_bt.pads[hs].vslot = -1;
     g_bt.pads[hs].jc.mate = -1;
-    g_bt.pads[hs].jc.waiting = 0;
     g_bt.pads[hs].jc.side = JOYCON_NONE;
-    if (mate >= 0) g_bt.pads[mate].jc.mate = -1;
-    pthread_mutex_unlock(&g_bt.lock);
     if (mate >= 0) {
-        log_line("bt: %s left, the other Joy-Con stays alone on slot %d", g_bt.pads[hs].name, vslot);
-    } else if (vslot >= 0) {
+        g_bt.pads[mate].jc.mate = -1;
+        g_bt.pads[mate].vslot = -1;
+    }
+    pthread_mutex_unlock(&g_bt.lock);
+    if (mate >= 0) joycons_update_quiet();
+    if (vslot >= 0) {
         vpad_remove(vslot);
         log_line("bt: %s left slot %d", g_bt.pads[hs].name, vslot);
     }
@@ -1058,6 +1039,7 @@ static void run_host(bt_dev_t *d)
         g_bt.pads[i].vslot = -1;
         g_bt.pads[i].jc.mate = -1;
     }
+    joycons_update_quiet();
 
     host_t *h = host_open(hci, BT_DB_PATH, &ev);
     if (!h) {
@@ -1108,6 +1090,8 @@ static void run_host(bt_dev_t *d)
         /* A pad with its link up counts, even before its first input gives it a slot: a pad that
          * only reports on change would otherwise have to share the radio with a full search */
         int connected = host_linked_count(h), slot_free = 0;
+        /* A Joy-Con waiting for the other one is silent, and the search is how the other one arrives */
+        for (int i = 0; i < HOST_MAX_PADS; i++) connected -= g_bt.pads[i].jc.side != JOYCON_NONE && g_bt.pads[i].jc.mate < 0;
         for (int i = 0; i < MAX_SLOTS; i++) {
             uint16_t vid, pid;
             if (!usb_hotplug_slot_ids(i, &vid, &pid) && vpad_slot_is_free(i)) slot_free = 1;
@@ -1129,7 +1113,7 @@ static void run_host(bt_dev_t *d)
         /* A pad that only reports on change gets no slot until a button is pressed: say so */
         for (int i = 0; i < HOST_MAX_PADS; i++) {
             bt_pad_t *p = &g_bt.pads[i];
-            if (!host_connected(h, i) || p->vslot >= 0 || p->jc.waiting) {
+            if (!host_connected(h, i) || p->vslot >= 0 || p->jc.side != JOYCON_NONE) {
                 p->ready_at = 0;
                 p->told_press = host_connected(h, i);
             } else if (!p->ready_at) {

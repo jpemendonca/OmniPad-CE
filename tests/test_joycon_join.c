@@ -155,7 +155,7 @@ static void test_joycon_merge_sticks_keepTheirDirections(void)
     CHECK(out.rx < 60 && out.ry > 120 && out.ry < 136, "right stick left goes left, got %d %d", out.rx, out.ry);
 }
 
-static void test_joycon_parse_singleJoyCon_turnsItsStickAQuarter(void)
+static void test_joycon_parse_fullReport_turnsItsStickAQuarter(void)
 {
     /* arrange: recordings cannot compare these sticks, see tests/test_captures.c */
     side_t l, r;
@@ -217,128 +217,80 @@ static void test_joycon_start_knownAndOtherPads_getTheirSide(void)
     joycon_t j;
 
     /* act and assert */
-    joycon_start(&j, VID, PID_L, 5);
-    CHECK(j.side == JOYCON_LEFT && j.mate == -1 && j.linked_at == 5, "057e:2006 is a left one, alone");
-    joycon_start(&j, VID, PID_R, 5);
+    joycon_start(&j, VID, PID_L);
+    CHECK(j.side == JOYCON_LEFT && j.mate == -1, "057e:2006 is a left one, alone");
+    joycon_start(&j, VID, PID_R);
     CHECK(j.side == JOYCON_RIGHT, "057e:2007 is a right one");
-    joycon_start(&j, VID, 0x2009, 5);
+    joycon_start(&j, VID, 0x2009);
     CHECK(j.side == JOYCON_NONE, "a Switch Pro is not a Joy-Con");
-    joycon_start(&j, 0x054C, PID_L, 5);
+    joycon_start(&j, 0x054C, PID_L);
     CHECK(j.side == JOYCON_NONE, "another vendor's pad is not a Joy-Con");
 }
 
-/* A left and a right that connected at t=1000 and hold their L and R from t=2000 */
-static void held_pair(joycon_t *l, joycon_t *r)
-{
-    pad_state st;
-    pad_state_reset(&st);
-    st.buttons = PAD_L2;
-    joycon_start(l, VID, PID_L, 1000);
-    joycon_start(r, VID, PID_R, 1000);
-    joycon_track(l, &st, 2000);
-    joycon_track(r, &st, 2000);
-}
-
-static void test_joycon_can_join_bothHeldLongEnough_joins(void)
-{
-    /* arrange */
-    joycon_t l, r;
-    held_pair(&l, &r);
-
-    /* act and assert */
-    CHECK(!joycon_can_join(&l, &r, 2999), "not before one second of holding");
-    CHECK(joycon_can_join(&l, &r, 3000), "after one second of holding");
-    CHECK(joycon_can_join(&r, &l, 3000), "either order");
-}
-
-static void test_joycon_can_join_oneLetGo_doesNotJoin(void)
-{
-    /* arrange */
-    joycon_t l, r;
-    pad_state up;
-    held_pair(&l, &r);
-    pad_state_reset(&up);
-
-    /* act */
-    joycon_track(&r, &up, 2500);
-
-    /* assert */
-    CHECK(!joycon_can_join(&l, &r, 3000), "both have to keep holding");
-}
-
-static void test_joycon_can_join_twoPlayersLongAfterConnecting_doesNotJoin(void)
-{
-    /* arrange: both aim in a game minutes after connecting, where L and R are each player's L2 */
-    joycon_t l, r;
-    pad_state st;
-    pad_state_reset(&st);
-    st.buttons = PAD_L2;
-    joycon_start(&l, VID, PID_L, 1000);
-    joycon_start(&r, VID, PID_R, 1000);
-    joycon_track(&l, &st, 300000);
-    joycon_track(&r, &st, 300000);
-
-    /* act and assert */
-    CHECK(!joycon_can_join(&l, &r, 305000), "two players on one Joy-Con each stay apart");
-}
-
-static void test_joycon_can_join_secondOneJustConnected_joins(void)
-{
-    /* arrange: the left one has been in use, the right one has just been switched on */
-    joycon_t l, r;
-    pad_state st;
-    pad_state_reset(&st);
-    st.buttons = PAD_L2;
-    joycon_start(&l, VID, PID_L, 1000);
-    joycon_start(&r, VID, PID_R, 300000);
-    joycon_track(&l, &st, 310000);
-    joycon_track(&r, &st, 310000);
-
-    /* act and assert */
-    CHECK(joycon_can_join(&l, &r, 311000), "a Joy-Con that just connected can join one already in use");
-    CHECK(!joycon_first_keeps_slot(&r, &l), "the newer one gives up its slot");
-    CHECK(joycon_first_keeps_slot(&l, &r), "the older one keeps its slot");
-}
-
-static void test_joycon_wait_over_timeAndButtons_endTheWait(void)
-{
-    /* arrange */
-    joycon_t j;
-    pad_state st;
-    pad_state_reset(&st);
-    joycon_start(&j, VID, PID_L, 1000);
-
-    /* act and assert */
-    CHECK(!joycon_wait_over(&j, 61000), "it can wait the whole time joining stays open");
-    CHECK(joycon_wait_over(&j, 61001), "then it takes a slot, for a second player");
-
-    st.buttons = PAD_L2 | PAD_R2;
-    joycon_track(&j, &st, 2000);
-    CHECK(!joycon_wait_over(&j, 2000), "the shoulders are how a player joins, or a finger next to them");
-
-    st.buttons = PAD_CROSS;
-    joycon_track(&j, &st, 3000);
-    CHECK(joycon_wait_over(&j, 3000), "any other button means someone plays with this one alone");
-}
-
-static void test_joycon_can_join_wrongPairs_doNotJoin(void)
+static void test_joycon_can_pair_leftAndRightAlone_pair(void)
 {
     /* arrange */
     joycon_t l, r, other, ds4;
-    pad_state st;
-    pad_state_reset(&st);
-    st.buttons = PAD_L2;
-    held_pair(&l, &r);
-    joycon_start(&other, VID, PID_L, 1000);
-    joycon_track(&other, &st, 2000);
-    joycon_start(&ds4, 0x054C, 0x09CC, 1000);
-    joycon_track(&ds4, &st, 2000);
+    joycon_start(&l, VID, PID_L);
+    joycon_start(&r, VID, PID_R);
+    joycon_start(&other, VID, PID_L);
+    joycon_start(&ds4, 0x054C, 0x09CC);
 
     /* act and assert */
-    CHECK(!joycon_can_join(&l, &other, 3000), "two left ones do not make a controller");
-    CHECK(!joycon_can_join(&l, &ds4, 3000), "a Joy-Con does not join another pad");
+    CHECK(joycon_can_pair(&l, &r) && joycon_can_pair(&r, &l), "a left and a right pair, in either order");
+    CHECK(!joycon_can_pair(&l, &other), "two left ones do not make a controller");
+    CHECK(!joycon_can_pair(&l, &ds4), "a Joy-Con does not pair with another pad");
     r.mate = 2;
-    CHECK(!joycon_can_join(&l, &r, 3000), "one that is already joined stays with its mate");
+    CHECK(!joycon_can_pair(&l, &r), "one that is already joined stays with its mate");
+}
+
+static int report_of(unsigned char id, unsigned char *r)
+{
+    memset(r, 0, 49);
+    r[0] = id;
+    return 49;
+}
+
+static void test_joycon_parse_quiet_readsOnlyThatItIsHere(void)
+{
+    /* arrange */
+    side_t r;
+    unsigned char rep[49];
+    pad_state st;
+    pad_state_reset(&st);
+    side_open(&r, 1);
+    profile_joycon_quiet(1);
+
+    /* act and assert */
+    int n = report_of(0x3F, rep);
+    CHECK(r.prof->parse(r.ctx, rep, n, &st) == PARSE_OK, "its default report counts as input, so the host announces it");
+    n = report_of(0x21, rep);
+    CHECK(r.prof->parse(r.ctx, rep, n, &st) == PARSE_OK, "so does the answer to a subcommand");
+    n = report_of(0x30, rep);
+    CHECK(r.prof->parse(r.ctx, rep, n, &st) == PARSE_REINIT, "a full report means it must be told to stop");
+    CHECK(r.prof->parse(r.ctx, rep, n, &st) == PARSE_NONE, "once: the reports already on their way must not repeat the order");
+    profile_joycon_quiet(0);
+    CHECK(r.prof->parse(r.ctx, rep, n, &st) == PARSE_FULL, "once the pair is complete, the full report is read");
+}
+
+static void test_joycon_init_quiet_asksForTheDefaultReport(void)
+{
+    /* arrange */
+    side_t r;
+    pad_output out;
+    unsigned char buf[64];
+    memset(&out, 0, sizeof out);
+    side_open(&r, 1);
+    profile_joycon_quiet(1);
+
+    /* act */
+    int n = r.prof->init_report(r.ctx, 0, &out, buf, (int)sizeof buf);
+    int after = r.prof->init_report(r.ctx, 1, &out, buf + 32, 32);
+    profile_joycon_quiet(0);
+
+    /* assert */
+    CHECK(n > 11 && buf[10] == 0x03 && buf[11] == 0x3F, "it asks for report 0x3f, got subcommand %#x arg %#x", buf[10], buf[11]);
+    CHECK(after == 0, "and sends nothing else");
 }
 
 int main(void)
@@ -346,16 +298,13 @@ int main(void)
     test_joycon_merge_eachButton_reachesItsDualSenseButton();
     test_joycon_merge_triggers_followZlAndZr();
     test_joycon_merge_sticks_keepTheirDirections();
-    test_joycon_parse_singleJoyCon_turnsItsStickAQuarter();
+    test_joycon_parse_fullReport_turnsItsStickAQuarter();
     test_joycon_merge_battery_showsTheLowerOne();
     test_joycon_init_setup_goesOutThreeTimes();
     test_joycon_start_knownAndOtherPads_getTheirSide();
-    test_joycon_can_join_bothHeldLongEnough_joins();
-    test_joycon_can_join_oneLetGo_doesNotJoin();
-    test_joycon_can_join_twoPlayersLongAfterConnecting_doesNotJoin();
-    test_joycon_can_join_secondOneJustConnected_joins();
-    test_joycon_wait_over_timeAndButtons_endTheWait();
-    test_joycon_can_join_wrongPairs_doNotJoin();
+    test_joycon_can_pair_leftAndRightAlone_pair();
+    test_joycon_parse_quiet_readsOnlyThatItIsHere();
+    test_joycon_init_quiet_asksForTheDefaultReport();
     printf("test_joycon_join: %d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
 }

@@ -99,7 +99,7 @@ What the gate does not cover: it never runs on a PS5. It does not prove that a c
 | `src/pad_drivers.c` | **One driver per controller model** (VID:PID, connection type, idle rule, flags, parser) |
 | `src/usb_controllers.c`, `src/profiles.c` | USB report parsers used by the drivers |
 | `src/bt_adapter.c` | OmniPad's own USB Bluetooth adapter: detection, firmware, HCI transport, glue to slots, background search, chip quirks |
-| `src/joycon_join.c` | Rules for joining two Bluetooth Joy-Cons into one controller |
+| `src/joycon_join.c` | How two Bluetooth Joy-Cons map onto one controller |
 | `src/bt_rtl.c` | Realtek firmware patch selection |
 | `src/bt_sched.c` | HCI command queue and background search rule, apart from USB so host tests can run them |
 | `src/bt/` | Vendored Bluetooth host from AnyPad (see its README) |

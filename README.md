@@ -33,7 +33,7 @@ Use third-party controllers on a jailbroken PS5 (FW 7.00 – 13.60). They plug i
 | Xbox Series X\|S | USB cable | ✅ Tested on a PS5, FW 13.60 |
 | Xbox Series X\|S | Bluetooth, through a USB adapter | ✅ Tested on a PS5, FW 13.60 |
 | Xbox One, Xbox 360, DualShock 3, Switch Pro, generic USB pads | USB cable | 🟡 Written from the spec, not yet tested on a console |
-| Nintendo Joy-Con: one alone held sideways, or two joined as one controller (hold L and R for 1 s) | Bluetooth, through a USB adapter | 🟡 One alone was recorded on a PS5, FW 13.60. Joining two is not yet tested on a console |
+| Nintendo Joy-Con, always the two together as one controller | Bluetooth, through a USB adapter | 🟡 Joined and played once on a PS5, FW 13.60. Still being tested on generic adapters |
 | Other Bluetooth pads (Switch Pro, 8BitDo, generic HID) | Bluetooth, through a USB adapter | 🟡 Profiles exist, not yet tested on a console |
 
 The official DualSense stays player 1 on the console's own radio. OmniPad never touches that radio.

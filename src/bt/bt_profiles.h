@@ -64,6 +64,9 @@ typedef struct pad_profile {
 
 const pad_profile *profile_find(uint16_t vid, uint16_t pid);
 
+/* OmniPad: quiet 1 keeps Joy-Cons out of their full report, for while the pair is not complete. */
+void profile_joycon_quiet(int quiet);
+
 /* Where profiles with a settings file look for it (<dir>/VVVV_PPPP.map). */
 void profiles_set_map_dir(const char *dir);
 /* OmniPad: the Bluetooth address of the pad whose profile setup() runs next

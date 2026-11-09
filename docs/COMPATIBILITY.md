@@ -89,12 +89,12 @@ Any USB device with a Bluetooth HCI interface (class `E0/01/01`) is used, except
 |---|---|
 | **Sony DualShock 4** (CUH-ZCT1, Bluetooth id `054c:09cc`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting by pressing PS |
 | **Xbox Series X\|S** (Bluetooth LE, `045e:0b13`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting when switched on. Its battery is not read yet |
-| Nintendo Joy-Con (`057e:2006`, `057e:2007`) | 🟡 One alone, held sideways, was recorded on a PS5. Joining two into one controller is not yet tested on a console |
+| Nintendo Joy-Con (`057e:2006`, `057e:2007`), always the two together | 🟡 Joined and played once on a PS5. Still being tested on generic adapters |
 | Switch Pro, 8BitDo, generic Bluetooth HID | 🟡 Profiles come from AnyPad, not tested through the adapter |
 
 ### Using it
 
-- **Two Joy-Cons as one controller:** the second Joy-Con to connect waits, with no controller of its own on the console. Within 60 s, hold L on the left one and R on the right one for 1 s. They become one controller on the slot of the one that connected first. For two players, press any other button on the second one, or wait the 60 s: it becomes a separate controller, which still can join until the 60 s end. Turn one off to separate joined Joy-Cons: the other goes back to working alone, sideways. Map buttons treats the joined pair as its own model, `057e:2008`. Motion is not sent yet.
+- **Joy-Cons:** OmniPad takes them only as a pair, as one controller. Hold the sync button on one until the notification asks for the other, then hold the sync button on the other. The profile screen opens when both are connected. Turning one off ends the controller, and the other one waits again. Map buttons treats the pair as model `057e:2008`. Motion is not sent yet.
 - **New controller:** put it in pairing mode (DS4: hold Share + PS). While no Bluetooth pad is connected, OmniPad searches all the time. With one connected, it looks for 3.8 s every 20 s. The dashboard's **Pair controller** button opens a 2-minute search as well.
 - **Paired controller:** press PS. It calls the adapter and reconnects. The keys are stored in `/data/anypad/omnipad_bt.db`.
 - **Forget paired pads:** dashboard, **Forget paired**.

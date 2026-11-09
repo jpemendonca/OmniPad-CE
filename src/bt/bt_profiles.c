@@ -567,7 +567,18 @@ static const uint16_t joycon_ids[][2] = {
 typedef struct {
     switch_ctx sw;                  /* first: switch_init uses it */
     int right;
+    int quiet_asked;                /* OmniPad: it has been told to leave the full report */
 } joycon_ctx;
+
+/* OmniPad: a CSR clone locked up on the commands that set up a second link, every time but one while
+ * a Joy-Con streamed its full report, and never with nothing streaming (PS5, 8 Nov). So a Joy-Con
+ * waiting for the other one stays in its default report, which it only sends on a change. */
+static int g_joycon_quiet;
+
+void profile_joycon_quiet(int quiet)
+{
+    g_joycon_quiet = quiet;
+}
 
 static void joycon_setup(void *ctx, uint16_t vid, uint16_t pid)
 {
@@ -584,6 +595,15 @@ static int joycon_parse(void *ctx, const uint8_t *r, int n, pad_state *st)
     uint32_t b = 0;
     uint8_t x, y_up;
 
+    if (g_joycon_quiet) {
+        if (r[0] == 0x3F || r[0] == 0x21) return PARSE_OK;   /* it is here: tells the host it has input */
+        if (r[0] == 0x30 && !c->quiet_asked) {
+            c->quiet_asked = 1;
+            return PARSE_REINIT;
+        }
+        return PARSE_NONE;
+    }
+    c->quiet_asked = 0;
     if (r[0] != 0x30 || n < 12) return PARSE_NONE;
     memset(&t, 0, sizeof t);
     if (!c->right) {
@@ -640,6 +660,10 @@ static int joycon_parse(void *ctx, const uint8_t *r, int n, pad_state *st)
 
 static int joycon_init(void *ctx, int step, const pad_output *o, uint8_t *b, int max)
 {
+    if (g_joycon_quiet) {
+        static const uint8_t default_mode[1] = { 0x3F };
+        return step == 0 ? switch_subcmd(&((joycon_ctx *)ctx)->sw, 0x03, default_mode, 1, b, max) : 0;
+    }
     if (step >= JOYCON_INIT_STEPS * JOYCON_INIT_PASSES) return 0;
     return switch_init(&((joycon_ctx *)ctx)->sw, step % JOYCON_INIT_STEPS, o, b, max);
 }
