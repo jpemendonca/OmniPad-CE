@@ -152,7 +152,7 @@ Games and emulators receive the inputs directly from the kernel, recognizing you
 
 ---
 
-## 🌐 Web Dashboard (Port 8095)
+## 🌐 Web Dashboard (Port 8105)
 
 An embedded zero-dependency HTTP server serves the dashboard from its own thread, so a slow client never delays the 250Hz injection loop:
 - **`GET /`**: the dashboard page. Its source is `web/index.html`; the build embeds it into the payload with `tools/embed_web.py`.
@@ -169,5 +169,5 @@ An embedded zero-dependency HTTP server serves the dashboard from its own thread
 ### Working on the dashboard
 
 - `python tools/mock_dashboard.py` serves `web/index.html` with a simulated API (a DualShock 4 on a cable and a 2.4G dongle that only reports on change), so the page can be changed without a PS5.
-- `python tools/mock_dashboard.py 8096 --proxy http://<PS5_IP>:8095` serves the local page but forwards `/api/*` to a running OmniPad, to test page changes against real controllers without rebuilding the payload.
+- `python tools/mock_dashboard.py 8096 --proxy http://<PS5_IP>:8105` serves the local page but forwards `/api/*` to a running OmniPad, to test page changes against real controllers without rebuilding the payload.
 - `node tools/screenshot_dashboard.mjs <url> <out.png> [width] [height] [lang] [mobile]` captures the page with headless Chrome, waiting in real time so the rate counters show real values. The README images in `docs/images/` come from it; `docs/images/mockup.html` composes `dashboard-mockup.png`.

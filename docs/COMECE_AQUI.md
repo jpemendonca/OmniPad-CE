@@ -33,7 +33,7 @@ Aperte **PS** no controle novo. O PS5 mostra a tela de escolher o perfil: escolh
 ## 5. Painel
 
 - **No próprio PS5:** abra a aba **Mídia** e o ícone **OmniPad**. Ele aparece depois da primeira vez que o OmniPad rodar, e só abre o painel enquanto o OmniPad estiver rodando.
-- **No celular ou no PC:** abra `http://<IP do PS5>:8095`. O IP aparece no aviso de "ativo".
+- **No celular ou no PC:** abra `http://<IP do PS5>:8105`. O IP aparece no aviso de "ativo".
 
 No painel você testa os botões do controle, vê se a conexão está boa, pareia ou esquece controles Bluetooth e acompanha o log.
 

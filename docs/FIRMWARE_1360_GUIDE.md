@@ -72,7 +72,7 @@ For maximum stability on **Firmware 13.60 (Relapse exploit)**, **OmniPad CE** is
 3. **3rd: `OmniPad-CE.elf`**
    - Initializes virtual DualSense controllers directly in the kernel (`libScePad` / MBus).
    - Handles profile assignment and error `0x803B0006` bypass.
-   - Starts the Web Dashboard on port **8095** and the LAN testing socket on port **9045**.
+   - Starts the Web Dashboard on port **8105** and the LAN testing socket on port **9045**.
 
 ### Conflict Prevention & Kernel Compatibility:
 - **USB Storage Isolation (ShadowMountPlus):** Mass storage drives (external SSDs and flash drives containing FPKG games mounted by ShadowMountPlus) use USB class `0x08`. OmniPad immediately identifies and discards mass storage nodes, preventing interference with external game drives.

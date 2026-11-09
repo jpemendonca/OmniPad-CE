@@ -40,7 +40,7 @@ BUTTONS = [
 class Ps5:
     def __init__(self, host):
         host = host.removeprefix("http://").rstrip("/")
-        self.base = "http://" + (host if ":" in host else host + ":8095")
+        self.base = "http://" + (host if ":" in host else host + ":8105")
 
     def _open(self, path, method="GET"):
         req = urllib.request.Request(self.base + path, method=method, data=b"" if method == "POST" else None)

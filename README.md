@@ -77,7 +77,7 @@ Nobody has to do this: controllers work as they are. To change a button, press *
 
 ## Dashboard
 
-On the PS5 itself, open the **OmniPad** icon in the **Media** tab. It is installed the first time OmniPad runs, and it works while OmniPad is running. From a phone or PC on the same network, open `http://<PS5_IP>:8095/`. The start notification shows the IP.
+On the PS5 itself, open the **OmniPad** icon in the **Media** tab. It is installed the first time OmniPad runs, and it works while OmniPad is running. From a phone or PC on the same network, open `http://<PS5_IP>:8105/`. The start notification shows the IP.
 
 ![OmniPad dashboard on a PC browser and a phone](docs/images/dashboard-mockup.png)
 

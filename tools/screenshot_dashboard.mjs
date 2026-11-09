@@ -4,7 +4,7 @@
 // fast-forwards the clock or captures a backgrounded page that never polls).
 //
 // Usage: node tools/screenshot_dashboard.mjs <url> <out.png> [width] [height] [lang] [mobile]
-//   e.g. node tools/screenshot_dashboard.mjs http://192.168.100.23:8095/ docs/images/dashboard.png 1200 1350 en
+//   e.g. node tools/screenshot_dashboard.mjs http://192.168.100.23:8105/ docs/images/dashboard.png 1200 1350 en
 // Needs Node 22+ (global WebSocket) and Chrome. Set CHROME to override the binary path.
 import { spawn } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';

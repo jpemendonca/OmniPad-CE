@@ -16,7 +16,8 @@
 #define ANYPAD_MIN_FW           0x07000000  /* 7.00 */
 #define ANYPAD_MAX_FW           0x1360FFFF  /* 13.60.xx */
 
-#define ANYPAD_DEFAULT_PORT     8095
+/* Not 8095: the Dump Forge payload uses it, and the PS5 browser opened Dump Forge instead (8 Nov) */
+#define ANYPAD_DEFAULT_PORT     8105
 #define ANYPAD_TCP_STREAM_PORT  9045
 
 #endif /* VERSION_H */

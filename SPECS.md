@@ -7,7 +7,7 @@ OmniPad CE runs as a payload on a jailbroken PS5 (FW 7.00 – 13.60). Third-part
 In scope:
 - USB pads and 2.4 GHz dongles, through one driver per model.
 - Bluetooth pads through a separate USB Bluetooth adapter.
-- A dashboard on port 8095, also reachable from a Media tab tile.
+- A dashboard on port 8105, also reachable from a Media tab tile.
 - PS5 notifications and dashboard in English, Portuguese, Spanish, French, German, Russian and Japanese, following the console's language. English when it has no translation.
 
 Out of scope:
@@ -61,11 +61,11 @@ No network service or account is needed. The firmware is embedded at build time.
 | `/data/anypad/omnipad_bt.db` | Bluetooth link keys. It is not PR 18's `pads.db`, whose keys belong to the internal radio. |
 | `/data/anypad/maps/` | Per-pad Bluetooth profile settings |
 | `/data/anypad/remap.txt` | Button rules per controller model, one `vvvv:pppp a+b=c,d=e` per line |
-| `/user/app/OMNP00001/sce_sys/` | Media tab tile: `param.json` (category 65536, `deeplinkUri` `http://127.0.0.1:8095/?tv=1`) and `icon0.png` |
+| `/user/app/OMNP00001/sce_sys/` | Media tab tile: `param.json` (category 65536, `deeplinkUri` `http://127.0.0.1:8105/?tv=1`) and `icon0.png` |
 
 ## Contracts
 
-HTTP on port 8095 (`web.c`):
+HTTP on port 8105 (`web.c`):
 
 | Route | Does |
 |---|---|

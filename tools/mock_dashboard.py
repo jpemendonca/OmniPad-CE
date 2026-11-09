@@ -8,8 +8,8 @@ a few seconds, then goes quiet long enough to show the idle countdown. Slot 3 is
 With --proxy, /api/* goes to a real OmniPad instead (the page is still served from disk), so the
 dashboard can be worked on against live controllers without rebuilding the payload.
 
-Usage: python tools/mock_dashboard.py [port] [--proxy http://<PS5_IP>:8095]
-       (default port 8095, then open http://localhost:<port>/)
+Usage: python tools/mock_dashboard.py [port] [--proxy http://<PS5_IP>:8105]
+       (default port 8105, then open http://localhost:<port>/)
 """
 import json
 import math
@@ -183,7 +183,7 @@ if __name__ == "__main__":
         i = args.index("--proxy")
         PROXY = args[i + 1].rstrip("/")
         del args[i:i + 2]
-    port = int(args[0]) if args else 8095
+    port = int(args[0]) if args else 8105
     if not PROXY:
         threading.Thread(target=background_log, daemon=True).start()
     print(f"dashboard on http://localhost:{port}/" + (f" (API proxied to {PROXY})" if PROXY else " (simulated API)"))

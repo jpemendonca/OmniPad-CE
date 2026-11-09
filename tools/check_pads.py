@@ -68,7 +68,7 @@ def main():
         return 2
     base = "http://" + sys.argv[1].removeprefix("http://").rstrip("/")
     if ":" not in base[7:]:
-        base += ":8095"
+        base += ":8105"
     seconds = float(sys.argv[2]) if len(sys.argv) > 2 else 20
     rows = read_reference()
 
