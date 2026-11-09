@@ -3,7 +3,10 @@
  * recorded it. A controller that was approved on the PS5 keeps decoding the same way.
  *
  * A change meant to alter how a recorded controller decodes is checked on the PS5, then the
- * recording is refreshed with: ./build/test_captures --update */
+ * recording is refreshed with: ./build/test_captures --update
+ *
+ * Nintendo sticks are the exception: the profile learns where they rest when the pad connects, and a
+ * recording starts after that, so only their buttons and triggers are compared. */
 #include "pad_drivers.h"
 #include "bt/bt_profiles.h"
 
@@ -103,6 +106,11 @@ static int replay(const entry_t *e, bt_pad_t *pads, int *npads, int *result, uns
     return p->seen++ > 0;       /* the first report only fills the state */
 }
 
+static int learns_stick_rest(const entry_t *e)
+{
+    return e->kind == 'B' && e->vid == 0x057E;
+}
+
 static int read_only_result(const entry_t *e)
 {
     return e->kind == 'U' ? e->result == 0 : e->result == PARSE_NONE;
@@ -140,6 +148,7 @@ static void test_capture_file_replays_likeWhenRecorded(const char *path, int upd
             continue;
         }
         compared++;
+        if (learns_stick_rest(&e)) memcpy(axes, e.axes, 4 * sizeof axes[0]);
         int same = result == e.result &&
                    (read_only_result(&e) || (buttons == e.buttons && memcmp(axes, e.axes, sizeof axes) == 0));
         if (out) {
