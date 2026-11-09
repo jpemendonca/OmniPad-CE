@@ -191,6 +191,26 @@ static void test_joycon_merge_battery_showsTheLowerOne(void)
     CHECK(out.has_battery && out.battery_pct == 25, "the lower battery shows, got %d", out.battery_pct);
 }
 
+static void test_joycon_init_setup_goesOutThreeTimes(void)
+{
+    /* arrange */
+    static const unsigned char want[] = { 0x03, 0x40, 0x48, 0x30 };
+    side_t r;
+    pad_output out;
+    unsigned char buf[64];
+    memset(&out, 0, sizeof out);
+    side_open(&r, 1);
+
+    for (int step = 0; step < 12; step++) {
+        /* act */
+        int n = r.prof->init_report(r.ctx, step, &out, buf, (int)sizeof buf);
+
+        /* assert */
+        CHECK(n > 10 && buf[10] == want[step % 4], "step %d sends subcommand %#x, got %#x", step, want[step % 4], buf[10]);
+    }
+    CHECK(r.prof->init_report(r.ctx, 12, &out, buf, (int)sizeof buf) == 0, "the sequence ends after three passes");
+}
+
 static void test_joycon_start_knownAndOtherPads_getTheirSide(void)
 {
     /* arrange */
@@ -328,6 +348,7 @@ int main(void)
     test_joycon_merge_sticks_keepTheirDirections();
     test_joycon_parse_singleJoyCon_turnsItsStickAQuarter();
     test_joycon_merge_battery_showsTheLowerOne();
+    test_joycon_init_setup_goesOutThreeTimes();
     test_joycon_start_knownAndOtherPads_getTheirSide();
     test_joycon_can_join_bothHeldLongEnough_joins();
     test_joycon_can_join_oneLetGo_doesNotJoin();

@@ -632,9 +632,16 @@ static int joycon_parse(void *ctx, const uint8_t *r, int n, pad_state *st)
     return PARSE_FULL;
 }
 
+/* OmniPad: the setup goes out three times. A right Joy-Con kept blinking and sent all-zero motion
+ * after one pass, while it had taken the report mode (PS5, 8 Nov); hid-nintendo also notes that
+ * these pads drop subcommands. Repeating one is harmless. */
+#define JOYCON_INIT_STEPS 4
+#define JOYCON_INIT_PASSES 3
+
 static int joycon_init(void *ctx, int step, const pad_output *o, uint8_t *b, int max)
 {
-    return switch_init(&((joycon_ctx *)ctx)->sw, step, o, b, max);
+    if (step >= JOYCON_INIT_STEPS * JOYCON_INIT_PASSES) return 0;
+    return switch_init(&((joycon_ctx *)ctx)->sw, step % JOYCON_INIT_STEPS, o, b, max);
 }
 
 /* ---- Nintendo Wii U Pro Controller and Wii Remote ---------------------------
