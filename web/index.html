@@ -247,6 +247,12 @@
     .report summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--accent-text); }
     .report-msg.ok { color: var(--ok); font-weight: 700; }
     .report-msg.bad { color: var(--bad); }
+    /* The code is what lets a report be found from a comment: people sent reports and left it out (Nov) */
+    .report-code { margin-top: 10px; padding: 14px 16px; border: 2px solid var(--bad); border-radius: 12px; background: color-mix(in srgb, var(--bad) 8%, transparent); }
+    .report-code[hidden] { display: none; }
+    .report-code-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .report-code-text { font-family: var(--mono); font-size: 34px; font-weight: 800; letter-spacing: 0.18em; color: var(--bad); user-select: all; }
+    .report-code-hint { margin: 8px 0 0; font-size: 14px; font-weight: 600; }
     .diag textarea { width: 100%; height: 160px; margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--log-text); background: var(--log-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; resize: vertical; }
     .diag textarea#reportMsg { height: 90px; margin-top: 6px; font-family: inherit; font-size: 14px; color: var(--text); background: var(--panel-2); }
 
@@ -271,6 +277,8 @@
     html.tv .report-btn { min-height: 44px; font-size: 16px; }
     html.tv .report-lbl, html.tv .report summary { font-size: 17px; }
     html.tv .diag textarea#reportMsg { font-size: 18px; height: 120px; }
+    html.tv .report-code-text { font-size: 48px; }
+    html.tv .report-code-hint { font-size: 18px; }
     html.tv .brand h1 { font-size: 28px; }
     html.tv .status .st-main { font-size: 20px; }
     html.tv .pill { font-size: 15px; padding: 6px 12px; }
@@ -348,6 +356,10 @@
         <button type="button" class="ghost" id="btnReportClose"></button>
       </div>
       <p class="note report-msg" id="reportStatus" aria-live="polite"></p>
+      <div class="report-code" id="reportCode" hidden>
+        <div class="report-code-row"><span class="report-code-text" id="reportCodeText"></span><button type="button" id="btnReportCopy"></button></div>
+        <p class="report-code-hint" id="reportCodeHint"></p>
+      </div>
     </section>
 
     <section class="panel start" id="start" aria-labelledby="hStart">
@@ -535,7 +547,7 @@
         reportNote: 'Envia o log e o diagnóstico deste PS5 para o desenvolvedor do OmniPad. Nada sai do console até você apertar Enviar.',
         reportMsgLbl: 'Conte o que está acontecendo (opcional)', reportPh: 'Ex.: meu controle 8BitDo não responde na tela de perfil.',
         reportPreview: 'Ver o que vai ser enviado', reportSend: 'Enviar', reportClose: 'Fechar', reportSending: 'Enviando…',
-        reportSent: (c) => `Enviado! Código do relatório: ${c}. Guarde esse código: se quiser falar do problema no GitHub ou no Reddit, é só mencioná-lo.`,
+        reportSent: 'Enviado! Código do seu relatório:', reportCodeHint: 'Coloque esse código na sua mensagem no GitHub ou no Reddit. É com ele que o desenvolvedor acha o seu relatório.', reportCopy: 'Copiar código', reportCopied: 'Copiado',
         reportLater: 'Muitos envios agora. Tente de novo mais tarde.', reportTomorrow: 'O limite de relatórios de hoje acabou. Tente de novo amanhã.',
         reportFail: 'Não deu para enviar. Se o PS5 estiver sem internet, abra este painel no celular, na mesma rede, e envie de lá. Ou use Copiar diagnóstico e abra uma issue no projeto no GitHub.',
         reportPrivacy: 'Endereços MAC são cortados antes de salvar, e o relatório é apagado em 90 dias.',
@@ -594,7 +606,7 @@
         reportNote: 'Sends this PS5’s log and diagnostics to the OmniPad developer. Nothing leaves the console until you press Send.',
         reportMsgLbl: 'Tell us what is happening (optional)', reportPh: 'E.g.: my 8BitDo controller does not respond on the profile screen.',
         reportPreview: 'See what will be sent', reportSend: 'Send', reportClose: 'Close', reportSending: 'Sending…',
-        reportSent: (c) => `Sent! Report code: ${c}. Keep this code: if you want to talk about the problem on GitHub or Reddit, just mention it.`,
+        reportSent: 'Sent! Your report code:', reportCodeHint: 'Put this code in your message on GitHub or Reddit. It is how the developer finds your report.', reportCopy: 'Copy code', reportCopied: 'Copied',
         reportLater: 'Too many sends right now. Try again later.', reportTomorrow: 'Today’s report limit was reached. Try again tomorrow.',
         reportFail: 'Could not send. If the PS5 has no internet, open this page on your phone, on the same network, and send it from there. Or use Copy diagnostics and open an issue on the project’s GitHub.',
         reportPrivacy: 'MAC addresses are cut before saving, and the report is deleted after 90 days.',
@@ -653,7 +665,7 @@
         reportNote: 'Envía el log y el diagnóstico de esta PS5 al desarrollador de OmniPad. Nada sale de la consola hasta que pulses Enviar.',
         reportMsgLbl: 'Cuenta qué está pasando (opcional)', reportPh: 'Ej.: mi mando 8BitDo no responde en la pantalla de perfil.',
         reportPreview: 'Ver lo que se enviará', reportSend: 'Enviar', reportClose: 'Cerrar', reportSending: 'Enviando…',
-        reportSent: (c) => `¡Enviado! Código del informe: ${c}. Guarda este código: si quieres hablar del problema en GitHub o Reddit, solo menciónalo.`,
+        reportSent: '¡Enviado! Código de tu informe:', reportCodeHint: 'Pon este código en tu mensaje en GitHub o Reddit. Con él, el desarrollador encuentra tu informe.', reportCopy: 'Copiar código', reportCopied: 'Copiado',
         reportLater: 'Demasiados envíos ahora. Inténtalo más tarde.', reportTomorrow: 'Se alcanzó el límite de informes de hoy. Inténtalo mañana.',
         reportFail: 'No se pudo enviar. Si la PS5 no tiene internet, abre este panel en el móvil, en la misma red, y envíalo desde allí. O usa Copiar diagnóstico y abre un issue en el GitHub del proyecto.',
         reportPrivacy: 'Las direcciones MAC se recortan antes de guardar, y el informe se borra a los 90 días.',
@@ -712,7 +724,7 @@
         reportNote: 'Envoie le journal et le diagnostic de cette PS5 au développeur d’OmniPad. Rien ne quitte la console tant que vous n’appuyez pas sur Envoyer.',
         reportMsgLbl: 'Décrivez ce qui se passe (facultatif)', reportPh: 'Ex. : ma manette 8BitDo ne répond pas sur l’écran de profil.',
         reportPreview: 'Voir ce qui sera envoyé', reportSend: 'Envoyer', reportClose: 'Fermer', reportSending: 'Envoi…',
-        reportSent: (c) => `Envoyé ! Code du rapport : ${c}. Gardez ce code : si vous voulez parler du problème sur GitHub ou Reddit, il suffit de le citer.`,
+        reportSent: 'Envoyé ! Code de votre rapport :', reportCodeHint: 'Mettez ce code dans votre message sur GitHub ou Reddit. C’est avec lui que le développeur retrouve votre rapport.', reportCopy: 'Copier le code', reportCopied: 'Copié',
         reportLater: 'Trop d’envois pour le moment. Réessayez plus tard.', reportTomorrow: 'La limite de rapports du jour est atteinte. Réessayez demain.',
         reportFail: 'Envoi impossible. Si la PS5 n’a pas internet, ouvrez cette page sur votre téléphone, sur le même réseau, et envoyez depuis celui-ci. Ou utilisez Copier le diagnostic et ouvrez une issue sur le GitHub du projet.',
         reportPrivacy: 'Les adresses MAC sont tronquées avant l’enregistrement, et le rapport est supprimé après 90 jours.',
@@ -771,7 +783,7 @@
         reportNote: 'Sendet das Log und die Diagnose dieser PS5 an den Entwickler von OmniPad. Nichts verlässt die Konsole, bevor du auf Senden drückst.',
         reportMsgLbl: 'Beschreibe, was passiert (optional)', reportPh: 'Z. B.: Mein 8BitDo-Controller reagiert nicht im Profilbildschirm.',
         reportPreview: 'Ansehen, was gesendet wird', reportSend: 'Senden', reportClose: 'Schließen', reportSending: 'Wird gesendet…',
-        reportSent: (c) => `Gesendet! Berichtscode: ${c}. Bewahre diesen Code auf: Wenn du auf GitHub oder Reddit über das Problem schreiben willst, nenne ihn einfach.`,
+        reportSent: 'Gesendet! Dein Berichtscode:', reportCodeHint: 'Schreib diesen Code in deine Nachricht auf GitHub oder Reddit. Damit findet der Entwickler deinen Bericht.', reportCopy: 'Code kopieren', reportCopied: 'Kopiert',
         reportLater: 'Gerade zu viele Sendungen. Versuche es später noch einmal.', reportTomorrow: 'Das Tageslimit für Berichte ist erreicht. Versuche es morgen wieder.',
         reportFail: 'Senden nicht möglich. Wenn die PS5 kein Internet hat, öffne diese Seite auf dem Handy im selben Netzwerk und sende von dort. Oder nutze Diagnose kopieren und eröffne ein Issue im GitHub des Projekts.',
         reportPrivacy: 'MAC-Adressen werden vor dem Speichern gekürzt, und der Bericht wird nach 90 Tagen gelöscht.',
@@ -830,7 +842,7 @@
         reportNote: 'Отправляет журнал и диагностику этой PS5 разработчику OmniPad. Ничего не покидает консоль, пока вы не нажмёте «Отправить».',
         reportMsgLbl: 'Опишите, что происходит (необязательно)', reportPh: 'Например: мой контроллер 8BitDo не реагирует на экране выбора профиля.',
         reportPreview: 'Посмотреть, что будет отправлено', reportSend: 'Отправить', reportClose: 'Закрыть', reportSending: 'Отправка…',
-        reportSent: (c) => `Отправлено! Код отчёта: ${c}. Сохраните этот код: если захотите написать о проблеме на GitHub или Reddit, просто укажите его.`,
+        reportSent: 'Отправлено! Код вашего отчёта:', reportCodeHint: 'Укажите этот код в сообщении на GitHub или Reddit. По нему разработчик находит ваш отчёт.', reportCopy: 'Скопировать код', reportCopied: 'Скопировано',
         reportLater: 'Сейчас слишком много отправок. Попробуйте позже.', reportTomorrow: 'Дневной лимит отчётов исчерпан. Попробуйте завтра.',
         reportFail: 'Не удалось отправить. Если у PS5 нет интернета, откройте эту страницу на телефоне в той же сети и отправьте оттуда. Или нажмите «Копировать диагностику» и создайте issue на GitHub проекта.',
         reportPrivacy: 'MAC-адреса обрезаются перед сохранением, а отчёт удаляется через 90 дней.',
@@ -889,7 +901,7 @@
         reportNote: 'このPS5のログと診断をOmniPadの開発者に送ります。「送信」を押すまで、コンソールから何も送られません。',
         reportMsgLbl: '何が起きているか教えてください（任意）', reportPh: '例：8BitDoのコントローラーがプロフィール画面で反応しません。',
         reportPreview: '送信される内容を見る', reportSend: '送信', reportClose: '閉じる', reportSending: '送信中…',
-        reportSent: (c) => `送信しました。レポートコード：${c}。このコードを保存してください。GitHubやRedditで問題について話したいときは、このコードを書くだけで大丈夫です。`,
+        reportSent: '送信しました。レポートコード：', reportCodeHint: 'GitHubやRedditのメッセージにこのコードを書いてください。開発者はこのコードでレポートを見つけます。', reportCopy: 'コードをコピー', reportCopied: 'コピーしました',
         reportLater: '現在、送信が多すぎます。しばらくしてからもう一度お試しください。', reportTomorrow: '今日のレポート上限に達しました。明日もう一度お試しください。',
         reportFail: '送信できませんでした。PS5がインターネットに接続されていない場合は、同じネットワークのスマートフォンでこのページを開いて送信してください。または「診断をコピー」を使い、プロジェクトのGitHubでissueを作成してください。',
         reportPrivacy: 'MACアドレスは保存前に短縮され、レポートは90日後に削除されます。',
@@ -971,6 +983,7 @@
       $('btnReport').textContent = T.report; $('hReport').textContent = T.hReport; $('reportNote').textContent = T.reportNote;
       $('reportMsgLbl').textContent = T.reportMsgLbl; $('reportMsg').placeholder = T.reportPh; $('reportPreview').textContent = T.reportPreview;
       $('reportPrivacy').textContent = T.reportPrivacy; $('btnReportSend').textContent = T.reportSend; $('btnReportClose').textContent = T.reportClose;
+      $('reportCodeHint').textContent = T.reportCodeHint; $('btnReportCopy').textContent = T.reportCopy;
       $('startSteps').innerHTML = '';
       T.steps.forEach(t => { const li = document.createElement('li'); li.textContent = t; $('startSteps').appendChild(li); });
       if (last) { renderBt(last.bt); renderStatus(last); renderUpdate(); }
@@ -1600,6 +1613,7 @@
       reportDone = false;
       $('btnReportSend').disabled = false;
       reportSay('', '');
+      $('reportCode').hidden = true;
       $('reportBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
       $('reportMsg').focus({ preventScroll: true });
     }
@@ -1631,7 +1645,11 @@
           let data = {};
           try { data = await res.json(); } catch (e) { /* no JSON body */ }
           if (res.status === 201 && data.code) {
-            reportSay(T.reportSent(data.code), 'ok');
+            reportSay(T.reportSent, 'ok');
+            $('reportCodeText').textContent = data.code;
+            $('btnReportCopy').textContent = T.reportCopy;
+            $('reportCode').hidden = false;
+            $('reportCode').scrollIntoView({ behavior: 'smooth', block: 'center' });
             reportDone = true;
             $('reportMsg').value = '';
             return;
@@ -1650,6 +1668,23 @@
         reportBusy = false;
         $('btnReportSend').disabled = reportDone;
       }
+    }
+
+    async function copyReportCode() {
+      const el = $('reportCodeText');
+      let ok = false;
+      try { await navigator.clipboard.writeText(el.textContent); ok = true; } catch (e) { /* not on plain http */ }
+      if (!ok) {
+        try {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const sel = getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          ok = document.execCommand('copy');
+        } catch (e) { /* the code stays selected for a manual copy */ }
+      }
+      if (ok) $('btnReportCopy').textContent = T.reportCopied;
     }
 
     /* ---------- actions ---------- */
@@ -1679,6 +1714,7 @@
       $('btnDiag').addEventListener('click', copyDiag);
       $('btnReport').addEventListener('click', openReport);
       $('btnReportClose').addEventListener('click', () => $('reportBox').classList.remove('show'));
+      $('btnReportCopy').addEventListener('click', copyReportCode);
       $('btnReportSend').addEventListener('click', sendReport);
       $('reportDetails').addEventListener('toggle', previewReport);
       $('btnMap').addEventListener('click', toggleMapping);
