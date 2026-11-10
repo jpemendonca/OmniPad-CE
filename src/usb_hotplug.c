@@ -524,8 +524,11 @@ static int find_free_slot(void)
     return -1;
 }
 
-static usb_controller_type_t usb_inspect_descriptors(int fd, const char **name_out)
+/* Fills summary (if not NULL) with each interface's class/subclass/protocol and endpoint count, from
+ * the configuration the kernel already read: an unknown device's log line then says what it offers. */
+static usb_controller_type_t usb_inspect_descriptors(int fd, const char **name_out, char *summary, size_t n)
 {
+    if (summary && n) summary[0] = 0;
 #ifdef __PROSPERO__
     struct usb_gen_descriptor desc;
     uint8_t raw[512];
@@ -537,6 +540,9 @@ static usb_controller_type_t usb_inspect_descriptors(int fd, const char **name_o
     int len = desc.ugd_actlen;
     if (len <= 0 || len > (int)sizeof(raw)) len = (int)sizeof(raw);
 
+    usb_controller_type_t found = CTRL_UNKNOWN;
+    size_t used = 0;
+    int endpoints = -1;
     int offset = 0;
     while (offset + 2 <= len) {
         int entry = raw[offset];
@@ -546,16 +552,24 @@ static usb_controller_type_t usb_inspect_descriptors(int fd, const char **name_o
             uint8_t if_class = raw[offset + 5];
             uint8_t if_subclass = raw[offset + 6];
 
+            if (summary && endpoints >= 0 && used < n) used += (size_t)snprintf(summary + used, n - used, " %d ep,", endpoints);
+            if (summary && used < n) used += (size_t)snprintf(summary + used, n - used, " %02x/%02x/%02x", if_class, if_subclass, raw[offset + 7]);
+            endpoints = 0;
+
             /* Xbox 360 / XInput interface (Class 0xFF, SubClass 0x5D) */
-            if (if_class == 0xFF && if_subclass == 0x5D) {
+            if (if_class == 0xFF && if_subclass == 0x5D && found == CTRL_UNKNOWN) {
                 if (name_out) *name_out = "XInput Compatible Controller";
-                return CTRL_XBOX_XINPUT;
+                found = CTRL_XBOX_XINPUT;
             }
+        } else if (bDescriptorType == 0x05 && endpoints >= 0) {
+            endpoints++;
         }
         offset += entry;
     }
+    if (summary && endpoints >= 0 && used < n) snprintf(summary + used, n - used, " %d ep", endpoints);
+    return found;
 #else
-    (void)fd; (void)name_out;
+    (void)fd; (void)name_out; (void)n;
 #endif
     return CTRL_UNKNOWN;
 }
@@ -597,7 +611,8 @@ static void probe_usb_devices(void)
 
             /* Per-model driver by VID/PID; otherwise an XInput interface descriptor picks a class driver */
             const pad_driver_t *drv = pad_driver_lookup(vid, pid);
-            if (!drv && usb_inspect_descriptors(fd, NULL) == CTRL_XBOX_XINPUT) {
+            char ifaces[160] = "";
+            if (!drv && usb_inspect_descriptors(fd, NULL, ifaces, sizeof(ifaces)) == CTRL_XBOX_XINPUT) {
                 drv = pad_driver_for_xinput_class(vid, pid);
             }
             usb_controller_type_t ctype = drv ? drv->type : CTRL_UNKNOWN;
@@ -609,6 +624,8 @@ static void probe_usb_devices(void)
                     s_last_seen[bus][dev] = packed;
                     log_line("usb_hotplug: Device discovered on %s (VID 0x%04x, PID 0x%04x, type %d: %s)",
                              path, vid, pid, (int)ctype, ctrl_name ? ctrl_name : "unrecognized");
+                    /* Class/subclass/protocol per interface: what a new driver for it would read */
+                    if (ctype == CTRL_UNKNOWN && ifaces[0]) log_line("usb_hotplug: %04x:%04x interfaces:%s", vid, pid, ifaces);
                 }
             }
 
