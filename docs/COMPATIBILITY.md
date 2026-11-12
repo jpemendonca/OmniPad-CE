@@ -89,7 +89,7 @@ Any USB device with a Bluetooth HCI interface (class `E0/01/01`) is used, except
 |---|---|
 | **Sony DualShock 4** (CUH-ZCT1, Bluetooth id `054c:09cc`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting by pressing PS |
 | **Xbox Series X\|S** (Bluetooth LE, `045e:0b13`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting when switched on. Its battery is not read yet |
-| Nintendo Joy-Con (`057e:2006`, `057e:2007`), always the two together | 🟡 Joined with a profile picked on a PS5, on a generic CSR adapter. Still being tested |
+| Nintendo Joy-Con (`057e:2006`, `057e:2007`), always the two together | 🟢 **Verified on PS5 Hardware**: on a TP-Link UB500 and a generic CSR adapter, and confirmed by the community (issue 7). Third-party Joy-Con copies are not supported yet |
 | Switch Pro, 8BitDo, generic Bluetooth HID | 🟡 Profiles come from AnyPad, not tested through the adapter |
 
 ### Using it

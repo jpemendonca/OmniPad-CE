@@ -24,7 +24,7 @@ Depois de iniciar, confira o aviso no canto da tela: **"OmniPad ... ativo"**. El
   2. Coloque o controle em pareamento. No DS4, segure **Share + PS** até a luz piscar rápido. No Xbox, segure o botão de parear, em cima do controle, até o logo piscar rápido.
   3. Em alguns segundos ele conecta. Da próxima vez, é só ligar o controle: **PS** no DS4, o botão **Xbox** no Xbox.
 
-- **Joy-Cons (sempre os dois juntos, como um controle só):**
+- **Joy-Cons originais da Nintendo (sempre os dois juntos, como um controle só):**
   1. Segure o botão de sincronizar de um deles até aparecer o aviso pedindo o outro.
   2. Segure o botão de sincronizar do outro até conectar. Aí abre a tela de perfil.
   3. Escolha o perfil e confirme com o **B**. Os botões seguem a posição do controle do PS5: B é X, A é Círculo, Y é Quadrado e X é Triângulo.
