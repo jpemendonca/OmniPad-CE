@@ -390,6 +390,21 @@ static void *usb_reader_worker(void *arg)
         usb_fs_send_packet(dev, led_on, sizeof(led_on), 80);
         log_line("usb_hotplug: GIP power/s_init/led sent on slot %d", dev->slot);
     }
+    if (dev->use_fs && dev->has_out && dev->type == CTRL_NINTENDO_SWITCH_PRO) {
+        /* What a Switch sends on the interrupt OUT endpoint (Linux hid-nintendo): handshake, then
+         * "no timeout", then full reports. An 8BitDo receiver in Switch Pro mode dropped off USB
+         * about 3 s after the control-request handshake alone, as a Pro Controller does without
+         * "no timeout" (reports RP9X, Q6BP, 6UUV). */
+        static const uint8_t handshake[] = {0x80, 0x02};
+        static const uint8_t no_timeout[] = {0x80, 0x04};
+        static const uint8_t full_reports[] = {0x01, 0x00, 0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40, 0x03, 0x30};
+        int r1 = usb_fs_send_packet(dev, handshake, sizeof(handshake), 80);
+        usleep(20000);
+        int r2 = usb_fs_send_packet(dev, no_timeout, sizeof(no_timeout), 80);
+        usleep(20000);
+        int r3 = usb_fs_send_packet(dev, full_reports, sizeof(full_reports), 80);
+        log_line("usb_hotplug: Switch handshake sent on OUT for slot %d -> %d %d %d", dev->slot, r1, r2, r3);
+    }
     if (dev->use_fs && dev->has_out && (dev->drv->flags & PADDRV_XINPUT_LED_OUT)) {
         /* XInput hosts set the player LED on the interrupt OUT endpoint right after
          * connecting. Without it the 8BitDo Ultimate 2C stays silent and re-enumerates
@@ -643,6 +658,9 @@ static void probe_usb_devices(void)
             }
 
             log_line("usb_hotplug: Claiming %s on %s (slot %d)", ctrl_name, path, slot);
+            /* What it offers: some receivers show the same ID with other endpoints than their pad on a cable */
+            if (!ifaces[0]) usb_inspect_descriptors(fd, NULL, ifaces, sizeof(ifaces));
+            if (ifaces[0]) log_line("usb_hotplug: %04x:%04x interfaces:%s", vid, pid, ifaces);
 
             /* Perform controller-specific wake-up / LED handshake */
             int slow_start = (drv->flags & PADDRV_SLOW_START) != 0;
