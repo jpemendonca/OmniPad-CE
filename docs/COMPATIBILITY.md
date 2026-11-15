@@ -32,6 +32,7 @@ All peripherals in this table connect directly to any USB-A or USB-C port on the
 | **Sony DualShock 3 (PS3)** | Mini-USB Cable (`054c:0268`) | 🟡 **Experimental (Spec-Implemented)** | Magic wake packet (`0x03f4`) implemented. *(No Bluetooth)*. |
 | **Nintendo Switch Pro Controller** | USB-C Cable (`057e:2009`) | 🟡 **Experimental (Spec-Implemented)** | 3-step USB activation handshake implemented. |
 | **8BitDo USB Wireless Adapter 2 with a DualShock 4** | USB adapter (`2dc8:3107`, then `054c:05c4`) | 🟢 **Verified on PS5 Hardware** | Idle it shows as `2dc8:3107`, which OmniPad leaves alone. When the DS4 connects it turns into a USB DS4. |
+| **8BitDo USB Wireless Adapter 2 with a Joy-Con** | USB adapter | ❌ **Not supported** | On a PS5 the adapter stayed in its idle mode (`2dc8:3107`) and never offered a controller (report UK5P). It also takes only one Joy-Con at a time. Connect Joy-Cons over Bluetooth instead, as a pair. |
 | **8BitDo Wireless USB Adapter (v1, or v2 with other controllers)** | USB 2.4G Dongle (`2dc8:*`) | 🟡 **Experimental (Spec-Implemented)** | Bridges controllers into standard USB HID/XInput. |
 | **8BitDo Ultimate 2** | 2.4GHz USB Dongle (`2dc8:310b`) | 🟢 **Verified on PS5 Hardware (community)** | Gets the same player LED command as the Ultimate 2C. It has no idle rule, because it only reports on change. |
 | **Mad Catz FightStick TE (PS3)** | Wired USB (`0738:8838`) | 🟡 **Experimental (Spec-Implemented)** | Reads the usual PS3 arcade stick layout. |

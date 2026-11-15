@@ -30,6 +30,7 @@ Use third-party controllers on a jailbroken PS5 (FW 7.00 – 13.60). They plug i
 | Machenike G5 Pro / G5 Pro Max SE | 2.4 GHz dongle or USB-C cable | ✅ Tested upstream |
 | GameSir G7 Pro 8K | 2.4 GHz dongle | ✅ Reported working by the community |
 | Sony DualShock 4 through an 8BitDo USB Wireless Adapter 2 | USB adapter | ✅ Tested on a PS5, FW 13.60 |
+| Joy-Con through an 8BitDo USB Wireless Adapter 2 | USB adapter | ❌ Not supported: connect Joy-Cons over Bluetooth |
 | Xbox Series X\|S | USB cable | ✅ Tested on a PS5, FW 13.60 |
 | Xbox Series X\|S | Bluetooth, through a USB adapter | ✅ Tested on a PS5, FW 13.60 |
 | Xbox One, Xbox 360, DualShock 3, Switch Pro, generic USB pads | USB cable | 🟡 Written from the spec, not yet tested on a console |
