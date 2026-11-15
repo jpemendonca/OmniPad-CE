@@ -27,3 +27,4 @@ The upstream stack shares the PS5's internal radio with the system. Here it runs
 - `host.c`, `le.c` and `host_int.h`: the Classic inquiry and the LE scan take turns instead of running together. A CSR clone with both on never finished an inquiry.
 - `bt_profiles.c`: a Joy-Con's setup subcommands go out three times, since a right Joy-Con did not take them all on one pass.
 - `bt_profiles.c` and `bt_profiles.h`: `profile_joycon_quiet` keeps Joy-Cons out of their full report until `src/bt_adapter.c` has both halves of a pair. A CSR clone locked up when a second link came up next to a streaming Joy-Con.
+- `le.c`: LE pads are asked for legacy pairing, not Secure Connections. An Xbox Series refused the Secure Connections DHKey check on a TP-Link UB500 (issue 10).

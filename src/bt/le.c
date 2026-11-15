@@ -657,7 +657,12 @@ static void smp_start(host_t *h, link_t *l)
     e->preq[0] = SMP_PAIRING_REQ;
     e->preq[1] = 0x03;                  /* NoInputNoOutput */
     e->preq[2] = 0x00;                  /* no OOB data */
-    e->preq[3] = (uint8_t)(0x01 | (h->le_pk_ok ? 0x08 : 0));   /* bonding, SC */
+    /* OmniPad: legacy pairing only. An Xbox Series refused the last step of Secure Connections
+     * (reason 0x0b, our DHKey check) on a TP-Link UB500 every time, while it paired on a CSR clone
+     * (issue 10, reports 5XCX, XM3W). The key it gets is the same the controller computes with,
+     * so the DHKey the Realtek returns is the suspect; legacy pairing does not use one. */
+    e->preq[3] = 0x01;                  /* bonding */
+    log_line("le pad %s: asking for legacy pairing", addr_str(l->addr));
     e->preq[4] = 16;                    /* key size */
     e->preq[5] = 0x02;                  /* our identity, if the pad takes it */
     e->preq[6] = 0x03;                  /* the pad's LTK and identity */
