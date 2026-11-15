@@ -61,9 +61,10 @@ static void test_switch_pro_usb_parsing(void)
     printf("Testing Switch Pro USB parsing... ");
     uint8_t report[64];
     memset(report, 0, sizeof(report));
-    report[3] = 0x01 | 0x40; /* B (Cross) + L1 */
-    report[4] = 0x10;        /* Home (PS button) */
-    report[5] = 0x02;        /* Dpad UP */
+    report[0] = 0x30;        /* full input report */
+    report[3] = 0x04 | 0x80; /* B (Cross) + ZR */
+    report[4] = 0x10 | 0x80; /* Home (PS button) + the charging grip bit */
+    report[5] = 0x02 | 0x40 | 0x80; /* Dpad UP + L + ZL */
 
     /* Sticks at bytes 6..11 */
     report[6] = 0x00;
@@ -78,8 +79,22 @@ static void test_switch_pro_usb_parsing(void)
     assert(res == 1);
     assert(st.buttons & PAD_BTN_CROSS);
     assert(st.buttons & PAD_BTN_L1);
+    assert(st.buttons & PAD_BTN_L2 && st.l2 == 255);
+    assert(st.buttons & PAD_BTN_R2 && st.r2 == 255);
     assert(st.buttons & PAD_BTN_PS);
     assert(st.buttons & PAD_DPAD_UP);
+    assert(!(st.buttons & (PAD_BTN_R1 | PAD_BTN_CIRCLE | PAD_BTN_SQUARE | PAD_BTN_TRIANGLE)));
+
+    /* The charging grip bit alone presses nothing (issue 12) */
+    memset(report, 0, sizeof(report));
+    report[0] = 0x30;
+    report[4] = 0x80;
+    res = usb_parse_input_report(CTRL_NINTENDO_SWITCH_PRO, report, sizeof(report), &st);
+    assert(res == 1 && st.buttons == 0 && st.r2 == 0);
+
+    /* A USB command reply (0x81) is not input */
+    report[0] = 0x81;
+    assert(usb_parse_input_report(CTRL_NINTENDO_SWITCH_PRO, report, sizeof(report), &st) == 0);
     printf("OK!\n");
 }
 

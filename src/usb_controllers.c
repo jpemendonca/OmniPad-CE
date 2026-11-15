@@ -119,34 +119,35 @@ int usb_parse_input_report(usb_controller_type_t type, const uint8_t *data, size
 
     switch (type) {
     case CTRL_NINTENDO_SWITCH_PRO: {
-        /* 64-byte or standard Switch Pro input report */
-        if (len < 12) return 0;
-        uint8_t b1 = data[3];
-        uint8_t b2 = data[4];
-        uint8_t b3 = data[5];
+        /* Full input report 0x30, or a subcommand reply 0x21 with the same first bytes, laid out as
+         * over Bluetooth (switch_parse in bt/bt_profiles.c): [3] right buttons, [4] shared, [5] left.
+         * Bit 7 of [4] is the charging grip, not a button: read as R2, it held R2 down (issue 12). */
+        if (len < 12 || (data[0] != 0x30 && data[0] != 0x21)) return 0;
+        uint8_t right = data[3];
+        uint8_t shared = data[4];
+        uint8_t left = data[5];
 
-        /* Face buttons */
-        if (b1 & 0x01) st->buttons |= PAD_BTN_CROSS;    /* Switch B -> Cross */
-        if (b1 & 0x02) st->buttons |= PAD_BTN_CIRCLE;   /* Switch A -> Circle */
-        if (b1 & 0x04) st->buttons |= PAD_BTN_SQUARE;   /* Switch Y -> Square */
-        if (b1 & 0x08) st->buttons |= PAD_BTN_TRIANGLE; /* Switch X -> Triangle */
-        if (b1 & 0x40) st->buttons |= PAD_BTN_L1;
-        if (b1 & 0x80) { st->buttons |= PAD_BTN_L2; st->l2 = 255; }
+        /* Buttons by position, as on a PS5 pad */
+        if (right & 0x01) st->buttons |= PAD_BTN_SQUARE;   /* Y */
+        if (right & 0x02) st->buttons |= PAD_BTN_TRIANGLE; /* X */
+        if (right & 0x04) st->buttons |= PAD_BTN_CROSS;    /* B */
+        if (right & 0x08) st->buttons |= PAD_BTN_CIRCLE;   /* A */
+        if (right & 0x40) st->buttons |= PAD_BTN_R1;       /* R */
+        if (right & 0x80) { st->buttons |= PAD_BTN_R2; st->r2 = 255; }   /* ZR */
 
-        if (b2 & 0x01) st->buttons |= PAD_BTN_OPTIONS;  /* Plus -> Options */
-        if (b2 & 0x02) st->buttons |= PAD_BTN_SHARE;    /* Minus -> Share */
-        if (b2 & 0x04) st->buttons |= PAD_BTN_R3;
-        if (b2 & 0x08) st->buttons |= PAD_BTN_L3;
-        if (b2 & 0x10) st->buttons |= PAD_BTN_PS;       /* Home -> PS */
-        if (b2 & 0x20) st->buttons |= PAD_BTN_TOUCHPAD; /* Capture -> Touchpad */
-        if (b2 & 0x40) st->buttons |= PAD_BTN_R1;
-        if (b2 & 0x80) { st->buttons |= PAD_BTN_R2; st->r2 = 255; }
+        if (shared & 0x01) st->buttons |= PAD_BTN_SHARE;    /* Minus */
+        if (shared & 0x02) st->buttons |= PAD_BTN_OPTIONS;  /* Plus */
+        if (shared & 0x04) st->buttons |= PAD_BTN_R3;
+        if (shared & 0x08) st->buttons |= PAD_BTN_L3;
+        if (shared & 0x10) st->buttons |= PAD_BTN_PS;       /* Home */
+        if (shared & 0x20) st->buttons |= PAD_BTN_TOUCHPAD; /* Capture */
 
-        /* D-Pad */
-        if (b3 & 0x01) st->buttons |= PAD_DPAD_DOWN;
-        if (b3 & 0x02) st->buttons |= PAD_DPAD_UP;
-        if (b3 & 0x04) st->buttons |= PAD_DPAD_RIGHT;
-        if (b3 & 0x08) st->buttons |= PAD_DPAD_LEFT;
+        if (left & 0x01) st->buttons |= PAD_DPAD_DOWN;
+        if (left & 0x02) st->buttons |= PAD_DPAD_UP;
+        if (left & 0x04) st->buttons |= PAD_DPAD_RIGHT;
+        if (left & 0x08) st->buttons |= PAD_DPAD_LEFT;
+        if (left & 0x40) st->buttons |= PAD_BTN_L1;        /* L */
+        if (left & 0x80) { st->buttons |= PAD_BTN_L2; st->l2 = 255; }    /* ZL */
 
         /* Analog Sticks (12-bit packed in Switch Pro) */
         uint16_t raw_lx = (uint16_t)(data[6] | ((data[7] & 0x0F) << 8));

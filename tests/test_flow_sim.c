@@ -135,14 +135,14 @@ static void test_pipeline_switch_pro_to_abi(void)
     report[1] = 0x01; /* Timer */
     report[2] = 0x90; /* Battery full */
     
-    /* Byte 3: Switch B (0x01 -> Cross), L1 (0x40) */
-    report[3] = 0x01 | 0x40;
+    /* Byte 3 (right side): Switch B (0x04 -> Cross) */
+    report[3] = 0x04;
     
-    /* Byte 4: Plus (0x01 -> Options), Home (0x10 -> PS) */
-    report[4] = 0x01 | 0x10;
-    
-    /* Byte 5: D-pad UP (0x02) */
-    report[5] = 0x02;
+    /* Byte 4 (shared): Plus (0x02 -> Options), Home (0x10 -> PS) */
+    report[4] = 0x02 | 0x10;
+
+    /* Byte 5 (left side): D-pad UP (0x02), L (0x40 -> L1) */
+    report[5] = 0x02 | 0x40;
 
     /* 12-bit Sticks: Center is 0x0800 (2048).
      * Forward Left Stick: raw_ly = 4095 (0x0FFF), raw_lx = 2048 (0x0800) */
