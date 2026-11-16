@@ -58,6 +58,23 @@ static void unregister_app(void)
     log_line("launcher: old tile removed to take the new link (0x%08x)", (unsigned)err);
 }
 
+/* Creates the tile's folder and files. Returns 0 when they are in place. */
+static int write_tile(const char *param, size_t len, int *param_changed, int *param_existed, int *icon_changed)
+{
+    if ((mkdir("/user/app", 0700) && errno != EEXIST) ||
+        (mkdir(LAUNCHER_DIR, 0755) && errno != EEXIST) ||
+        (mkdir(LAUNCHER_DIR "/sce_sys", 0755) && errno != EEXIST)) {
+        log_line("launcher: cannot create %s (%s)", LAUNCHER_DIR, strerror(errno));
+        return -1;
+    }
+    if (write_if_changed(LAUNCHER_DIR "/sce_sys/param.json", param, len, param_changed, param_existed) != 0 ||
+        write_if_changed(LAUNCHER_DIR "/sce_sys/icon0.png", LAUNCHER_ICON, LAUNCHER_ICON_LEN, icon_changed, NULL) != 0) {
+        log_line("launcher: cannot write the tile files (%s)", strerror(errno));
+        return -1;
+    }
+    return 0;
+}
+
 static int register_app(void)
 {
     int (*install_title_dir)(const char *, const char *, void *) = NULL;
@@ -84,18 +101,8 @@ int launcher_install(int port)
         "  }\n"
         "}\n", LAUNCHER_TITLE_ID, port);
 
-    if ((mkdir("/user/app", 0700) && errno != EEXIST) ||
-        (mkdir(LAUNCHER_DIR, 0755) && errno != EEXIST) ||
-        (mkdir(LAUNCHER_DIR "/sce_sys", 0755) && errno != EEXIST)) {
-        log_line("launcher: cannot create %s (%s)", LAUNCHER_DIR, strerror(errno));
-        return 0;
-    }
     int changed = 0, param_changed = 0, param_existed = 0;
-    if (write_if_changed(LAUNCHER_DIR "/sce_sys/param.json", param, (size_t)len, &param_changed, &param_existed) != 0 ||
-        write_if_changed(LAUNCHER_DIR "/sce_sys/icon0.png", LAUNCHER_ICON, LAUNCHER_ICON_LEN, &changed, NULL) != 0) {
-        log_line("launcher: cannot write the tile files (%s)", strerror(errno));
-        return 0;
-    }
+    if (write_tile(param, (size_t)len, &param_changed, &param_existed, &changed) != 0) return 0;
     /* Registered on every start, as the reference does: a tile removed from the home
      * screen comes back even when its files were left in place */
     int err = sceAppInstUtilInitialize();
@@ -103,7 +110,13 @@ int launcher_install(int port)
         log_line("launcher: sceAppInstUtilInitialize failed (0x%08x)", (unsigned)err);
         return 0;
     }
-    if (param_changed && param_existed) unregister_app();
+    if (param_changed && param_existed) {
+        unregister_app();
+        /* The uninstall takes the tile's files with it: the next start wrote them again and
+         * said "installed" (PS5, 16 Nov) */
+        int rewritten = 0;
+        if (write_tile(param, (size_t)len, &rewritten, NULL, &rewritten) != 0) return 0;
+    }
     err = register_app();
     if (err) {
         log_line("launcher: registering the tile failed (0x%08x)", (unsigned)err);
