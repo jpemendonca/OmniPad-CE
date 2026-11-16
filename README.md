@@ -93,8 +93,8 @@ On the PS5 itself, open the **OmniPad** icon in the **Media** tab. It is install
 - **Bluetooth:** the adapter, its address, the paired and connected pads, plus buttons to pair or to forget the paired pads.
 - **Live log:** with filters for USB, Bluetooth, slots and errors.
 - **Actions:** simulate the PS button, free a slot, or stop OmniPad.
-- **Copy diagnostics:** the version, controllers, Bluetooth state and the end of the log in one text, to paste when asking for help.
-- **Send a report:** the button at the top right sends the log and the diagnostics to the developer, with a message if you want to add one. You get a short code to quote on GitHub or Reddit.
+- **Copy diagnostics:** the button at the top right copies the version, controllers, Bluetooth state and the end of the log in one text, to paste when asking for help.
+- **Send a report:** the button on the status bar sends the log and the diagnostics to the developer, with a message if you want to add one. You get a short code to quote on GitHub or Reddit.
 
 **Sending a report.** Nothing leaves your console unless you press Send. A report holds the OmniPad log, the diagnostics text (slots, controllers, Bluetooth adapter), the OmniPad version and build, the console firmware, and the message you choose to add. MAC addresses are cut to their first three bytes, the part that names the maker, before the report is saved. Reports go to a small API run by the maintainer on Cloudflare Workers and are stored in a Cloudflare database. Only the maintainer, and the AI tools used to develop OmniPad, read them. Each report is deleted after 90 days. Your IP address is not stored: only a salted hash of it, kept for up to two days, to limit how often one address can send. To have a report deleted sooner, quote its code in an issue or a message to the maintainer.
 
