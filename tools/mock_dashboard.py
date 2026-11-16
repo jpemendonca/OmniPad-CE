@@ -117,6 +117,15 @@ class Handler(BaseHTTPRequestHandler):
         t = time.time() - START
         if PROXY and url.path.startswith("/api/"):
             self._proxy("GET")
+        elif url.path == "/start":
+            self._send(200, (ROOT / "web" / "start.html").read_bytes(), "text/html; charset=UTF-8")
+        elif url.path == "/omnipad.appcache":
+            self._send(200, "CACHE MANIFEST\n# mock\n\nCACHE:\n/start\n\nNETWORK:\n*\n", "text/cache-manifest")
+        elif url.path == "/ping":
+            self._send(200, "omnipad-ok", "text/plain", {"Access-Control-Allow-Origin": "*"})
+        elif url.path == "/ping.gif":
+            self._send(200, bytes.fromhex("47494638396101000100800000000000ffffff21f90401000000002c00000000010001000002024401003b"),
+                       "image/gif", {"Access-Control-Allow-Origin": "*"})
         elif url.path == "/api/state":
             state = {"version": "1.0.4-mock", "build": 0, "lang": "en", "uptime_ms": now_ms(), "now_ms": now_ms(),
                      "slots": [ds4_slot(t), dongle.slot(t), FREE]}

@@ -12,6 +12,7 @@
 #include "util.h"
 #include "capture.h"
 #include "web_index.h"  /* generated from web/index.html by tools/embed_web.py */
+#include "web_start.h"  /* generated from web/start.html */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -178,6 +179,47 @@ static void reply_json(int cfd, const char *body)
     write(cfd, res, (size_t)n);
 }
 
+/* True when the request line asks for exactly `route` ("GET /start"), with or without a query */
+static int req_is(const char *req, const char *route)
+{
+    size_t n = strlen(route);
+    return strncmp(req, route, n) == 0 && (req[n] == ' ' || req[n] == '?');
+}
+
+/* Answers that the browser may keep: the icon's start page and its AppCache manifest. A no-store
+ * answer can stop WebKit caching them. */
+static void reply_cacheable(int cfd, const char *type, const void *body, size_t len)
+{
+    char hdr[256];
+    int n = snprintf(hdr, sizeof(hdr),
+        "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n", type, len);
+    write(cfd, hdr, (size_t)n);
+    write_all(cfd, body, len);
+}
+
+/* The start page's manifest. Its comment changes with the page and the version, so WebKit
+ * refreshes its copy. */
+static void reply_manifest(int cfd)
+{
+    uint32_t h = 2166136261u;   /* FNV-1a */
+    for (size_t i = 0; i < HTML_START_LEN; i++) h = (h ^ (uint8_t)HTML_START[i]) * 16777619u;
+    char m[200];
+    int n = snprintf(m, sizeof(m), "CACHE MANIFEST\n# OmniPad CE %s build %d start page %08x\n\nCACHE:\n/start\n\nNETWORK:\n*\n",
+                     ANYPAD_VERSION, ANYPAD_BUILD, (unsigned)h);
+    reply_cacheable(cfd, "text/cache-manifest", m, (size_t)n);
+}
+
+/* What the start page asks to learn that OmniPad is running, readable from any origin */
+static void reply_ping(int cfd, const char *type, const void *body, size_t len)
+{
+    char hdr[256];
+    int n = snprintf(hdr, sizeof(hdr),
+        "HTTP/1.1 200 OK\r\nContent-Type: %s\r\nCache-Control: no-store\r\nAccess-Control-Allow-Origin: *\r\n"
+        "Content-Length: %zu\r\nConnection: close\r\n\r\n", type, len);
+    write(cfd, hdr, (size_t)n);
+    write_all(cfd, body, len);
+}
+
 static void handle_client(int cfd)
 {
     /* Bound how long one slow client can hold the server thread */
@@ -214,7 +256,23 @@ static void handle_client(int cfd)
         return;
     }
 
-    if (strncmp(req, "GET /api/state", 14) == 0) {
+    if (req_is(req, "GET /start")) {
+        reply_cacheable(cfd, "text/html; charset=UTF-8", HTML_START, HTML_START_LEN);
+    }
+    else if (req_is(req, "GET /omnipad.appcache")) {
+        reply_manifest(cfd);
+    }
+    else if (req_is(req, "GET /ping")) {
+        reply_ping(cfd, "text/plain", "omnipad-ok", 10);
+    }
+    else if (req_is(req, "GET /ping.gif")) {
+        static const unsigned char gif[] = {
+            0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0xff, 0xff, 0xff, 0x21, 0xf9, 0x04, 0x01, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x00, 0x00,
+            0x01, 0x00, 0x01, 0x00, 0x00, 0x02, 0x02, 0x44, 0x01, 0x00, 0x3b };
+        reply_ping(cfd, "image/gif", gif, sizeof(gif));
+    }
+    else if (strncmp(req, "GET /api/state", 14) == 0) {
         /* Live view for the dashboard, polled ~30 times per second: what each controller
          * is sending right now, plus counters the page turns into rates. */
         long now = now_ms();

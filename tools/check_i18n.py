@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Checks that every language of the dashboard's I18N table says the same things as English.
+"""Checks that every language of each page's I18N table says the same things as English.
 
 Same keys, same number of list items, same function arguments and the same ${values}. A missing
 key would show "undefined" on the page. Run by `make test`.
@@ -8,7 +8,7 @@ import re
 import sys
 from pathlib import Path
 
-PAGE = Path(__file__).resolve().parent.parent / "web" / "index.html"
+PAGES = [Path(__file__).resolve().parent.parent / "web" / name for name in ("index.html", "start.html")]
 OPEN, CLOSE = "{[(", "}])"
 
 
@@ -84,8 +84,8 @@ def shape(value):
             sorted(set(re.findall(r"\$\{([^}]+)\}", value))))
 
 
-def main():
-    table = languages(PAGE.read_text(encoding="utf-8"))
+def check(page):
+    table = languages(page.read_text(encoding="utf-8"))
     english = table["en"]
     problems = []
     for name, lang in table.items():
@@ -97,9 +97,13 @@ def main():
             if shape(english[key]) != shape(lang[key]):
                 problems.append(f"{name}: {key} differs: {shape(lang[key])} vs English {shape(english[key])}")
     for problem in problems:
-        print("FAIL: " + problem)
-    print(f"check_i18n: {len(table)} languages, {len(english)} keys, {len(problems)} problems")
-    return 1 if problems else 0
+        print(f"FAIL: {page.name}: {problem}")
+    print(f"check_i18n: {page.name}: {len(table)} languages, {len(english)} keys, {len(problems)} problems")
+    return len(problems)
+
+
+def main():
+    return 1 if sum(check(page) for page in PAGES) else 0
 
 
 if __name__ == "__main__":

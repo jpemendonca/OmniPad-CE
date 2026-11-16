@@ -21,11 +21,13 @@
 int sceAppInstUtilInitialize(void);
 int sceAppInstUtilAppInstallAll(void *);
 
-/* Writes path only when its content differs, so an unchanged tile is not re-registered */
-static int write_if_changed(const char *path, const void *data, size_t len, int *changed)
+/* Writes path only when its content differs, so an unchanged tile is not re-registered.
+ * *existed tells whether there was an older version of the file. */
+static int write_if_changed(const char *path, const void *data, size_t len, int *changed, int *existed)
 {
     static char old[256 * 1024];
     FILE *f = fopen(path, "rb");
+    if (existed) *existed = f != NULL;
     if (f) {
         size_t n = fread(old, 1, sizeof(old), f);
         fclose(f);
@@ -37,6 +39,23 @@ static int write_if_changed(const char *path, const void *data, size_t len, int 
     if (fclose(f) != 0) ok = 0;
     if (ok) *changed = 1;
     return ok ? 0 : -1;
+}
+
+/* An installed tile keeps the link it was installed with: a new param.json is taken only after
+ * an uninstall */
+static void unregister_app(void)
+{
+    uint32_t handle;
+    int (*uninstall)(const char *) = NULL;
+    if (kernel_dynlib_handle(-1, "libSceAppInstUtil.sprx", &handle) == 0) {
+        uninstall = (void *)kernel_dynlib_resolve(-1, handle, "Sx4TTyrQccE");
+    }
+    if (!uninstall) {
+        log_line("launcher: sceAppInstUtilAppUnInstall not found, the old tile keeps its link");
+        return;
+    }
+    int err = uninstall(LAUNCHER_TITLE_ID);
+    log_line("launcher: old tile removed to take the new link (0x%08x)", (unsigned)err);
 }
 
 static int register_app(void)
@@ -57,7 +76,7 @@ int launcher_install(int port)
         "{\n"
         "  \"applicationCategoryType\": 65536,\n"
         "  \"titleId\": \"%s\",\n"
-        "  \"deeplinkUri\": \"http://127.0.0.1:%d/?tv=1\",\n"
+        "  \"deeplinkUri\": \"http://127.0.0.1:%d/start\",\n"
         "  \"localizedParameters\": {\n"
         "    \"defaultLanguage\": \"en-US\",\n"
         "    \"en-US\": { \"titleName\": \"OmniPad\" },\n"
@@ -71,9 +90,9 @@ int launcher_install(int port)
         log_line("launcher: cannot create %s (%s)", LAUNCHER_DIR, strerror(errno));
         return 0;
     }
-    int changed = 0;
-    if (write_if_changed(LAUNCHER_DIR "/sce_sys/param.json", param, (size_t)len, &changed) != 0 ||
-        write_if_changed(LAUNCHER_DIR "/sce_sys/icon0.png", LAUNCHER_ICON, LAUNCHER_ICON_LEN, &changed) != 0) {
+    int changed = 0, param_changed = 0, param_existed = 0;
+    if (write_if_changed(LAUNCHER_DIR "/sce_sys/param.json", param, (size_t)len, &param_changed, &param_existed) != 0 ||
+        write_if_changed(LAUNCHER_DIR "/sce_sys/icon0.png", LAUNCHER_ICON, LAUNCHER_ICON_LEN, &changed, NULL) != 0) {
         log_line("launcher: cannot write the tile files (%s)", strerror(errno));
         return 0;
     }
@@ -84,13 +103,14 @@ int launcher_install(int port)
         log_line("launcher: sceAppInstUtilInitialize failed (0x%08x)", (unsigned)err);
         return 0;
     }
+    if (param_changed && param_existed) unregister_app();
     err = register_app();
     if (err) {
         log_line("launcher: registering the tile failed (0x%08x)", (unsigned)err);
         return 0;
     }
-    log_line("launcher: OmniPad tile %s in the Media tab (opens http://127.0.0.1:%d/)",
-             changed ? "installed" : "checked", port);
+    log_line("launcher: OmniPad tile %s in the Media tab (opens http://127.0.0.1:%d/start)",
+             changed || param_changed ? "installed" : "checked", port);
     return 1;
 }
 

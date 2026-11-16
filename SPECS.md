@@ -61,7 +61,7 @@ No network service or account is needed. The firmware is embedded at build time.
 | `/data/anypad/omnipad_bt.db` | Bluetooth link keys. It is not PR 18's `pads.db`, whose keys belong to the internal radio. |
 | `/data/anypad/maps/` | Per-pad Bluetooth profile settings |
 | `/data/anypad/remap.txt` | Button rules per controller model, one `vvvv:pppp a+b=c,d=e` per line |
-| `/user/app/OMNP00001/sce_sys/` | Media tab tile: `param.json` (category 65536, `deeplinkUri` `http://127.0.0.1:8105/?tv=1`) and `icon0.png` |
+| `/user/app/OMNP00001/sce_sys/` | Media tab tile: `param.json` (category 65536, `deeplinkUri` `http://127.0.0.1:8105/start`) and `icon0.png` |
 
 ## Contracts
 
@@ -70,6 +70,9 @@ HTTP on port 8105 (`web.c`):
 | Route | Does |
 |---|---|
 | `GET /` | Dashboard. `?tv=1` switches to the TV layout. |
+| `GET /start` | The Media tab tile's page (`web/start.html`). Sent without `no-store`, so the browser can keep it. |
+| `GET /omnipad.appcache` | AppCache manifest of `/start`: `CACHE: /start`, `NETWORK: *`, and a comment with the version and an FNV-1a hash of the page. Sent without `no-store`. |
+| `GET /ping`, `GET /ping.gif` | `omnipad-ok` and a 1x1 GIF, with `Access-Control-Allow-Origin: *`. The start page asks both to learn that OmniPad is running. |
 | `GET /api/state` | Version, console language (`lang`), uptime, per slot (status, name, conn, battery, charging, battery_known, vid/pid, buttons, raw_buttons (before the rules of `remap.c`), raw_seen (pressed since the last read, cleared by reading), sticks, triggers, counters, idle release), and `bt` (state, adapter, address, pairing_left, paired, pads) |
 | `GET /api/status` | Older per-slot summary |
 | `GET /api/log[?since=N]` | Up to 32 KB of the log. `X-Log-Offset` says where the next read starts. |
@@ -129,6 +132,7 @@ GitHub releases on `jpemendonca/OmniPad-CE`. Assets: `OmniPad-CE.elf` and the Re
   - a key is forgotten only when the pad refuses it.
 - **2026-10-25: the adapter searches by itself.** The user only puts the pad in pairing mode, with no dashboard needed.
 - **2026-10-27: Media tab tile** with the same mechanism as ps5-web-file-manager: an app with no executable, plus a `deeplinkUri`.
+- **2026-11-16: the tile opens `/start`, not the dashboard.** With OmniPad stopped the tile showed the browser's page error. The start page's AppCache manifest lets the console's browser keep a copy and show it while nothing answers on the port: the page asks `/ping` (XHR) and `/ping.gif` (an image) at once, opens the dashboard with `?tv=1` on the first answer, or says how to start OmniPad and asks again every 4 s. The browser only has the copy after the tile was opened once with OmniPad running. `file://` links do not open on the console. An installed tile keeps its old link, so a changed `param.json` is registered after an uninstall (`sceAppInstUtilAppUnInstall`), and only then.
 - **2026-10-27: notifications follow the system language**. Since 2026-11-03 in seven languages, English by default. The translations are ours, with no native review, so reports from users are expected to correct them.
 - **2026-11-03: 1.5.0 went out without rechecking the Xbox Series and the short search on a good chip (UB500)**: the maintainer no longer has them and decided so. They rest on the 2 Nov PS5 tests and on the simulator.
 - **2026-11-03: a DS4 once stayed linked and mute**, 18 s after reconnecting on the Baseus clone, until switched off. It did not happen again and the cause is unknown; the maintainer closed it. `bt_adapter.c` logs "silent for" with the transport counters, so a recurrence explains itself.

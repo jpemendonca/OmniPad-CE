@@ -38,7 +38,7 @@ Aperte **PS** no controle novo. O PS5 mostra a tela de escolher o perfil: escolh
 
 ## 5. Painel
 
-- **No próprio PS5:** abra a aba **Mídia** e o ícone **OmniPad**. Ele aparece depois da primeira vez que o OmniPad rodar, e só abre o painel enquanto o OmniPad estiver rodando.
+- **No próprio PS5:** abra a aba **Mídia** e o ícone **OmniPad**. Ele aparece depois da primeira vez que o OmniPad rodar. Se você abrir o ícone com o OmniPad parado, aparece uma página explicando que é preciso iniciar o OmniPad primeiro, e ela abre o painel sozinha quando o OmniPad responder. Essa página só funciona depois que você abriu o ícone uma vez com o OmniPad rodando: é aí que o navegador do PS5 guarda ela.
 - **No celular ou no PC:** abra `http://<IP do PS5>:8105`. O IP aparece no aviso de "ativo".
 
 No painel você testa os botões do controle, vê se a conexão está boa, pareia ou esquece controles Bluetooth e acompanha o log.
@@ -53,7 +53,7 @@ Ninguém precisa fazer isso: o controle já funciona como está. Se o seu não t
 |---|---|
 | Nenhum aviso do OmniPad apareceu | O payload não foi iniciado. Mande de novo e clique em **Iniciar** ou **Launch** no seu loader. |
 | O painel não abre no celular | O celular e o PS5 precisam estar na mesma rede. Confira o IP no aviso de "ativo". |
-| O ícone da aba Mídia abre uma página de erro | O OmniPad não está rodando. Inicie o payload e abra o ícone de novo. |
+| O ícone da aba Mídia abre uma página de erro | O OmniPad não está rodando, e o ícone ainda não tinha sido aberto com ele rodando. Inicie o payload e abra o ícone de novo. Da próxima vez, aparece a página que explica o que fazer. |
 | Controle com fio não responde | Alguns cabos só carregam, sem passar dados. Teste outro cabo. |
 | Adaptador Bluetooth não aparece no painel | Tire e plugue de novo. Adaptadores Realtek que não sejam RTL8761B ainda não funcionam. |
 | Segundo controle não conecta num adaptador genérico | Com um controle já conectado, os genéricos "CSR 4.0" não procuram sozinhos. Toque em **Parear controle** no painel e coloque o controle em pareamento. Isso pode travar esse chip e derrubar os controles: se o aviso pedir, tire e plugue o adaptador. Pra usar dois controles Bluetooth, prefira um adaptador com chip RTL8761B, como o TP-Link UB500. |
