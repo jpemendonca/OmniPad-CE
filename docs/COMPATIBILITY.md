@@ -38,6 +38,7 @@ All peripherals in this table connect directly to any USB-A or USB-C port on the
 | **Mad Catz FightStick TE (PS3)** | Wired USB (`0738:8838`) | 🟡 **Experimental (Spec-Implemented)** | Reads the usual PS3 arcade stick layout. |
 | **8BitDo Ultimate 2C Wireless** | 2.4GHz USB Dongle (`2dc8:310a`) | 🟡 **Experimental (Spec-Implemented)** | Same handling as the `2dc8:3106` below. Its receiver shows as `2dc8:301c` until the pad is on. |
 | **8BitDo Ultimate 2C Wireless** | 2.4GHz USB Dongle or USB-C Cable (`2dc8:3106`) | 🟢 **Verified on PS5 Hardware (community)** | Briefly enumerates as a vendor HID device (`2dc8:3016`) and then as XInput (`2dc8:3106`). Sends no input until it gets the XInput player-LED command (`01 03 02`) on interrupt OUT endpoint `0x05`, and re-enumerates after ~10s without it. |
+| **GuliKit TT Pro** | 2.4GHz USB Dongle (`057e:2009`) | 🟢 **Verified on PS5 Hardware (community)** | Its dongle shows as a Switch Pro Controller on USB. Confirmed by a user in issue #3. |
 | **GameSir G7 Pro 8K** | 2.4GHz USB Dongle | 🟢 **Verified on PS5 Hardware (community)** | A user on r/ps5homebrew reported it working well. Its USB ID and firmware were not reported. A G7 Pro was also reported working over Bluetooth in issue #1. |
 | **Logitech Gamepads (F310, F710)** | USB Cable / 2.4G Receiver | 🟡 **Experimental (Spec-Implemented)** | Operates in either XInput or standard HID mode. |
 | **Generic PC USB Gamepads** | Standard USB Cable | 🟡 **Experimental (Spec-Implemented)** | 10-byte standard HID descriptor normalization. |
@@ -89,7 +90,7 @@ Any USB device with a Bluetooth HCI interface (class `E0/01/01`) is used, except
 | Controller | Status |
 |---|---|
 | **Sony DualShock 4** (CUH-ZCT1, Bluetooth id `054c:09cc`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting by pressing PS |
-| **Xbox Series X\|S** (Bluetooth LE, `045e:0b13`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting when switched on. Its battery is not read yet |
+| **Xbox Series X\|S** (Bluetooth LE, `045e:0b13`) | 🟢 **Verified on PS5 Hardware**: pairing, play, and reconnecting when switched on. Pairing on a TP-Link UB500 confirmed by the community (issue 10). Its battery is not read yet |
 | Nintendo Joy-Con (`057e:2006`, `057e:2007`), always the two together | 🟢 **Verified on PS5 Hardware**: on a TP-Link UB500 and a generic CSR adapter, and confirmed by the community (issue 7). Third-party Joy-Con copies are not supported yet |
 | Switch Pro, 8BitDo, generic Bluetooth HID | 🟡 Profiles come from AnyPad, not tested through the adapter |
 
