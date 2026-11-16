@@ -94,6 +94,7 @@ typedef struct {
     char     name[64];
     long     ready_at;       /* when its link became ready with no input yet; 0: not waiting */
     int      told_press;     /* the user was told to press a button */
+    int      told_confirm;   /* a Joy-Con pair: the user was told which button confirms the profile */
     long     last_input_at;  /* its last report that reached the slot */
     long     silent_since;   /* when it was reported silent; 0: reporting */
     long     silent_logged;  /* when the transport counters were last logged for it */
@@ -917,6 +918,7 @@ static void joycon_connected(int hs)
     g_bt.pads[mate].jc.mate = hs;
     pthread_mutex_unlock(&g_bt.lock);
     pad_state_reset(&g_bt.pads[mate].jc.last);
+    p->told_confirm = g_bt.pads[mate].told_confirm = 0;
     joycons_update_quiet();
     if (vslot < 0) log_line("bt: Joy-Cons in host slots %d and %d joined but every slot is taken", hs, mate);
     else log_line("bt: Joy-Cons in host slots %d and %d joined on slot %d", hs, mate, vslot);
@@ -971,6 +973,12 @@ static void on_state(void *ud, int hs, const pad_state *st)
     pad_info pair_info;
     pad_state merged;
     if (jc->mate >= 0) {
+        /* On a Joy-Con the hand goes to A, which is Circle here: the maintainer kept pressing it
+         * on the profile screen (PS5, 16 Nov). Said once the slot is live, when that screen is up. */
+        if (!g_bt.pads[hs].told_confirm && vpad_is_live(g_bt.pads[hs].vslot)) {
+            g_bt.pads[hs].told_confirm = g_bt.pads[jc->mate].told_confirm = 1;
+            notify_ps5("%s", ui_text(UI_JC_CONFIRM_B));
+        }
         jc->last = *st;
         const bt_pad_t *mate = &g_bt.pads[jc->mate];
         const bt_pad_t *left = jc->side == JOYCON_LEFT ? &g_bt.pads[hs] : mate;

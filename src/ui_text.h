@@ -15,6 +15,7 @@ typedef enum {
     UI_BT_NO_START,
     UI_JC_NEED_RIGHT,
     UI_JC_NEED_LEFT,
+    UI_JC_CONFIRM_B,
     UI_COUNT
 } ui_msg_t;
 

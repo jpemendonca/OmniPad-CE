@@ -27,7 +27,7 @@ Depois de iniciar, confira o aviso no canto da tela: **"OmniPad ... ativo"**. El
 - **Joy-Cons originais da Nintendo (sempre os dois juntos, como um controle só):**
   1. Segure o botão de sincronizar de um deles até aparecer o aviso pedindo o outro.
   2. Segure o botão de sincronizar do outro até conectar. Aí abre a tela de perfil.
-  3. Escolha o perfil e confirme com o **B**. Os botões seguem a posição do controle do PS5: B é X, A é Círculo, Y é Quadrado e X é Triângulo.
+  3. Escolha o perfil e confirme com o **B**, não com o A. Um aviso na tela lembra disso. Os botões seguem a posição do controle do PS5: B é X, A é Círculo, Y é Quadrado e X é Triângulo.
   4. Se desligar um deles, o controle sai, e o outro fica esperando. É só segurar o botão de sincronizar de novo.
 
 O DualSense oficial continua sendo o jogador 1, sem fio, como sempre. O OmniPad não mexe no rádio Bluetooth do PS5.

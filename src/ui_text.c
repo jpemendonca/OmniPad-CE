@@ -20,6 +20,7 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_NO_START] = "OmniPad: the Bluetooth adapter did not start. Unplug and plug it again, or see the dashboard",
         [UI_JC_NEED_RIGHT] = "OmniPad: left Joy-Con connected. Now hold the sync button on the right one until it connects",
         [UI_JC_NEED_LEFT] = "OmniPad: right Joy-Con connected. Now hold the sync button on the left one until it connects",
+        [UI_JC_CONFIRM_B] = "OmniPad: Joy-Cons connected. Choose your profile and confirm with B (the bottom button), not A",
     },
     [UI_PT] = {
         [UI_RUNNING] = "OmniPad %s ativo. Painel: aba Midia",
@@ -33,6 +34,7 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_NO_START] = "OmniPad: o adaptador Bluetooth nao iniciou. Tire e plugue de novo, ou veja o painel",
         [UI_JC_NEED_RIGHT] = "OmniPad: Joy-Con esquerdo conectado. Agora segure o botao de sincronizar do direito ate conectar",
         [UI_JC_NEED_LEFT] = "OmniPad: Joy-Con direito conectado. Agora segure o botao de sincronizar do esquerdo ate conectar",
+        [UI_JC_CONFIRM_B] = "OmniPad: Joy-Cons conectados. Escolha o perfil e confirme com o B (o botao de baixo), nao com o A",
     },
     [UI_ES] = {
         [UI_RUNNING] = "OmniPad %s activo. Panel: pestaña Multimedia",
@@ -46,6 +48,7 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_NO_START] = "OmniPad: el adaptador Bluetooth no arrancó. Desconéctalo y vuelve a conectarlo, o mira el panel",
         [UI_JC_NEED_RIGHT] = "OmniPad: Joy-Con izquierdo conectado. Ahora mantén el botón de sincronización del derecho hasta que conecte",
         [UI_JC_NEED_LEFT] = "OmniPad: Joy-Con derecho conectado. Ahora mantén el botón de sincronización del izquierdo hasta que conecte",
+        [UI_JC_CONFIRM_B] = "OmniPad: Joy-Cons conectados. Elige tu perfil y confirma con B (el botón de abajo), no con A",
     },
     [UI_FR] = {
         [UI_RUNNING] = "OmniPad %s actif. Tableau de bord : onglet Multimédia",
@@ -59,6 +62,7 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_NO_START] = "OmniPad : l'adaptateur Bluetooth n'a pas démarré. Débranchez-le puis rebranchez-le, ou consultez le tableau de bord",
         [UI_JC_NEED_RIGHT] = "OmniPad : Joy-Con gauche connecté. Maintenez le bouton de synchronisation du droit jusqu'à la connexion",
         [UI_JC_NEED_LEFT] = "OmniPad : Joy-Con droit connecté. Maintenez le bouton de synchronisation du gauche jusqu'à la connexion",
+        [UI_JC_CONFIRM_B] = "OmniPad : Joy-Con connectés. Choisissez votre profil et validez avec B (le bouton du bas), pas avec A",
     },
     [UI_DE] = {
         [UI_RUNNING] = "OmniPad %s läuft. Dashboard: Tab Medien",
@@ -72,6 +76,7 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_NO_START] = "OmniPad: Der Bluetooth-Adapter ist nicht gestartet. Zieh ihn ab und steck ihn wieder ein oder sieh im Dashboard nach",
         [UI_JC_NEED_RIGHT] = "OmniPad: Linker Joy-Con verbunden. Halte jetzt die Sync-Taste am rechten, bis er verbunden ist",
         [UI_JC_NEED_LEFT] = "OmniPad: Rechter Joy-Con verbunden. Halte jetzt die Sync-Taste am linken, bis er verbunden ist",
+        [UI_JC_CONFIRM_B] = "OmniPad: Joy-Cons verbunden. Wähle dein Profil und bestätige mit B (der unteren Taste), nicht mit A",
     },
     [UI_RU] = {
         [UI_RUNNING] = "OmniPad %s запущен. Панель: вкладка «Мультимедиа»",
@@ -85,6 +90,7 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_NO_START] = "OmniPad: адаптер Bluetooth не запустился. Отключите его и подключите снова или откройте панель",
         [UI_JC_NEED_RIGHT] = "OmniPad: левый Joy-Con подключён. Теперь удерживайте кнопку синхронизации на правом до подключения",
         [UI_JC_NEED_LEFT] = "OmniPad: правый Joy-Con подключён. Теперь удерживайте кнопку синхронизации на левом до подключения",
+        [UI_JC_CONFIRM_B] = "OmniPad: Joy-Con подключены. Выберите профиль и подтвердите кнопкой B (нижней), а не A",
     },
     [UI_JA] = {
         [UI_RUNNING] = "OmniPad %s 起動中。ダッシュボード: メディアタブ",
@@ -98,6 +104,7 @@ static const char *const k_text[UI_LANG_COUNT][UI_COUNT] = {
         [UI_BT_NO_START] = "OmniPad: Bluetoothアダプターを起動できませんでした。抜き差しするか、ダッシュボードを確認してください",
         [UI_JC_NEED_RIGHT] = "OmniPad: 左のJoy-Conを接続しました。右のJoy-Conのシンクロボタンを接続するまで長押ししてください",
         [UI_JC_NEED_LEFT] = "OmniPad: 右のJoy-Conを接続しました。左のJoy-Conのシンクロボタンを接続するまで長押ししてください",
+        [UI_JC_CONFIRM_B] = "OmniPad: Joy-Conを接続しました。プロフィールを選び、AではなくB（下のボタン）で決定してください",
     },
 };
 
