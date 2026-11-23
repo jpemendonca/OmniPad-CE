@@ -96,6 +96,7 @@ typedef struct {
     int      told_press;     /* the user was told to press a button */
     int      told_confirm;   /* a Joy-Con pair: the user was told which button confirms the profile */
     long     last_input_at;  /* its last report that reached the slot */
+    long     connected_at;   /* when its link came up */
     long     silent_since;   /* when it was reported silent; 0: reporting */
     long     silent_logged;  /* when the transport counters were last logged for it */
     joycon_t jc;             /* side NONE for any other pad */
@@ -936,6 +937,7 @@ static void on_connect(void *ud, int hs, const pad_info *info)
     snprintf(p->name, sizeof(p->name), "%s (Bluetooth)", info->profile ? info->profile : "Bluetooth pad");
     p->vslot = -1;
     p->last_input_at = now_ms();
+    p->connected_at = p->last_input_at;
     p->silent_since = 0;
     p->silent_logged = 0;
     joycon_start(&p->jc, info->vid, info->pid);
@@ -1005,10 +1007,19 @@ static void on_report(void *ud, int hs, uint16_t vid, uint16_t pid, const unsign
                 st->buttons, st->lx, st->ly, st->rx, st->ry, st->l2, st->r2);
 }
 
+/* When the last background search round started; 0: none yet */
+static long g_search_round_at;
+
 static void on_disconnect(void *ud, int hs)
 {
     (void)ud;
     if (hs < 0 || hs >= HOST_MAX_PADS) return;
+    /* An Xbox Series on a UB500 dropped now and then with reason 0x22 (issue 14). Whether a search
+     * round was near the drop tells if it takes radio time from the link. */
+    long now = now_ms();
+    log_line("bt: %s link lasted %ld s, last input %ld ms before the drop, last search round %ld ms before",
+             g_bt.pads[hs].name, (now - g_bt.pads[hs].connected_at) / 1000, now - g_bt.pads[hs].last_input_at,
+             g_search_round_at ? now - g_search_round_at : -1L);
     pthread_mutex_lock(&g_bt.lock);
     int vslot = g_bt.pads[hs].vslot;
     int mate = g_bt.pads[hs].jc.mate;
@@ -1115,6 +1126,7 @@ static void run_host(bt_dev_t *d)
         if (mode != BT_AUTO_OFF && host_pairing_left(h) == 0 && now >= next_auto) {
             host_pair(h, mode == BT_AUTO_PEEK ? BT_AUTO_PEEK_S : BT_AUTO_FULL_S);
             auto_window = 1;
+            g_search_round_at = now;
             next_auto = now + (mode == BT_AUTO_PEEK ? BT_AUTO_PEEK_MS : 0);
         }
 
