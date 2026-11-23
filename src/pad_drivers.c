@@ -6,6 +6,15 @@
 #define GIP_INPUT_MIN 18       /* bytes usb_parse_input_report reads from a GIP 0x20 report */
 #define GIP_GUIDE_MIN 5        /* and from a GIP 0x07 packet */
 
+/* The Xbox 360 wireless receiver wraps the wired pad's report: byte 0 bit 3 marks a link status
+ * packet, byte 1 bit 0 marks input, and the wired report starts at byte 4 (Linux xpad). Read with the
+ * wired layout from byte 0, its header `00 01 00 f0` held A, B, X and Y (issue 15). */
+static int parse_x360_wireless(const uint8_t *data, size_t len, pad_state_t *st)
+{
+    if (len < 4 + 14 || (data[0] & 0x08) || !(data[1] & 0x01)) return 0;
+    return usb_parse_input_report(CTRL_XBOX_XINPUT, data + 4, len - 4, st);
+}
+
 /* PS3 arcade sticks have no report id: two bytes of buttons, the hat (8 = centred), four stick bytes.
  * The generic layout read the centred hat as a stick and its bytes as held buttons (report BVUV). */
 static int parse_ps3_stick(const uint8_t *data, size_t len, pad_state_t *st)
@@ -104,7 +113,7 @@ static const pad_driver_t k_xinput_class_drivers[] = {
       "PS5 FW 13.60, 2.4G dongle and USB-C cable" },
     { 0x2dc8, 0,      "XInput Compatible Controller",   CTRL_XBOX_XINPUT, DONGLE, IDLE_DONGLE_MS, PADDRV_XINPUT_LED_OUT, NULL, NULL },
     /* Xbox 360 wireless receiver: XInput, not GIP; its LED command differs from the wired pad's */
-    { 0x045e, 0x0719, "Xbox 360 Wireless Receiver",     CTRL_XBOX_XINPUT, DONGLE, IDLE_DONGLE_MS, 0, NULL, NULL },
+    { 0x045e, 0x0719, "Xbox 360 Wireless Receiver",     CTRL_XBOX_XINPUT, DONGLE, IDLE_DONGLE_MS, 0, parse_x360_wireless, NULL },
     { 0,      0,      "XInput Compatible Controller",   CTRL_XBOX_XINPUT, WIRED,  0, PADDRV_XINPUT_LED_OUT, NULL, NULL },
 };
 

@@ -317,12 +317,65 @@ static void test_ps3_stick_shortReport_isNotInput(void)
     CHECK(!parsed, "a short report must not fall through to the generic layout");
 }
 
+/* A wireless receiver packet: header, then the wired report (00 13, buttons, triggers, sticks).
+ * The header is the one issue 15 logged as held A, B, X and Y. */
+#define X360W_HEADER "00 01 00 f0 "
+#define X360W_REST   "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
+
+static int parse_x360w(const char *hex, pad_state_t *st)
+{
+    uint8_t buf[64];
+    size_t len = parse_hex(hex, buf, sizeof(buf));
+    pad_state_neutral(st);
+    return pad_driver_parse(pad_driver_for_xinput_class(0x045e, 0x0719), buf, len, st);
+}
+
+static void test_x360_wireless_atRest_pressesNothing(void)
+{
+    /* arrange */
+    pad_state_t st;
+
+    /* act */
+    int parsed = parse_x360w(X360W_HEADER "00 13 00 00 00 00 00 00 00 00 00 00 00 00" X360W_REST, &st);
+
+    /* assert */
+    CHECK(parsed && st.buttons == 0, "nothing is held at rest, got 0x%08x", st.buttons);
+}
+
+static void test_x360_wireless_buttonsAndStick_areRead(void)
+{
+    /* arrange: A and Start, left stick fully right */
+    pad_state_t st;
+
+    /* act */
+    int parsed = parse_x360w(X360W_HEADER "00 13 10 10 00 00 ff 7f 00 00 00 00 00 00" X360W_REST, &st);
+
+    /* assert */
+    CHECK(parsed && st.buttons == (PAD_BTN_CROSS | PAD_BTN_OPTIONS), "A and Start, got 0x%08x", st.buttons);
+    CHECK(st.lx > 250, "left stick right, got %d", st.lx);
+}
+
+static void test_x360_wireless_linkStatus_isNotInput(void)
+{
+    /* arrange: the packet issue 15 logged as unparsed */
+    pad_state_t st;
+
+    /* act */
+    int parsed = parse_x360w("08 80 00 00 00 00", &st);
+
+    /* assert */
+    CHECK(!parsed, "a link status packet must not reach the virtual pad");
+}
+
 int main(void)
 {
     test_driver_table();
     test_ps3_stick_atRest_pressesNothing();
     test_ps3_stick_buttonsAndHat_areRead();
     test_ps3_stick_shortReport_isNotInput();
+    test_x360_wireless_atRest_pressesNothing();
+    test_x360_wireless_buttonsAndStick_areRead();
+    test_x360_wireless_linkStatus_isNotInput();
     test_gip_statusPacket_isNotInput();
     test_gip_input_stillDecoded();
     test_gip_guide_pressAndRelease();
