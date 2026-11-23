@@ -343,6 +343,22 @@ static void ack_gip_packet(usb_slot_device_t *dev, const uint8_t *report, int co
 
 #endif /* __PROSPERO__ */
 
+/* Raw reports are logged while a pad is new: reports showed the decoded state only on a button
+ * press, so a stick that never moved left, or a PS press nobody made, could not be traced
+ * (issues 9, 13, 3) */
+#define RAW_LOG_FOR_MS   90000
+#define RAW_LOG_EVERY_MS 250
+#define RAW_LOG_BYTES    32
+
+/* Logs one report as bytes next to what it decoded to */
+static void log_raw_report(int slot, const char *why, const uint8_t *report, int n, const pad_state_t *st)
+{
+    char hex[RAW_LOG_BYTES * 3 + 1];
+    hex_dump(report, (size_t)(n < RAW_LOG_BYTES ? n : RAW_LOG_BYTES), hex, sizeof(hex));
+    log_line("usb_hotplug: slot %d %s, %d bytes: %s-> 0x%08x LX=%d LY=%d RX=%d RY=%d L2=%d R2=%d",
+             slot, why, n, hex, (unsigned)st->buttons, st->lx, st->ly, st->rx, st->ry, st->l2, st->r2);
+}
+
 static void *usb_reader_worker(void *arg)
 {
     usb_slot_device_t *dev = (usb_slot_device_t *)arg;
@@ -353,6 +369,10 @@ static void *usb_reader_worker(void *arg)
     long last_led_time = 0;
     long last_log_t = 0;
     int consecutive_errors = 0;
+    long started_at = now_ms(), last_raw_t = 0;
+    uint8_t last_raw[RAW_LOG_BYTES];
+    int last_raw_len = 0;
+    uint32_t reports = 0, unparsed = 0, last_buttons = 0;
 
     log_line("usb_hotplug: Reader thread started for slot %d (%s on %s)",
              dev->slot, dev->name, dev->dev_path);
@@ -451,6 +471,19 @@ static void *usb_reader_worker(void *arg)
         if (n > 0) {
             consecutive_errors = 0;
             int parsed = pad_driver_parse(dev->drv, report, (size_t)n, &st);
+            reports++;
+            if (!parsed) unparsed++;
+            int cmp = n < RAW_LOG_BYTES ? n : RAW_LOG_BYTES;
+            if (cur_time - started_at < RAW_LOG_FOR_MS && cur_time - last_raw_t >= RAW_LOG_EVERY_MS &&
+                (cmp != last_raw_len || memcmp(report, last_raw, (size_t)cmp) != 0)) {
+                last_raw_t = cur_time;
+                memcpy(last_raw, report, (size_t)cmp);
+                last_raw_len = cmp;
+                log_raw_report(dev->slot, parsed ? "report" : "report not parsed", report, n, &st);
+            }
+            if (parsed && (st.buttons & PAD_BTN_PS) && !(last_buttons & PAD_BTN_PS))
+                log_raw_report(dev->slot, "PS pressed", report, n, &st);
+            if (parsed) last_buttons = st.buttons;
             if (capture_wants(dev->slot)) {
                 capture_add(CAPTURE_KIND_USB, dev->slot, dev->vid, dev->pid, report, n, parsed,
                             st.buttons, st.lx, st.ly, st.rx, st.ry, st.l2, st.r2);
@@ -514,7 +547,8 @@ static void *usb_reader_worker(void *arg)
     }
 #endif
 
-    log_line("usb_hotplug: Reader thread stopped for slot %d", dev->slot);
+    log_line("usb_hotplug: Reader thread stopped for slot %d after %ld ms, %u reports, %u not parsed",
+             dev->slot, now_ms() - started_at, (unsigned)reports, (unsigned)unparsed);
     return NULL;
 }
 
