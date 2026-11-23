@@ -135,5 +135,5 @@ When non-DualSense controllers are emulated as virtual DualSense devices, the fo
 | **Touchpad Click** | ✅ Fully Supported | Mapped to open maps and in-game menu functions. A pad with no touchpad button can get it from the dashboard, with Map buttons. |
 | **Multi-touch Touchpad Surface** | ❌ Not Supported | Non-Sony controllers lack a capacitive touch surface. |
 | **Adaptive Triggers (Motor Force)** | ❌ Not Supported | Non-DualSense controllers do not have internal resistance motors. |
-| **Advanced DualSense Haptics** | ❌ Not Supported | Standard rumble is passed through where hardware permits. |
+| **Advanced DualSense Haptics** | ❌ Not Supported | Rumble is not passed to any controller yet. |
 | **Gyroscope / Accelerometer (IMU)** | ❌ Neutral Only | Fixed to identity quaternion. (Roadmap for motion-capable controllers). |
