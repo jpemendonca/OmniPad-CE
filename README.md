@@ -17,6 +17,8 @@ Use third-party controllers on a jailbroken PS5 (FW 7.00 – 13.60). They plug i
 > - One driver per controller model.
 >
 > Bugs and requests go to [Issues](https://github.com/jpemendonca/OmniPad-CE/issues). Paste the dashboard's **Copy diagnostics** text into them, or press **Something wrong? Send a report** on the dashboard and quote the code it gives you.
+>
+> If OmniPad CE helps you, you can support it on [Buy Me a Coffee](https://buymeacoffee.com/jpemendonca), or with Pix on [LivePix](https://livepix.gg/jpemendonca) from Brazil.
 
 ---
 
