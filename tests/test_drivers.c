@@ -56,7 +56,7 @@ static const expect_t k_expect[] = {
     { 0x2dc8, 0x310a, 0, "8BitDo Ultimate 2C",             CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 0,     PADDRV_XINPUT_LED_OUT, 0 },
     { 0x2dc8, 0x310b, 0, "8BitDo Ultimate 2",              CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 0,     PADDRV_XINPUT_LED_OUT, 0 },
     { 0x2dc8, 0x3109, 1, "XInput Compatible Controller",   CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 60000, PADDRV_XINPUT_LED_OUT, 0 },
-    { 0x0079, 0x0006, 0, "Generic USB HID Gamepad",        CTRL_GENERIC_HID, CONN_USB_WIRED,      0,     0, 0 },
+    { 0x0079, 0x0006, 0, "DragonRise Gamepad / Arcade",    CTRL_GENERIC_HID, CONN_USB_WIRED,      0,     0, 0 },
     { 0x0079, 0x0011, 0, "Generic USB HID Gamepad",        CTRL_GENERIC_HID, CONN_USB_WIRED,      0,     0, 0 },
     { 0xbeef, 0x0001, 1, "XInput Compatible Controller",   CTRL_XBOX_XINPUT, CONN_USB_WIRED,      0,     PADDRV_XINPUT_LED_OUT, 0 },
 };
@@ -370,6 +370,79 @@ static void test_x360_wireless_linkStatus_isNotInput(void)
     CHECK(status == PAD_PARSE_STATUS, "nor the status packet logged every 2 s, got %d", status);
 }
 
+/* ---- DragonRise 0079:0006 (issue 13): reports from C9YM, an arcade stick with a 10-button panel ---- */
+
+#define DR_REST "7f 7f 84 7f 7f 0f 00 c0"
+
+static int parse_dr(const char *hex, pad_state_t *st)
+{
+    uint8_t buf[64];
+    size_t len = parse_hex(hex, buf, sizeof(buf));
+    pad_state_neutral(st);
+    return pad_driver_parse(pad_driver_lookup(0x0079, 0x0006), buf, len, st);
+}
+
+static void test_dragonrise_atRest_pressesNothing(void)
+{
+    /* arrange: the generic layout held L1, L2, R1, R2, square, circle and cross here */
+    pad_state_t st;
+
+    /* act */
+    int parsed = parse_dr(DR_REST, &st);
+
+    /* assert */
+    CHECK(parsed && st.buttons == 0, "nothing is held at rest, got 0x%08x", st.buttons);
+    CHECK(st.lx == 127 && st.ly == 127 && st.rx == 127 && st.ry == 127, "sticks centred, got %d,%d %d,%d", st.lx, st.ly, st.rx, st.ry);
+    CHECK(st.l2 == 0 && st.r2 == 0, "triggers released");
+}
+
+static void test_dragonrise_stickLeft_isRead(void)
+{
+    /* arrange: byte 0 is zero, which the generic layout took for a report id */
+    pad_state_t st;
+
+    /* act */
+    int parsed = parse_dr("00 7f 84 7f 7f 0f 00 c0", &st);
+
+    /* assert */
+    CHECK(parsed && st.buttons == 0, "pushing left holds no button, got 0x%08x", st.buttons);
+    CHECK(st.lx == 0 && st.ly == 127, "stick left, got %d,%d", st.lx, st.ly);
+}
+
+static void test_dragonrise_buttonsAndHat_areRead(void)
+{
+    /* arrange */
+    pad_state_t st;
+
+    /* act: button 1, button 5, button 10, then the hat right */
+    parse_dr("7f 7f 84 7f 7f 1f 00 c0", &st);
+    uint32_t b1 = st.buttons;
+    parse_dr("7f 7f 84 7f 7f 0f 01 c0", &st);
+    uint32_t b5 = st.buttons;
+    parse_dr("7f 7f 84 7f 7f 0f 20 c0", &st);
+    uint32_t b10 = st.buttons;
+    parse_dr("7f 7f 84 7f 7f 02 00 c0", &st);
+    uint32_t hat = st.buttons;
+
+    /* assert */
+    CHECK(b1 == PAD_BTN_TRIANGLE, "button 1 is triangle, got 0x%08x", b1);
+    CHECK(b5 == PAD_BTN_L1, "button 5 is L1, got 0x%08x", b5);
+    CHECK(b10 == PAD_BTN_OPTIONS, "button 10 is Options, got 0x%08x", b10);
+    CHECK(hat == PAD_DPAD_RIGHT, "hat right, got 0x%08x", hat);
+}
+
+static void test_dragonrise_severalReports_readsTheLast(void)
+{
+    /* arrange: the PS5 handed over 64 bytes, eight reports in a row */
+    pad_state_t st;
+
+    /* act */
+    int parsed = parse_dr(DR_REST " " DR_REST " " DR_REST " " DR_REST " " DR_REST " " DR_REST " " DR_REST " 7f 00 84 7f 7f 0f 00 c0", &st);
+
+    /* assert */
+    CHECK(parsed && st.ly == 0 && st.buttons == 0, "the newest report is read, got LY=%d 0x%08x", st.ly, st.buttons);
+}
+
 int main(void)
 {
     test_driver_table();
@@ -379,6 +452,10 @@ int main(void)
     test_x360_wireless_atRest_pressesNothing();
     test_x360_wireless_buttonsAndStick_areRead();
     test_x360_wireless_linkStatus_isNotInput();
+    test_dragonrise_atRest_pressesNothing();
+    test_dragonrise_stickLeft_isRead();
+    test_dragonrise_buttonsAndHat_areRead();
+    test_dragonrise_severalReports_readsTheLast();
     test_gip_statusPacket_isNotInput();
     test_gip_input_stillDecoded();
     test_gip_guide_pressAndRelease();

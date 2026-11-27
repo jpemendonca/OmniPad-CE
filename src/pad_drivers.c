@@ -16,6 +16,37 @@ static int parse_x360_wireless(const uint8_t *data, size_t len, pad_state_t *st)
     return usb_parse_input_report(CTRL_XBOX_XINPUT, data + 4, len - 4, st);
 }
 
+/* DragonRise 0079:0006, in generic gamepads and zero-delay arcade encoders: 8-byte reports with no
+ * report id. X, Y, an unused axis that drifts, the right stick, then the hat in the low nibble of
+ * byte 5 (15 = centred), buttons 1-4 in its high nibble and 5-12 in byte 6. Buttons follow the SDL
+ * mapping for this ID. The generic layout read the hat byte as buttons, so seven were held at rest,
+ * and a stick pushed left made byte 0 zero, read as a report id (issue 13, report C9YM). A read can
+ * hold several reports in a row: the last one is the newest. */
+#define DRAGONRISE_REPORT 8
+
+static int parse_dragonrise(const uint8_t *data, size_t len, pad_state_t *st)
+{
+    static const uint32_t k_buttons[12] = { PAD_BTN_TRIANGLE, PAD_BTN_CIRCLE, PAD_BTN_CROSS, PAD_BTN_SQUARE,
+                                            PAD_BTN_L1, PAD_BTN_R1, PAD_BTN_L2, PAD_BTN_R2,
+                                            PAD_BTN_SHARE, PAD_BTN_OPTIONS, PAD_BTN_L3, PAD_BTN_R3 };
+    static const uint32_t k_hat[8] = { PAD_DPAD_UP, PAD_DPAD_UP | PAD_DPAD_RIGHT, PAD_DPAD_RIGHT,
+                                       PAD_DPAD_DOWN | PAD_DPAD_RIGHT, PAD_DPAD_DOWN,
+                                       PAD_DPAD_DOWN | PAD_DPAD_LEFT, PAD_DPAD_LEFT, PAD_DPAD_UP | PAD_DPAD_LEFT };
+    if (len < 7) return 0;
+    if (len >= 2 * DRAGONRISE_REPORT && len % DRAGONRISE_REPORT == 0) data += len - DRAGONRISE_REPORT;
+    pad_state_neutral(st);
+    st->lx = data[0];
+    st->ly = data[1];
+    st->rx = data[3];
+    st->ry = data[4];
+    if ((data[5] & 0x0f) < 8) st->buttons |= k_hat[data[5] & 0x0f];
+    uint32_t b = (uint32_t)(data[5] >> 4) | ((uint32_t)data[6] << 4);
+    for (int i = 0; i < 12; i++) if (b & (1u << i)) st->buttons |= k_buttons[i];
+    if (st->buttons & PAD_BTN_L2) st->l2 = 255;
+    if (st->buttons & PAD_BTN_R2) st->r2 = 255;
+    return 1;
+}
+
 /* PS3 arcade sticks have no report id: two bytes of buttons, the hat (8 = centred), four stick bytes.
  * The generic layout read the centred hat as a stick and its bytes as held buttons (report BVUV). */
 static int parse_ps3_stick(const uint8_t *data, size_t len, pad_state_t *st)
@@ -93,6 +124,7 @@ static const pad_driver_t k_drivers[] = {
 
     /* Generic PC HID pads (DragonRise, Betop, Retro-Bit, Mayflash, PDP...). Not SteelSeries or Razer:
      * they also make headsets, and an Arctis Nova Pro (1038:12cd) was taken as a pad (issue 7). */
+    { 0x0079, 0x0006, "DragonRise Gamepad / Arcade",   CTRL_GENERIC_HID, WIRED, 0, 0, parse_dragonrise, NULL },
     { 0x0079, 0, "Generic USB HID Gamepad", CTRL_GENERIC_HID, WIRED, 0, 0, NULL, NULL },
     { 0x0810, 0, "Generic USB HID Gamepad", CTRL_GENERIC_HID, WIRED, 0, 0, NULL, NULL },
     { 0x11ff, 0, "Generic USB HID Gamepad", CTRL_GENERIC_HID, WIRED, 0, 0, NULL, NULL },
