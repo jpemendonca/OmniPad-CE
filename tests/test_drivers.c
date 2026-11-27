@@ -57,6 +57,7 @@ static const expect_t k_expect[] = {
     { 0x2dc8, 0x310b, 0, "8BitDo Ultimate 2",              CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 0,     PADDRV_XINPUT_LED_OUT, 0 },
     { 0x2dc8, 0x3109, 1, "XInput Compatible Controller",   CTRL_XBOX_XINPUT, CONN_USB_DONGLE_24G, 60000, PADDRV_XINPUT_LED_OUT, 0 },
     { 0x0079, 0x0006, 0, "Generic USB HID Gamepad",        CTRL_GENERIC_HID, CONN_USB_WIRED,      0,     0, 0 },
+    { 0x0079, 0x0011, 0, "Generic USB HID Gamepad",        CTRL_GENERIC_HID, CONN_USB_WIRED,      0,     0, 0 },
     { 0xbeef, 0x0001, 1, "XInput Compatible Controller",   CTRL_XBOX_XINPUT, CONN_USB_WIRED,      0,     PADDRV_XINPUT_LED_OUT, 0 },
 };
 
@@ -362,9 +363,11 @@ static void test_x360_wireless_linkStatus_isNotInput(void)
 
     /* act */
     int parsed = parse_x360w("08 80 00 00 00 00", &st);
+    int status = parse_x360w("00 f8 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00", &st);
 
     /* assert */
-    CHECK(!parsed, "a link status packet must not reach the virtual pad");
+    CHECK(parsed == PAD_PARSE_STATUS, "a link status packet must not reach the virtual pad, got %d", parsed);
+    CHECK(status == PAD_PARSE_STATUS, "nor the status packet logged every 2 s, got %d", status);
 }
 
 int main(void)

@@ -24,6 +24,10 @@
 #define PADDRV_SHARE_END_26    (1u << 3)  /* Xbox Series: Share is bit 0 of the byte 26 from the report's end; it acts as the touchpad */
 #define PADDRV_SLOW_START      (1u << 4)  /* run its handshake on the reader thread: it can take 15 s */
 
+/* What a parser returns for a packet it knows that carries no input, such as a link status packet:
+ * not counted or logged as unparsed. 1 is input, 0 a packet it does not know. */
+#define PAD_PARSE_STATUS (-1)
+
 typedef int (*pad_parse_fn)(const uint8_t *data, size_t len, pad_state_t *st);
 
 typedef struct {
@@ -45,7 +49,8 @@ const pad_driver_t *pad_driver_lookup(uint16_t vid, uint16_t pid);
  * an XInput pad (class 0xFF, subclass 0x5D). Never NULL. */
 const pad_driver_t *pad_driver_for_xinput_class(uint16_t vid, uint16_t pid);
 
-/* Decode one input report with the driver's parser, falling back to the generic HID layout */
+/* Decode one input report with the driver's parser, falling back to the generic HID layout.
+ * Returns 1 for input, 0 for an unknown packet, PAD_PARSE_STATUS for a known one without input. */
 int pad_driver_parse(const pad_driver_t *drv, const uint8_t *data, size_t len, pad_state_t *st);
 
 #endif /* PAD_DRIVERS_H */

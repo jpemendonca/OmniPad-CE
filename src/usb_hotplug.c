@@ -471,15 +471,17 @@ static void *usb_reader_worker(void *arg)
         if (n > 0) {
             consecutive_errors = 0;
             int parsed = pad_driver_parse(dev->drv, report, (size_t)n, &st);
+            int status = parsed == PAD_PARSE_STATUS;
+            if (status) parsed = 0;
             reports++;
-            if (!parsed) unparsed++;
+            if (!parsed && !status) unparsed++;
             int cmp = n < RAW_LOG_BYTES ? n : RAW_LOG_BYTES;
             if (cur_time - started_at < RAW_LOG_FOR_MS && cur_time - last_raw_t >= RAW_LOG_EVERY_MS &&
                 (cmp != last_raw_len || memcmp(report, last_raw, (size_t)cmp) != 0)) {
                 last_raw_t = cur_time;
                 memcpy(last_raw, report, (size_t)cmp);
                 last_raw_len = cmp;
-                log_raw_report(dev->slot, parsed ? "report" : "report not parsed", report, n, &st);
+                log_raw_report(dev->slot, parsed ? "report" : status ? "status packet" : "report not parsed", report, n, &st);
             }
             if (parsed && (st.buttons & PAD_BTN_PS) && !(last_buttons & PAD_BTN_PS))
                 log_raw_report(dev->slot, "PS pressed", report, n, &st);
@@ -507,7 +509,7 @@ static void *usb_reader_worker(void *arg)
                     log_line("usb_hotplug: slot %d button press 0x%08x (LX=%d LY=%d)",
                              dev->slot, (unsigned)st.buttons, st.lx, st.ly);
                 }
-            } else if (cur_time - last_log_t > 2000) {
+            } else if (!status && cur_time - last_log_t > 2000) {
                 last_log_t = cur_time;
                 log_line("usb_hotplug: slot %d unparsed %d bytes: %02x %02x %02x %02x %02x %02x",
                          dev->slot, n, report[0], report[1], report[2], report[3], report[4], report[5]);

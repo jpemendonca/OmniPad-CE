@@ -8,10 +8,11 @@
 
 /* The Xbox 360 wireless receiver wraps the wired pad's report: byte 0 bit 3 marks a link status
  * packet, byte 1 bit 0 marks input, and the wired report starts at byte 4 (Linux xpad). Read with the
- * wired layout from byte 0, its header `00 01 00 f0` held A, B, X and Y (issue 15). */
+ * wired layout from byte 0, its header `00 01 00 f0` held A, B, X and Y (issue 15). Its other packets
+ * (`00 f8 ..`, `00 00 00 f0 ..`) are status, and were logged as unparsed every 2 s. */
 static int parse_x360_wireless(const uint8_t *data, size_t len, pad_state_t *st)
 {
-    if (len < 4 + 14 || (data[0] & 0x08) || !(data[1] & 0x01)) return 0;
+    if (len < 4 + 14 || (data[0] & 0x08) || !(data[1] & 0x01)) return len > 0 ? PAD_PARSE_STATUS : 0;
     return usb_parse_input_report(CTRL_XBOX_XINPUT, data + 4, len - 4, st);
 }
 
