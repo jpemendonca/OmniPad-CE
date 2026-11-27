@@ -375,6 +375,9 @@ static int g_klog_lines, g_klog_shown;
 static void show_klog_line(const char *line)
 {
     g_klog_lines++;
+    /* Our own lines reach the kernel log too (log.c): shown again, they nested "klog: [OmniPad] klog:"
+     * up to four deep and took the 40 lines meant for the system's (issue 15) */
+    if (strstr(line, "[OmniPad]")) return;
     if (g_klog_shown >= KLOG_SHOWN_MAX) return;
     if (!strcasestr(line, "pad") && !strcasestr(line, "device")) return;
     g_klog_shown++;
