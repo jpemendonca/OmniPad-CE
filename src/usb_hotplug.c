@@ -625,6 +625,67 @@ static usb_controller_type_t usb_inspect_descriptors(int fd, const char **name_o
     return CTRL_UNKNOWN;
 }
 
+/* Logs the HID report descriptor of each HID interface: it says where a pad puts its buttons and sticks,
+ * so a driver can be written from a report instead of guessed from raw bytes (a GameSir in HID mode read
+ * as XInput, report AWDX; a G7 Pro dongle taken for a keyboard). Read-only standard request, once per
+ * device seen, never on the console's own Bluetooth radio. */
+#define HID_DESC_LOG_MAX 256
+#define HID_DESC_LINE    32
+
+static void log_hid_report_descriptors(int fd, uint16_t vid, uint16_t pid)
+{
+#ifdef __PROSPERO__
+    if (vid == 0x0e8d || vid == 0x1286) return;
+    struct usb_gen_descriptor desc;
+    uint8_t raw[512];
+    memset(&desc, 0, sizeof(desc));
+    desc.ugd_data = raw;
+    desc.ugd_maxlen = sizeof(raw);
+    if (ioctl(fd, USB_GET_FULL_DESC, &desc) != 0) return;
+    int len = desc.ugd_actlen;
+    if (len <= 0 || len > (int)sizeof(raw)) len = (int)sizeof(raw);
+
+    int iface = -1, logged = 0;
+    for (int off = 0; off + 2 <= len && logged < 3; ) {
+        int entry = raw[off];
+        if (entry < 2 || off + entry > len) break;
+        if (raw[off + 1] == 0x04 && entry >= 9) {
+            iface = raw[off + 5] == 0x03 ? raw[off + 2] : -1;          /* HID class only */
+        } else if (raw[off + 1] == 0x21 && entry >= 9 && iface >= 0 && raw[off + 6] == 0x22) {
+            int want = raw[off + 7] | (raw[off + 8] << 8);
+            uint8_t rd[HID_DESC_LOG_MAX];
+            struct usb_ctl_request req;
+            memset(&req, 0, sizeof(req));
+            req.ucr_request.bmRequestType = 0x81;                     /* standard, to an interface */
+            req.ucr_request.bRequest = 0x06;                          /* GET_DESCRIPTOR */
+            USETW(req.ucr_request.wValue, 0x2200);                    /* report descriptor */
+            USETW(req.ucr_request.wIndex, (uint16_t)iface);
+            USETW(req.ucr_request.wLength, (uint16_t)(want < HID_DESC_LOG_MAX ? want : HID_DESC_LOG_MAX));
+            req.ucr_data = rd;
+            req.ucr_flags = USB_SHORT_XFER_OK;
+            logged++;
+            if (ioctl(fd, USB_DO_REQUEST, &req) != 0) {
+                log_line("usb_hotplug: %04x:%04x interface %d report descriptor not read (%s)", vid, pid, iface, strerror(errno));
+            } else {
+                int got = req.ucr_actlen > 0 && req.ucr_actlen <= HID_DESC_LOG_MAX ? req.ucr_actlen : 0;
+                log_line("usb_hotplug: %04x:%04x interface %d report descriptor, %d of %d bytes:", vid, pid, iface, got, want);
+                for (int i = 0; i < got; i += HID_DESC_LINE) {
+                    char hex[HID_DESC_LINE * 3 + 1];
+                    size_t used = 0;
+                    for (int k = i; k < got && k < i + HID_DESC_LINE; k++)
+                        used += (size_t)snprintf(hex + used, sizeof(hex) - used, "%02x ", rd[k]);
+                    log_line("usb_hotplug:   %s", hex);
+                }
+            }
+            iface = -1;
+        }
+        off += entry;
+    }
+#else
+    (void)fd; (void)vid; (void)pid;
+#endif
+}
+
 static void probe_usb_devices(void)
 {
     char path[32];
@@ -677,6 +738,7 @@ static void probe_usb_devices(void)
                              path, vid, pid, (int)ctype, ctrl_name ? ctrl_name : "unrecognized");
                     /* Class/subclass/protocol per interface: what a new driver for it would read */
                     if (ctype == CTRL_UNKNOWN && ifaces[0]) log_line("usb_hotplug: %04x:%04x interfaces:%s", vid, pid, ifaces);
+                    log_hid_report_descriptors(fd, vid, pid);
                 }
             }
 
