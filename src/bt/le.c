@@ -35,6 +35,8 @@
 #define OP_LE_START_ENCRYPTION   0x2019
 #define OP_LE_READ_LOCAL_P256    0x2025
 #define OP_LE_GENERATE_DHKEY     0x2026
+#define OP_LE_CONN_PARAM_REPLY   0x2020
+#define OP_LE_CONN_PARAM_NEG     0x2021
 
 #define CID_ATT     0x0004
 #define CID_LE_SIG  0x0005
@@ -485,6 +487,59 @@ void le_poll(host_t *h, long now)
 
 /* ---- HCI LE events ----------------------------------------------------------- */
 
+static link_t *le_link_by_handle(host_t *h, unsigned handle)
+{
+    int i;
+    for (i = 0; i < HOST_MAX_PADS; i++)
+        if (h->links[i].used && h->links[i].le && h->links[i].connected && h->links[i].handle == handle)
+            return &h->links[i];
+    return NULL;
+}
+
+/* OmniPad: interval in 1.25 ms units, supervision timeout in 10 ms units, as the controller gives them */
+static void log_params(const link_t *l, const char *what, unsigned itv, unsigned lat, unsigned to)
+{
+    log_line("le pad %s: %s interval %u.%02u ms, latency %u, timeout %u ms",
+             l ? addr_str(l->addr) : "?", what, itv * 5 / 4, (itv * 125) % 100, lat, to * 10);
+}
+
+/* OmniPad: the rules the Core spec (and Linux, hci_check_conn_params) puts on LE connection parameters */
+static int params_valid(unsigned min, unsigned max, unsigned lat, unsigned to)
+{
+    if (min > max || min < 6 || max > 3200) return 0;
+    if (to < 10 || to > 3200 || max >= to * 8) return 0;
+    if (lat > 499 || lat > (to * 8 / max) - 1) return 0;
+    return 1;
+}
+
+/* OmniPad: the event mask turns on the Remote Connection Parameter Request, so the controller waits for
+ * our answer before it answers the pad. With none, the pad's request timed out after 40 s and the link
+ * dropped with LL Response Timeout (0x22): an Xbox Series on a UB500, playing or idle (issue 14). */
+static void on_param_request(host_t *h, const unsigned char *ev, int len)
+{
+    uint8_t p[14];
+    unsigned handle, min, max, lat, to;
+
+    if (len < 11) return;
+    handle = le16(ev + 1) & 0x0FFF;
+    min = le16(ev + 3);
+    max = le16(ev + 5);
+    lat = le16(ev + 7);
+    to = le16(ev + 9);
+    log_params(le_link_by_handle(h, handle), "asks for", max, lat, to);
+    put16(p, handle);
+    if (!params_valid(min, max, lat, to)) {
+        p[2] = 0x1E;                            /* invalid LL parameters */
+        send_cmd(h, OP_LE_CONN_PARAM_NEG, p, 3);
+        log_line("le: connection parameters refused (min %u max %u latency %u timeout %u)", min, max, lat, to);
+        return;
+    }
+    memcpy(p + 2, ev + 3, 8);                   /* interval min, max, latency, timeout */
+    put16(p + 10, 0);
+    put16(p + 12, 0);
+    send_cmd(h, OP_LE_CONN_PARAM_REPLY, p, 14);
+}
+
 void le_on_meta(host_t *h, const unsigned char *ev, int len)
 {
     link_t *l;
@@ -507,6 +562,27 @@ void le_on_meta(host_t *h, const unsigned char *ev, int len)
         l->handle = le16(ev + 2) & 0x0FFF;
         l->t_conn = now_ms();
         log_line("le pad %s: connected, handle %#05x", addr_str(l->addr), l->handle);
+        {
+            int at = ev[0] == 0x0A ? 24 : 12;   /* the enhanced event carries two private addresses first */
+            if (len >= at + 6) log_params(l, "link", le16(ev + at), le16(ev + at + 2), le16(ev + at + 4));
+        }
+        break;
+
+    case 0x03:  /* Connection Update Complete: status, handle, interval, latency, timeout */
+        if (len < 10) break;
+        if (ev[1] != 0) {
+            log_line("le: connection update failed (status %#04x)", ev[1]);
+            break;
+        }
+        log_params(le_link_by_handle(h, le16(ev + 2) & 0x0FFF), "now", le16(ev + 4), le16(ev + 6), le16(ev + 8));
+        break;
+
+    case 0x06:  /* Remote Connection Parameter Request */
+        on_param_request(h, ev, len);
+        break;
+
+    case 0x07:  /* Data Length Change: handle, max tx octets, tx time, max rx octets, rx time */
+        if (len >= 11) log_line("le: data length now %u bytes out, %u in", le16(ev + 3), le16(ev + 7));
         break;
 
     case 0x02:  /* Advertising Report: one report per event, in practice */

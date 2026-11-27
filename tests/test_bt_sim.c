@@ -1118,6 +1118,45 @@ static void test_xbox_and_ds4_together_bothPlay(void)
     host_close(h);
 }
 
+/* The pad asks for new connection parameters over the link layer, which the controller hands to us */
+static void xbox_asks_for_params(unsigned min, unsigned max, unsigned latency, unsigned timeout)
+{
+    unsigned char m[11] = { 0x06 };
+    put_le16(m + 1, XBOX_HANDLE);
+    put_le16(m + 3, min);
+    put_le16(m + 5, max);
+    put_le16(m + 7, latency);
+    put_le16(m + 9, timeout);
+    event(g_c.air, 0x3E, m, 11);
+}
+
+static void test_xbox_asksForParams_isAnswered(void)
+{
+    /* arrange: an Xbox playing; unanswered, its request dropped the link 40 s later with 0x22 (issue 14) */
+    host_t *h = sim_open(0);
+    store_xbox(h);
+    g_auto_on = 1;
+    g_c.xbox.on = 1;
+    run(h, 20000);
+    int x = slot_of_addr(h, XBOX_ADDR);
+    CHECK(x >= 0, "the Xbox has a slot");
+    if (x < 0) { host_close(h); return; }
+    int from = g_c.nsent;
+
+    /* act: 7.5 to 15 ms, then a request that breaks the spec (timeout below the interval) */
+    xbox_asks_for_params(6, 12, 0, 300);
+    run(h, 1000);
+    int accepted = count_op_since(from, 0x2020), refused = count_op_since(from, 0x2021);
+    xbox_asks_for_params(6, 400, 0, 20);
+    run(h, 1000);
+
+    /* assert */
+    CHECK(accepted == 1 && refused == 0, "a valid request is accepted, got %d accepted, %d refused", accepted, refused);
+    CHECK(count_op_since(from, 0x2021) == 1, "an invalid one is refused, not left to time out");
+    CHECK(count_op_since(from, 0x2020) == 1, "and not accepted");
+    host_close(h);
+}
+
 static void test_ds4_switchedOffAndOn_comesBack(void)
 {
     /* arrange */
@@ -1202,6 +1241,7 @@ int main(void)
     test_xbox_advertInFlight_duringInquiry_stopsTheSearch();
     test_xbox_slowLink_duringPageSearch_noInquiryUntilReady();
     test_xbox_and_ds4_together_bothPlay();
+    test_xbox_asksForParams_isAnswered();
     test_ds4_switchedOffAndOn_comesBack();
     test_transport_adapterPulled_isLost();
     test_transport_chipGoesDeaf_isLostInSeconds();

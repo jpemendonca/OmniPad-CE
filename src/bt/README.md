@@ -28,3 +28,4 @@ The upstream stack shares the PS5's internal radio with the system. Here it runs
 - `bt_profiles.c`: a Joy-Con's setup subcommands go out three times, since a right Joy-Con did not take them all on one pass.
 - `bt_profiles.c` and `bt_profiles.h`: `profile_joycon_quiet` keeps Joy-Cons out of their full report until `src/bt_adapter.c` has both halves of a pair. A CSR clone locked up when a second link came up next to a streaming Joy-Con.
 - `le.c`: LE pads are asked for legacy pairing, not Secure Connections. An Xbox Series refused the Secure Connections DHKey check on a TP-Link UB500 (issue 10).
+- `le.c`: a pad's request for new connection parameters is answered: accepted when the spec allows it, refused otherwise. The event mask turns that request on, and unanswered it dropped an Xbox Series 40 s later with LL Response Timeout (issue 14). The link's parameters, their updates and data length changes are logged. `tests/test_bt_sim.c` covers it.
