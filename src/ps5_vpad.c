@@ -275,7 +275,9 @@ static int scan_vpad_handle(int32_t user_id, int slot)
 static int open_kernel_log(void)
 {
     /* Try local klog server (port 3232, kstuff-1.13) first */
+    int server_errno = 0;
     int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) server_errno = errno;
     if (fd >= 0) {
         struct sockaddr_in sin;
         memset(&sin, 0, sizeof(sin));
@@ -288,6 +290,7 @@ static int open_kernel_log(void)
             log_line("vpad: reading the kernel log from the klog server (port 3232)");
             return fd;
         }
+        server_errno = errno;
         close(fd);
     }
 
@@ -299,7 +302,11 @@ static int open_kernel_log(void)
         return fd;
     }
 
-    log_line("vpad: unable to open klog server or /dev/klog (errno=%d)", errno);
+    /* EBUSY: /dev/klog has one reader, and another payload or log viewer had it. Without the kernel
+     * log no device id is found, and on the profile screen the slot fails (report DFCE). */
+    int dev_errno = errno;
+    log_line("vpad: unable to open the klog server (errno=%d) or /dev/klog (errno=%d)%s", server_errno, dev_errno,
+             dev_errno == EBUSY ? ": another program is reading the kernel log" : "");
     return -1;
 }
 
